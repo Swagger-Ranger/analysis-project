@@ -1,3 +1,12 @@
+liufei:
+  name: liu fei
+  title: java software Engineer
+  url: https://github.com/Swagger-Ranger
+  image_url: https://github.com/yangshun.png
+  page: false
+  socials:
+    github: Swagger-Ranger
+
 yangshun:
   name: Yangshun Tay
   title: Front End Engineer @ Facebook
