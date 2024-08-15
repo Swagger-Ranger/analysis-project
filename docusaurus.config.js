@@ -37,11 +37,15 @@ const config = {
 
   presets: [
     [
-      'classic',
+      // 'classic',
+      '@docusaurus/preset-classic',
       /** @type {import('@docusaurus/preset-classic').Options} */
       ({
         docs: {
+          remarkPlugins: [require('remark-math')],
+          rehypePlugins: [require('rehype-katex')],
           sidebarPath: './sidebars.js',
+          include: ['**/*.md', '**/*.mdx'],
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
@@ -68,6 +72,14 @@ const config = {
       }),
     ],
   ],
+  //渲染数学公式
+  stylesheets: [
+    {
+      href: '/css/katex.min.css',
+      type: 'text/css',
+    },
+  ],
+
 
 // 首页的导航栏
   themeConfig:
@@ -91,12 +103,12 @@ const config = {
             type: 'docSidebar',
             sidebarId: 'middlewareSidebar',
             position: 'left',
-            label: '核心组件',
+            label: 'coreMiddleware',
           },{
             type: 'docSidebar',
             sidebarId: 'jdkSidebar',
             position: 'left',
-            label: 'Java相关',
+            label: 'JavaDocs',
           },{
             type: 'docSidebar',
             sidebarId: 'devopsSidebar',
@@ -115,53 +127,18 @@ const config = {
       footer: {
         style: 'dark',
         links: [
-//          {
-//            title: 'Docs',
-//            items: [
-//              {
-//                label: 'Tutorial',
-//                to: '/docs/intro',
-//              },
-//            ],
-//          },
-//          {
-//            title: 'Community',
-//            items: [
-//              {
-//                label: 'Stack Overflow',
-//                href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-//              },
-//              {
-//                label: 'Discord',
-//                href: 'https://discordapp.com/invite/docusaurus',
-//              },
-//              {
-//                label: 'Twitter',
-//                href: 'https://twitter.com/docusaurus',
-//              },
-//            ],
-//          },
-//          {
-//            title: 'More',
-//            items: [
-//              {
-//                label: 'Blog',
-//                to: '/blog',
-//              },
-//              {
-//                label: 'GitHub',
-//                href: 'https://github.com/facebook/docusaurus',
-//              },
-//            ],
-//          },
+
         ],
         copyright: `Copyright © ${new Date().getFullYear()} Analysis Project, author liufei32@outlook.com`,
       },
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
+        additionalLanguages: ['java'],
       },
     }),
+
+
 };
 
 export default config;
