@@ -73,12 +73,12 @@ const config = {
     ],
   ],
   //渲染数学公式
-  stylesheets: [
-    {
-      href: '/css/katex.min.css',
-      type: 'text/css',
-    },
-  ],
+  // stylesheets: [
+  //   {
+  //     href: '/css/katex.min.css',
+  //     type: 'text/css',
+  //   },
+  // ],
 
 
 // 首页的导航栏
@@ -103,7 +103,7 @@ const config = {
             type: 'docSidebar',
             sidebarId: 'middlewareSidebar',
             position: 'left',
-            label: 'coreMiddleware',
+            label: 'CoreMiddleware',
           },{
             type: 'docSidebar',
             sidebarId: 'jdkSidebar',

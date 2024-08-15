@@ -1,0 +1,776 @@
+---
+title: ThreadLocal
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+### ThreadLocal的设计结构
+
+`ThreadLocal`只是一个中间引用对象，实际的数据存储在`ThreadLocalMap`中，具体来说是存储在`ThreadLocalMap`中的`Entry`数组中。而每个线程都维护了一个`ThreadLocalMap`实例变量，
+
+```java
+    // Thread中维护了 ThreadLocal.ThreadLocalMap变量
+    /*
+     * ThreadLocal values pertaining to this thread. This map is maintained
+     * by the ThreadLocal class.
+     */
+    ThreadLocal.ThreadLocalMap threadLocals;
+
+    /*
+     * InheritableThreadLocal values pertaining to this thread. This map is
+     * maintained by the InheritableThreadLocal class.
+     */
+    ThreadLocal.ThreadLocalMap inheritableThreadLocals;
+```
+
+当向线程中添加`ThreadLocal`对象时，实际上就是在想线程的`ThreadLocal.ThreadLocalMap`变量维护的`Entry`数组中添加元素，每个元素都是一个WeakReference元素，`ThreadLocal`对象作为`WeakReference`引用的key，实际的值也就是线程中要存储的`ThreadLocal`值存储`Entry`对象的`value`对象变量中。
+
+```java
+static class Entry extends WeakReference<ThreadLocal<?>> {
+            /** The value associated with this ThreadLocal. */
+            Object value;
+
+            Entry(ThreadLocal<?> k, Object v) {
+                super(k);
+                value = v;
+            }
+        }
+```
+
+
+
+而为什么采用这样的结构？Doug Lea在ThreadLocal类一开头的源码中，就这样描述ThreadLocal的目的
+
+```text
+This class provides thread-local variables. These variables differ from their normal counterparts in that each thread that accesses one (via its get or set method) has its own, independently initialized copy of the variable. ThreadLocal instances are typically private static fields in classes that wish to associate state with a thread (e. g., a user ID or Transaction ID).
+For example, the class below generates unique identifiers local to each thread. A thread's id is assigned the first time it invokes ThreadId. get() and remains unchanged on subsequent calls.
+
+这个类提供了线程局部变量。这些变量的不同之处在于，每个线程(通过get或set方法)访问一个变量时，都会有一个独立初始化的变量副本。ThreadLocal实例通常是类中的私有静态字段，用于将状态与线程关联(例如，用户ID或事务ID)。
+
+例如，下面的类生成每个线程本地的唯一标识符。线程的id在它第一次调用threaddid时被分配。Get()，并且在后续调用中保持不变。
+```
+
+这样`ThreadLocal`对象是要保存可能存在于整个jvm中的各自目的的变量引用，然后可能在每个线程中来使用。
+
+**并且这里面的所有复杂操作都是不用考虑并发安全的，因为数据全部都在存储在同一个线程中，不会存在多个线程的竞态条件。**
+
+
+
+### ThreadLocal的hash码
+
+每个`ThreadLocal`实例是通过代码：`int h = key.threadLocalHashCode & (len - 1);`获取对应的数组位置的，翻译一下就是：
+
+> `keyIndex = ((当前threadLocal的nextHashCode值 + 1) * 0x61c88647魔数码) & (length - 1)`，`length`就是每个Thread线程中维护的ThreadLocalMap变量中维护的`Entry`数组的数组长度，并且length必定是2的n次幂，则length - 1在二进制上有效位就全是1。
+
+因为 `nextHashCode`是静态的，进而在 JVM 中这个变量是全局唯一的，所以当每个 `ThreadLocal` 对象在创建时能通过 `nextHashCode()` 方法获取一个唯一的哈希码，进而不同的 `ThreadLocal` 对象的 `threadLocalHashCode` 是不同的，确保了它们在 `ThreadLocalMap` 中的独特性。
+
+```java
+// 在示例化threadLocal对象是会初始化threadLocalHashCode
+private final int threadLocalHashCode = nextHashCode();
+
+// ThreadLocal类的魔数码
+private static final int HASH_INCREMENT = 0x61c88647;
+
+// nextHashCode是静态的，因而与AtomicInteger类加载对象是对应的，也就是全局唯一的
+private static AtomicInteger nextHashCode =
+        new AtomicInteger();
+
+// 此处 nextHashCode.getAndAdd(HASH_INCREMENT)，nextHashCode是唯一的，获取ThreadLocal示例对象对应的模数码
+private static int nextHashCode() {
+        return nextHashCode.getAndAdd(HASH_INCREMENT);
+    }
+
+int h = key.threadLocalHashCode & (len - 1);
+```
+
+**注意这里要保存的变量必然是处于jvm全局中的，因为其是要保存在整个jvm中各自目的的变量引用，然后可能在各个线程中来使用**。
+
+
+
+**上面那样计算hash码的本质就是在使用全局唯一的一个变量来保证每个`ThreadLocal`实例在jvm中的数字都不相同，然后加入此魔数码作为扰动，来保证在每个`ThreadLocal`对象的哈希值对应在整个jvm中都是唯一的，而且是在16、32、64等这些2的n幂次中取模都有良好的分布的。**
+
+
+
+#### 为什么使用0x61c88647作为魔数
+
+```java
+    /**
+     * The difference between successively generated hash codes - turns
+     * implicit sequential thread-local IDs into near-optimally spread
+     * multiplicative hash values for power-of-two-sized tables.
+     * 连续生成的哈希码之间的差异 —— 将隐式的顺序线程局部id转换为对于两个大小的表的幂的近似最优的扩展乘法哈希值。
+     */
+    private static final int HASH_INCREMENT = 0x61c88647;
+```
+
+`ThreadLocal`中的哈希魔数就是`1640531527`(十六进制为`0x61c88647`)。这个魔数是斐波那契数列`F(n) = F(n-1) + F(n-2)`，函数的解。
+
+这个问题的本质就是在问：
+
+> 为什么斐波那契数列的解乘以带符号位的32位int，获取的数值在2的n次幂长度数组中取模会有更好的分布？
+>
+> 附：chatgpt的回答好坏，很大程度上取决于问题的好坏，当我问：为什么使用0x61c88647魔数在ThreadLocal能减少哈希冲突，有更好的散列？，这个问题的回答深度远远不如上面问题的回答深度。
+
+原因在于在哈希函数设计中，通常使用乘法散列法 (Multiplicative Hashing) 来获得较好的散列分布。具体的做法是选择一个合适的常数 A(即魔数)，使得对哈希表的大小取模后，输入值能够均匀分布。这种方法的基本思路来源于「乘法哈希」的概念。而这个常数就是黄金分割点即斐波那契数列的解。
+
+**即本质就是一个扰动函数来改善在2的n次幂中取模的分布，使其分布更加均匀。而为什么斐波那契数列解作为扰动函数，有这样的特性呢？原因在于其函数`F(n)=F(n−1)+F(n−2)`，这种递归定义使得其元素具有较高的随机性和非线性增长特性**。为什么斐波那契数列会有如此的分布，那就是个数学问题了，给一个关于极坐标(lgn,lgn-rad)下斐波那契数的分布图，感受一下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+  <img src="/analysis-project/img/juc/juc-29.png" alt="image" style={{ maxWidth: '36%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+然后`ThreadLocal`中的哈希魔数具体的推导过程如下：
+斐波那契数列与黄金比例`(ϕ)`密切相关，斐波那契数列的第n项可以近似的表示为：*（此处数学公式渲染可能有问题-插件版本问题导致渲染有重复）*
+$$
+    F(n) \approx \frac{\phi^n}{\sqrt{5}}
+$$
+其中`ϕ≈1.618`，将斐波那契数列与乘法散列法结合，称为"斐波那契数列散列"，公式如下：
+$$
+\text{hash}(x) = (x \times C) \mod 2^n
+$$
+其中C是与黄金比例相关的一个常数即就是一个乘法散列的魔数，通常C的值通过如下公式来计算得到：
+$$
+C = \frac{\phi - 1}{2} \times 2^n
+$$
+> 现在我们来求解这个C：
+>
+> 因为黄金分割ϕ≈1.618(这个数字怎么推算的，我就不写了)，并且在32位int中，n=32，上图中公式可以简化为：c=0.618*2^(31)，而`1640531527`正好是带符号位的计算值，去掉首位的符号位就是31位，正好就是常量`int HASH_INCREMENT = 0x61c88647`。
+
+上面的推导过程就是魔数的完整推到过程。
+
+最后总结这个常数C达到的目的就是要使得对2^n取模后：
+
+- **分布性好**: 斐波那契数列的递推式及其与黄金比例的关系，导致乘以该常数后所得的数值在 2^n 取模后能够均匀分布在哈希表的各个槽中。
+- **避免聚集**: 如果选择不当的常数，或者直接使用整数乘法而不是黄金比例相关的数值，可能导致哈希值聚集在某些特定位置上，破坏哈希表的均匀性。而与黄金比例相关的乘数由于其无理性，避免了这种聚集。
+
+
+
+
+
+### ThreadLocal的数据结构
+
+在`ThreadLocal`中，其自身只是作为一个中间引用对象，起一个桥梁作用，真正存储数据的是其内部的`ThreadLocal.ThreadLocalMap`类，具体来说就是`ThreadLocal.ThreadLocalMap`中的`Entry`数组。
+
+#### ThreadLocalMap.Entry
+
+`ThreadLocalMap.Entry`是存储的数据结构，源码如下：
+
+```java
+static class ThreadLocalMap {
+
+        /**
+         * The entries in this hash map extend WeakReference, using
+         * its main ref field as the key (which is always a
+         * ThreadLocal object).  Note that null keys (i.e. entry.get()
+         * == null) mean that the key is no longer referenced, so the
+         * entry can be expunged from table.  Such entries are referred to
+         * as "stale entries" in the code that follows.
+         */
+        static class Entry extends WeakReference<ThreadLocal<?>> {
+            /** The value associated with this ThreadLocal. */
+            Object value;
+
+            Entry(ThreadLocal<?> k, Object v) {
+                super(k);
+                value = v;
+            }
+        }
+
+        /**
+         * The initial capacity -- MUST be a power of two.//必须是2的幂
+         */
+        private static final int INITIAL_CAPACITY = 16;
+
+        /**
+         * 维护了一个Entry数组
+         * The table, resized as necessary.
+         * table.length MUST always be a power of two.
+         */
+        private Entry[] table;
+```
+
+要明白为什么是这种结构，则需要先理解引用
+
+#### Java中的引用
+
+Java中引用有4中：`StrongRerence` > `SoftReference` > `WeakReference` > `PhantomReference`；
+
+- `StrongRerence` ：一般的赋值就是强引用，强引用不会被回收即使发生OOM
+- `SoftReference` ：当系统内存不足时，gc会回收掉弱引用的对象
+- `WeakReference` ：下次gc时无论系统内存是否充足都会直接回收弱引用的对象
+- `PhantomReference`： 幻像引用返回的引用值都是null，一般和`ReferenceQueue`一起使用
+
+详细关系如下：
+
+| 引用类型 | 定义                               | 影响对象的生命周期 | 回收时机                                  |
+| -------- | ---------------------------------- | ------------------ | ----------------------------------------- |
+| 强引用   | 直接使用对象，例如：`new Object()` | 不会被回收         | 只有强引用被移除或对象显式置为 `null` 时  |
+| 软引用   | `SoftReference<T>`                 | 内存不足时被回收   | 内存不足时                                |
+| 弱引用   | `WeakReference<T>`                 | 内存不足时立即回收 | 无论内存是否紧张                          |
+| 虚引用   | `PhantomReference<T>`              | 不影响对象生命周期 | 对象被回收后，`ReferenceQueue` 中会有通知 |
+
+`WeakReference` 和 `SoftReference` 都是将对象回收的时机交给 jvm，差别是 `SoftReference`引用对应在内存充足时不会被回收，所以`SoftReference`一般用来作缓存使用，当引用的对象可以在其他地方被获取到，同时想在还有多余内存时避免频繁的去获取，就可以使用`SoftReference`来引用对象。
+
+**注意：当多种引用同时引用对象时，强引用对弱引用或软引用对象的目标对象具有更高的持久性，因此，当强引用存在时，目标对象不会被回收，即使它的弱引用或软引用已经存在。**
+
+```java
+package org.liufei.junit5.test;
+
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.WeakHashMap;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author liufei
+ **/
+public class ReferenceTest {
+
+    /**
+     * WeakReference 用法
+     */
+    private static void weakReferenceUsageTest() {
+        HashMap<String, Object> map = new HashMap<>();
+        map.put("a", new MyClass(""));
+        WeakReference<HashMap> wobj
+                = new WeakReference<>(map);
+        // 如果此处不将map置位null，则始终存在对map的强引用，导致gc时也不能回收map
+//        map = null;
+
+        System.out.println(wobj.get() == null);
+
+
+        System.out.println("gc start ...");
+        while (wobj.get() != null) {
+            System.gc();
+        }
+        System.out.println("gc end ...");
+    }
+
+    /**
+     * 对比map在key为null时也不会回收value
+     * map在将key对应的对象值为空后，即map中的key没有再被引用到时，map也不会去回收值
+     */
+    private static void weakReferenceMapTest() {
+        HashMap<MyClass, MyClass> aMap = new HashMap<>();
+
+        MyClass emp = new MyClass("Vinoth");
+        MyClass val = new MyClass("Programmer");
+
+        aMap.put(emp, val);
+
+        emp = null;
+
+        // 这里睡眠+gc，多执行几次；无论怎样都是无法回收的
+        for (int i = 0; i < 3; i++) {
+            System.gc();
+            try {
+                TimeUnit.SECONDS.sleep(1);
+            } catch (InterruptedException e) {
+                //... 不做操作
+            }
+        }
+        System.out.println("Size of Map " + aMap.size());
+    }
+
+    /**
+     * WeakHashMap中的key没有再被引用到时，map中的entry则会被回收
+     * 这就是 WeakHashMap 不同于 HashMap的地方，也就是其设计目的
+     */
+    private static void weakReferenceWeakMapTest() {
+        WeakHashMap<MyClass, MyClass> aMap =
+                new WeakHashMap<>();
+
+        MyClass emp = new MyClass("Java");
+        MyClass val = new MyClass("Programmer");
+
+        aMap.put(emp, val);
+
+        emp = null;
+
+        System.gc();
+        int count = 0;
+
+        // System.gc() 只是告诉收集器回收，但不保证一点gc，所以此处要用个while，因为count可能会>0
+        while (!aMap.isEmpty()) {
+            ++count;
+            System.gc();
+        }
+        System.out.println("Took " + count
+                + " calls to System.gc() to result in weakHashMap size of : "
+                + aMap.size());
+    }
+
+    static class MyClass {
+
+        private byte[] bytes = new byte[1024 * 1000 * 30];
+        private String key;
+
+        MyClass(String key) {
+            this.key = key;
+        }
+
+        void Display() {
+            System.out.println("Display Function invoked ...");
+        }
+
+    }
+
+    public static void main(String[] args) {
+//        weakReferenceUsageTest();
+        weakReferenceMapTest();
+        weakReferenceWeakMapTest();
+    }
+}
+```
+
+上面的代码就可以看到，弱引用在gc时对象的回收
+
+### ThreadLocal核心源码
+
+这一块就是`ThreadLocal`中`get`，`set`，`remove`方法的逻辑：
+
+*使用的源码是OpenJDK21*
+
+#### set
+
+```java
+private void set(Thread t, T value) {
+        ThreadLocalMap map = getMap(t);
+        if (map != null) {
+            map.set(this, value);
+        } else {
+            createMap(t, value);
+        }
+    }
+
+// 当不存在时就 createMap一个并赋值
+void createMap(Thread t, T firstValue) {
+        t.threadLocals = new ThreadLocalMap(this, firstValue);
+    }
+
+ThreadLocalMap(ThreadLocal<?> firstKey, Object firstValue) {
+            // INITIAL_CAPACITY 初始值16，且必定是2的整数次幂
+            table = new Entry[INITIAL_CAPACITY];
+            int i = firstKey.threadLocalHashCode & (INITIAL_CAPACITY - 1);
+            table[i] = new Entry(firstKey, firstValue);
+            size = 1;
+            setThreshold(INITIAL_CAPACITY);
+        }
+
+```
+
+`set`的底层核心方法
+
+```java
+private void set(ThreadLocal<?> key, Object value) {
+
+            // We don't use a fast path as with get() because it is at
+            // least as common to use set() to create new entries as
+            // it is to replace existing ones, in which case, a fast
+            // path would fail more often than not.
+
+            Entry[] tab = table;
+            int len = tab.length;
+            int i = key.threadLocalHashCode & (len-1);
+
+            // 整个for循环就是在检测冲突，并且将冲突的情况判断并处理，有冲突并且有效就继续找，有冲突但之前的值gc了就辅助清理一下；否则就退出for即找到了位置。
+            for (Entry e = tab[i];
+                 e != null;
+                 // 这里就是在遍历链表，寻找合适的位置，nextIndex方法下面有解释
+                 e = tab[i = nextIndex(i, len)]) {
+                // refersTo就是调用的Reference的方法，底层是个native方法，refersTo(T obj)就是检查当前引用对象的指向是否与传入的对象obj 相同。
+                if (e.refersTo(key)) {
+                    e.value = value;
+                    return;
+                }
+
+                if (e.refersTo(null)) {
+                    replaceStaleEntry(key, value, i);
+                    return;
+                }
+            }
+
+            // 这里上面for循环以及处理了冲突并找到了位置，此处就是直接新建条目并赋值tab[i]
+            tab[i] = new Entry(key, value);
+            int sz = ++size;
+            // 这里清理掉无效的entry，如果没有可以清理的了而且sz超过阈值，就执行扩容
+            if (!cleanSomeSlots(i, sz) && sz >= threshold)
+                rehash();
+        }
+```
+
+这里`e = tab[i = nextIndex(i, len)]`来for循环遍历链表，是因为其使用了一种**线性探测**（Linear Probing）的开放寻址策略，即：
+
+- 当在哈希表中找到一个位置 `i` 时，如果该位置已经被占用（即存在一个 `Entry`），则尝试将索引位置移动到下一个位置 `i+1` 继续探测。
+
+- 如果已经探测到数组的末尾，则会回绕到数组的开头继续探测，环绕处理，直到找到一个空闲的位置。
+
+```java
+private static int nextIndex(int i, int len) {
+            return ((i + 1 < len) ? i + 1 : 0);
+        }
+```
+
+下面说一下`set`调用的 `replaceStaleEntry` 方法，这个方法就是清理当前这个位置，对应的无效节点，此每次set都调用 `replaceStaleEntry` 方法很重要，这样才能保存每次set都能使数组保存高效
+
+> 简而言之：`replaceStaleEntry` 方法的主要目的是处理 `ThreadLocalMap` 中的哈希冲突，特别是由于线性探测（linear probing）引发的哈希地址偏移和过期条目的清理问题。在线性探测的哈希表中，随着时间的推移，当一些条目被清理或回收时，会在哈希表中留下“空洞”，这些空洞会破坏哈希表的高效性，使得后续的查找、插入等操作变得低效。
+
+```java
+private void replaceStaleEntry(ThreadLocal<?> key, Object value,
+                                       int staleSlot) {
+            Entry[] tab = table;
+            int len = tab.length;
+            Entry e;
+
+            // 这里就是在寻找连续段的最早过期条目，即回溯到最早的无效条目开始
+            int slotToExpunge = staleSlot;
+            for (int i = prevIndex(staleSlot, len);
+                 (e = tab[i]) != null;
+                 i = prevIndex(i, len))
+                if (e.refersTo(null))
+                    slotToExpunge = i;
+
+            // Find either the key or trailing null slot of run, whichever
+            // occurs first
+            // 这里就是在不断向后找entry
+            for (int i = nextIndex(staleSlot, len);
+                 (e = tab[i]) != null;
+                 i = nextIndex(i, len)) {
+
+                if (e.refersTo(key)) {
+                    e.value = value;
+                    // 这里就是找到了之前线性探测往后挪了的entry，此时就交换它们，以继续往后找
+                    tab[i] = tab[staleSlot];
+                    tab[staleSlot] = e;
+
+                    // 当slotToExpunge == staleSlot时，因为slotToExpunge就是前面找到的最早的无效条目，此时slotToExpunge == staleSlot就是从后找又返回到了数组最前即找到头了，两张相遇就是找完了一个无效节点中线性探测往后了的所有链条
+                    if (slotToExpunge == staleSlot)
+                        slotToExpunge = i;
+                    //找完了无效节点中线性探测往后挪了的所有链条，此时就开始清理它们，最后退出
+                    cleanSomeSlots(expungeStaleEntry(slotToExpunge), len);
+                    return;
+                }
+
+                // If we didn't find stale entry on backward scan, the
+                // first stale entry seen while scanning for key is the
+                // first still present in the run.
+                // 这个判断其实就是说，没有找到后续的无效节点，而第一个仍然是无效节点没有被清理
+                if (e.refersTo(null) && slotToExpunge == staleSlot)
+                    slotToExpunge = i;
+            }
+
+            // If key not found, put new entry in stale slot
+            // 这里就是上面for循环(e = tab[i]) != null不满足，没有找到后面的key为空单却无效的节点，所以直接赋值到空节点即可
+            tab[staleSlot].value = null;// 辅助gc已有的无效entry
+            // 将set中调用的key和value设置到对应位置，因为这一个节点是第一个无效节点，而且后续也没有无效节点，所以直接设置。set中的调用也return了，所以这里就直接赋值就可以了。
+            tab[staleSlot] = new Entry(key, value);
+
+            // If there are any other stale entries in run, expunge them
+            // 此时如果两个不想等，说明还有中间还有无效节点，需要再次调用清理方法
+            if (slotToExpunge != staleSlot)
+                cleanSomeSlots(expungeStaleEntry(slotToExpunge), len);
+        }
+```
+
+> 最后的这里两个方法组合很有意思`cleanSomeSlots(expungeStaleEntry(slotToExpunge), len);`，
+>
+> - expungeStaleEntry(slotToExpunge)：是清楚某个无效节点以及其后续hash链的节点的重新hash，以保证hash的高效。
+> - cleanSomeSlots：是启发式的清除后续节点中的无效节点。
+>
+> 两个组合是因为expungeStaleEntry当遇到第一个为空的节点就会停止，因为意味着特定某个特定节点的重hash链必然停止了，此时要在这个停止的节点后续继续检查才能继续检查后续节点。
+
+
+
+#### 清除无效entry
+
+我将方法的注释翻译了放在一起，因为这个方法很有意思，而且注释里面就详细说明了这个方法的目的的具体操作
+
+`cleanSomeSlots`的思想总结就是：每次都去扫描当前有效位置之后的2的对数次位置因为
+
+- 因为hash首次寻址都是通过`2*魔数%table.length`，然后有冲突则线程探测都会依次往后排列，那出现无效的空洞也都是依次排在位置的后面，所以只需要扫描后续的位置即可，
+- 并且此方法不一个个扫描，而是使用`n >>>= 1`来扫描对数位置，虽然不会清除全部，但更高效的，并且可以改变n来扫描不同的位置，随着每次`set`都会检查后续位置，随着调用次数也必定能将大多数的无效节点清理掉
+
+```java
+/**
+     * 启发式地扫描一些单元格，查找过时的条目。在添加新元素或清除旧元素时，都会调用该函数。它执行的扫描次数为对数，
+     * 这是不扫描(速度快但保留了垃圾)和扫描次数与元素数量成正比的平衡，扫描次数可以找到所有垃圾，但会导致一些插入操作的时间为O(n)。
+     * 参数:
+     * i：一个有效的entry位置。扫描从i之后的元素开始。
+     * n：扫描控制:扫描log2(n)个单元格，除非发现一个过期的项，在这种情况下，log2(table.length)-1额外的单元被扫描。
+     *     当在插入操作中调用时，该参数是元素的数量，但当在replaceStaleEntry中调用时，该参数是表的长度。
+     *     (注意:所有这些都可以通过加权n来改变，而不是直接使用log n。但这个版本简单、快速，似乎工作得很好。)
+     * 返回:
+     * 如果删除了任何过期项，返回True。
+     */
+private boolean cleanSomeSlots(int i, int n) {
+            boolean removed = false;
+            Entry[] tab = table;
+            int len = tab.length;
+            do {
+                i = nextIndex(i, len);
+                Entry e = tab[i];
+                if (e != null && e.refersTo(null)) {
+                    n = len;
+                    removed = true;
+                    i = expungeStaleEntry(i);
+                }
+            // n >>>= 1无符号位移，就是执行2的对数次while循环
+            } while ( (n >>>= 1) != 0);
+            return removed;
+        }
+```
+
+
+
+`expungeStaleEntry` 方法的主要作用是清理 `ThreadLocal` 哈希表中的某个位置的过期条目（即已经被垃圾回收器清理掉的键），并通过重新散列可能受影响的条目(即后续第一个不为空的节点位置之前的所有节点都要检查是否要调整位置)，确保哈希表的完整性和效率。
+
+```java
+private int expungeStaleEntry(int staleSlot) {
+            Entry[] tab = table;
+            int len = tab.length;
+
+            // expunge entry at staleSlot
+            tab[staleSlot].value = null;// 过期条目的值设置为 null，辅助gc
+            tab[staleSlot] = null;// 将位置上的条目中移除。
+            size--;
+
+            // Rehash until we encounter null重新hash一下后续节点
+            Entry e;
+            int i;
+            // 这里就是在将无效节点后续的不为空的节点都检查一下并重新hash，为什么遇到为空的就结束，是因为遇到一个空槽即tab[i] == null，这意味着当前探测链的末尾已经到达，这一段探测链就结束了。
+            for (i = nextIndex(staleSlot, len);
+                 (e = tab[i]) != null;
+                 i = nextIndex(i, len)) {
+                ThreadLocal<?> k = e.get();
+                if (k == null) {
+                    e.value = null;
+                    tab[i] = null;
+                    size--;
+                } else {
+                    // 这里就是在重新计算hash位置，如果不相同就是线性探测往后挪了的，就要调整位置
+                    int h = k.threadLocalHashCode & (len - 1);
+                    if (h != i) {
+                        tab[i] = null;
+
+                        // Unlike Knuth 6.4 Algorithm R, we must scan until
+                        // null because multiple entries could have been stale.
+                        // 这里其实就是在上一个for循环中重新hash位置的节点在重新放节点时遇到了位置被占了，就继续往后找位置。
+                        while (tab[h] != null)
+                            h = nextIndex(h, len);
+                        tab[h] = e;
+                    }
+                }
+            }
+            return i;
+        }
+```
+
+
+
+#### get
+
+上面的set、处理hash冲突和处理无效节点的方法说完，现在get方法就很简单了。
+
+```java
+private T get(Thread t) {
+        ThreadLocalMap map = getMap(t);
+        if (map != null) {
+            // get数据就找到存储在ThreadLocalMap的entry元素，然后取出来
+            ThreadLocalMap.Entry e = map.getEntry(this);
+            if (e != null) {
+                @SuppressWarnings("unchecked")
+                T result = (T) e.value;
+                return result;
+            }
+        }
+        // ThreadLocalMap ==null，就是线程中的对应的ThreadLocalMap变量没有赋值，这里就初始化一下
+        return setInitialValue(t);
+    }
+
+private Entry getEntry(ThreadLocal<?> key) {
+            int i = key.threadLocalHashCode & (table.length - 1);
+            Entry e = table[i];
+            // 如果对象相同就返回，不然就继续找
+            if (e != null && e.refersTo(key))
+                return e;
+            else
+                return getEntryAfterMiss(key, i, e);
+        }
+
+// 继续找，然后顺便清除无效的节点
+private Entry getEntryAfterMiss(ThreadLocal<?> key, int i, Entry e) {
+            Entry[] tab = table;
+            int len = tab.length;
+
+            while (e != null) {
+                if (e.refersTo(key))
+                    return e;
+                if (e.refersTo(null))
+                    expungeStaleEntry(i);
+                else
+                    i = nextIndex(i, len);
+                e = tab[i];
+            }
+            return null;
+        }
+```
+
+
+
+#### remove
+
+```java
+public void remove() {
+         remove(Thread.currentThread());
+     }
+
+private void remove(Thread t) {
+         ThreadLocalMap m = getMap(t);
+         if (m != null) {
+             m.remove(this);
+         }
+     }
+
+private void remove(ThreadLocal<?> key) {
+            Entry[] tab = table;
+            int len = tab.length;
+            int i = key.threadLocalHashCode & (len-1);
+            for (Entry e = tab[i];
+                 e != null;
+                 e = tab[i = nextIndex(i, len)]) {
+                if (e.refersTo(key)) {
+                    // 这里就是调用的 Reference的本地clear0方法，清理掉弱引用
+                    e.clear();
+                    // 清除掉数组中特定位置的节点，将存储的对象置为null，以使得后续被gc
+                    expungeStaleEntry(i);
+                    return;
+                }
+            }
+        }
+```
+
+`remove`方法其实在要做的事情其实都是依赖`expungeStaleEntry`，这个才是`ThreadLocal`处理无效节点的核心方法(文章上面已经解析了)，只是有一个差异，就是手动调用了一下`e.clear();`，而 `clear` 方法本质上是用来手动清除 `Reference` 对象引用的。虽然垃圾收集器在合适的时间会自动清除这些引用，但仍然手动调用来提前释放这种引用的对象以便尽早回收内存，这就是 `clear` 方法的作用。
+
+### ThreadLocal的对象回收
+
+先来看一下，`ThreadLocal`是怎么回收对象的：就是将引用置为`null`来辅助gc的。
+
+```java
+private int expungeStaleEntry(int staleSlot) {
+            Entry[] tab = table;
+            int len = tab.length;
+
+            // expunge entry at staleSlot
+            tab[staleSlot].value = null; // 这里就是清理节点，直接设置为null
+            tab[staleSlot] = null;
+```
+
+
+
+好现在我们来回答一下为什么`ThreadLocal`不`remove`会内存泄漏？
+
+首先是由于上面的设计，在`ThreadLocalMap`中实际的数据是存储在`java.lang.ThreadLocal.ThreadLocalMap.Entry`中的。而在Java数组中的对象，即使数组中的元素对象本身没有被引用了，而数组本身还在被引用，是无法gc数组中的元素的。
+
+具体到`ThreadLocal`，线程如果被销毁了，`ThreadLocal`中的变量即使没有被`remove`，其也是能随着线程消亡而被回收的，因为其是维护在线程的`Thread#threadLocals`和`Thread#inheritableThreadLocals`变量中的。
+
+而问题就在于实际项目中或者框架中，因为线程创建和销毁是比较重的操作，而常常采用池化即线程池或者复用线程，使得线程会一直存活，所以只要`ThreadLocal`变量没有被手动`remove`掉，就大概率会发生内存泄漏，因为其存在于线程的`Thread#threadLocals`和`Thread#inheritableThreadLocals`变量中的`Entry`数组中的元素，因为其`ThreadLocal`对象已经被回收，无法再通过`ThreadLocal`对象来定位到其数组中的位置而访问到它；但与此同时呢`Entry`数组本身不会被销毁，会一直被引用而且数组的引用本身是强引用，导致其中的元素即使是弱引用，也是不能被回收的，这就是`ThreadLocal`内存泄漏的根源。
+
+
+
+### InheritableThreadLocal
+
+`InheritableThreadLocal`和`ThreadLocal`的差异就是重写了`createMap`方法，其他都是一样的
+
+```java
+@Override
+    void createMap(Thread t, T firstValue) {
+        t.inheritableThreadLocals = new ThreadLocalMap(this, firstValue);
+    }
+```
+
+这样在创建`InheritableThreadLocal`时，自动就会将传入线程的值传递到InheritableThreadLocal。
+
+具体到线程创建时`InheritableThreadLocal`是如何自动获取到父类线程的数据的，其流程如下：
+
+- 首先是`ThreadLocal`中本身还增加了一个构造方法
+
+```java
+        /**
+         * Construct a new map including all Inheritable ThreadLocals
+         * from given parent map. Called only by createInheritedMap.
+         *
+         * @param parentMap the map associated with parent thread.
+         */
+        // 这个构造方法是私有的目的就是为了创建Inheritable ThreadLocals
+        private ThreadLocalMap(ThreadLocalMap parentMap) {
+            Entry[] parentTable = parentMap.table;
+            int len = parentTable.length;
+            setThreshold(len);
+            table = new Entry[len];
+
+            for (Entry e : parentTable) {
+                if (e != null) {
+                    @SuppressWarnings("unchecked")
+                    ThreadLocal<Object> key = (ThreadLocal<Object>) e.get();
+                    if (key != null) {
+                        Object value = key.childValue(e.value);
+                        Entry c = new Entry(key, value);
+                        int h = key.threadLocalHashCode & (len - 1);
+                        while (table[h] != null)
+                            h = nextIndex(h, len);
+                        table[h] = c;
+                        size++;
+                    }
+                }
+            }
+        }
+  ```
+
+
+
+- 然后将上面私有的构造方法提供一个暴露方法`ThreadLocal#createInheritedMap`给线程创建时，将`ThreadLocal`传递下去
+
+比如：`java.lang.Thread#Thread(java.lang.ThreadGroup, java.lang.String, int, java.lang.Runnable, long, java.security.AccessControlContext)`
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-30.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- 最后线程创建时，将其自身维护`parent.inheritableThreadLocals`的变量处理赋值，如下`Thread`构造方法中的代码。
+
+```java
+Thread(String name, int characteristics, boolean bound) {
+        this.tid = ThreadIdentifiers.next();
+        this.name = (name != null) ? name : "";
+        this.inheritedAccessControlContext = Constants.NO_PERMISSIONS_ACC;
+
+        // thread locals
+        if ((characteristics & NO_INHERIT_THREAD_LOCALS) == 0) {
+            Thread parent = currentThread();
+            ThreadLocal.ThreadLocalMap parentMap = parent.inheritableThreadLocals;
+            if (parentMap != null && parentMap.size() > 0) {
+                this.inheritableThreadLocals = ThreadLocal.createInheritedMap(parentMap);
+            }
+            this.contextClassLoader = contextClassLoader(parent);
+        } else {
+            // default CCL to the system class loader when not inheriting
+            this.contextClassLoader = ClassLoader.getSystemClassLoader();
+        }
+  ```
+
+这就是`InheritableThreadLocal`整个设计逻辑。
+
+
+
+### 结构化并发中的线程变量
+
+额外提一下jdk新的革命性特性：结构化并发中的，线程变量。
+
+即Scoped Values 特性，在 JDK 21 中作为预览功能发布。Scoped Values 提供了一种新的方式来管理和访问线程局部变量，比现有的 ThreadLocal 更简单和高效。
+
+Scoped Values 允许在一个受限的范围内定义和访问变量，并确保这些变量在范围结束时被正确地清理。这种机制特别适用于并发编程，因为它可以更好地控制变量的生命周期和作用范围，避免内存泄漏和意外的共享数据问题。
+
+下面是jeps的预发布文档：
+
+[jeps-429ScopedValue](https://openjdk.org/jeps/429)
+
