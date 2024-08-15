@@ -1,0 +1,841 @@
+---
+title: Lucene手册3-搜索
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## lucene查询顺序
+
+在说查询前，先看下lucene或者es如何访问的索引文件，因为查询过程是复杂而高效的，依赖于底层的 Lucene 索引文件。理解这些文件的作用和访问顺序有助于掌握其 查询的机制，下面是es的基本查询逻辑。
+
+### Es的索引文件的访问
+
+现在es的文件和早期的lucene文件有一点点差异主要是文件内容优化和文件名有不同，但核心思想和内容是一致的
+
+1. **Segments File (`segments_N`)**: 查询首先从 `segments_N` 文件开始。这个文件包含了当前活跃的段（segment）信息及其元数据。
+2. **Field Infos File (`.fnm`)**: 每个段都有一个 `.fnm` 文件，存储了字段的元数据信息，如字段名称和属性。这帮助查询引擎确定哪些字段存在以及它们的配置。
+3. **Term Dictionary (`.tim`or`.tis`) and Term Index (`.tip` or `.tii`)**:
+- 查询接下来访问 `.tim` 文件（Term Dictionary File），其中包含词汇表中的所有术语。
+- `.tii` 文件（Term Index File）提供了术语的索引，使得可以快速查找术语在 `.tim` 文件中的位置。
+- 这些文件有助于快速定位查询中的术语及其倒排列表，并且Term Index存在内存中以加速查询Term Dictionary
+4. **Posting Lists (`.doc`, `.pos`, `.pay`)**:
+- 一旦找到术语，查询引擎会读取 `.doc` 文件（Postings File），这包含了文档 ID 列表，即哪些文档包含该术语。
+- 如果需要位置信息（如短语查询），还会读取 `.pos` 文件（Positions File）。
+- 如果有其他有效载荷信息（如词频），会访问 `.pay` 文件（Payload File）。
+5. **Stored Fields (`.fdt` and `.fdx`)**:
+- 如果查询结果需要返回实际的字段值，则会访问 `.fdx` 文件（Field Index File）和 `.fdt` 文件（Field Data File）。这些文件存储了实际的文档内容。
+- `.fdx` 文件包含文档到 `.fdt` 文件的偏移量，使得可以快速定位每个文档的内容。
+6. **Norms (`.nvd` and `.nvm`)**:
+- 用于存储字段归一化值，影响得分计算。`.nvd` 文件（Norms Data）和 `.nvm` 文件（Norms Metadata）存储这些信息。
+7. **Vector Files (`.dim`, `.vec`)**:
+- 如果使用向量搜索，这些文件会包含向量数据和向量索引。
+
+### es的基本查询流程
+
+1. **接收查询**:查询首先被发送到 Elasticsearch 的节点，节点解析查询并确定涉及哪些分片。
+2. **分片查询**:每个分片内的查询过程如上所述，从 `segments_N` 文件开始，逐步访问相关索引文件。
+3. **聚合结果**:各分片的查询结果汇总到主节点，进行最终的排序、合并和聚合处理
+
+
+
+## 基本搜索
+
+### Lucene 主要的搜索 API
+
+| 类                | 目的                                                         |
+| ----------------- | ------------------------------------------------------------ |
+| IndexSearcher     | 搜索索引的门户。所有搜索都通过 IndexSearcher 进行，它们会调用该类中重载的 search 方法 |
+| Query（及其子类） | 封装某种查询类型的具体子类。Query 实例将被传递给 IndexSearcher 的 search方法 |
+| QueryParser       | 将用户输入的（可读的）查询表达式处理成具体的 Query 对象      |
+| TopDocS           | 保持由 IndexSearcher.search（）方法返回的具有较高评分的顶部文档 |
+| ScoreDoc          | 提供对 TopDocs 中每条搜索结果的访问接口                      |
+
+**注意：es中已经不直接依赖QueryParser类来实现查询**
+
+> 在最新的 Elasticsearch 中，查询解析不再直接依赖 Lucene 的 `QueryParser`，而是通过一套自定义的查询解析机制来支持丰富的查询 DSL。关键组件包括 `org.elasticsearch.index.query.QueryBuilders`、以及一系列的`builders`来提供灵活和强大的查询解析和执行功能。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-12.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-12.png" style="zoom:30%;" />)
+
+es的查询代码示例：
+
+```java
+// 构建查询
+QueryBuilder query = QueryBuilders.matchQuery("field", "value");
+
+// 将查询转换为 JSON
+String jsonQuery = query.toString();
+
+// 使用 RestHighLevelClient 执行查询
+RestHighLevelClient client = new RestHighLevelClient(RestClient.builder(new HttpHost("localhost", 9200, "http")));
+
+SearchRequest searchRequest = new SearchRequest("index_name");
+SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+sourceBuilder.query(query);
+searchRequest.source(sourceBuilder);
+
+SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+```
+
+
+
+当查询 Lucene 索引时，它将返回一个包含有序的 ScoreDoc对象数组的TopDocs对象。在输入查询后，Lucene 会为每个文档计算评分（用以表示相关性的数值）。ScoreDoc对象自身并不会进行实际的文档匹配操作，而是由程序通过整型文档 ID 来进行匹配的。
+
+在大多数展现搜索结果的应用程序中，用户只会访问最靠前的几个文档，因此我们没有必要提供对所有搜索结果文档的检索，而只需要对当前页面中需要呈现给用户的搜索结果文档进行展现即可。事实上，对于超大的索引来说，将匹配文档收集到计算机内存中，完全展现结果文档，或是不太可能的，或者会消耗很长时间。
+
+**_id文档标识符**
+
+在 Lucene 中，每个文档在索引中都会有一个内部的整型标识符，这个标识符称为 `docID`。`docID` 是一个非持久化的、顺序递增的整数，由 Lucene 内部管理，用于快速定位和检索文档。这个 `docID` 在 Lucene 的生命周期中可能会变化，特别是在索引段合并或删除文档时。
+
+es中`_id` 是一个字符串类型字段，用于唯一标识每个文档，而且全局唯一。它是 Elasticsearch 内部使用的重要标识符之一，在索引（创建、更新、删除）文档时，需要使用 `_id` 来指定目标文档。 在查询文档时，可以使用 `_id` 来精确查找某个特定的文档。用户可以在创建或索引文档时显式指定 `_id`。如果在创建文档时未指定 `_id`，es 会自动为其生成一个唯一的 `_id`。自动生成的 `_id` 是一个长度为 20 的字符串，由 Base64 URL 编码的 UUID 生成。
+
+
+
+
+### lucene搜索用法
+
+在 es 中，可以使用 `simple_query_string` 或 `query_string` 查询来直接解析类似 `"+JUNIT +ANT -MOCK"`的语句。这些查询允许你使用 Lucene 查询语法来构建复杂查询。
+
+- **`simple_query_string`**：适合解析和执行简单的带有操作符的查询字符串。
+
+- **`query_string`**：提供了更多的选项和更强的功能，可以解析更复杂的查询字符串。
+
+对应`org.elasticsearch.index.search.SimpleQueryStringQueryParser`和`org.elasticsearch.index.search.QueryStringQueryParser`来提供lucene的查询语法。
+
+
+
+但在es也依赖了lucene-queryparser，也就是说也可以使用lucene的`QueryParser`来查询，比如：
+
+`org.elasticsearch:org.elasticsearch:6.5.4`中的`QueryBuilders`类依赖了`org.apache.lucene:lucene-queryparser:7.5.0`
+
+(*6.5.4、7.5.0只是我代码中的版本号*)其中`org.apache.lucene.queryparser.simple.SimpleQueryParser`和类来支持解析lucene的语法。
+
+**`QueryParser` 的本质就是将查询字符串解析成 Lucene 中的 `Query` 对象（或它的子类），从而形成一个可以在索引中执行的查询组合。**
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-14.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-14.png" style="zoom:40%;" />)
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-13.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-13.png" style="zoom:25%;" />)
+
+**常用语法示例：**
+
+| 查询表达式                                                   | 匹配文档                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| java                                                         | 默认域包含 java 项的文档                                     |
+| java junit java OR junit                                     | 默认域包含java 和 junit 中一个或两个的文档a                  |
+| +java +junit java AND junit                                  | 默认域中同时包含java 和junit 文档                            |
+| title:ant                                                    | title 域中包含 ant 项的文档                                  |
+| title: extreme -subject: sports tielt: extreme AND NOT subject: sports | title 域中包含 extreme 且 subject 域中不包含 sports 的文档   |
+| (agile OR extreme) AND methodogy                             | 默认域中包含methodology且包含 agie和extreme中的一个或两个的文档 |
+| title: "junit in action"                                     | title 域为junit in action 的文档                             |
+| title: "junit action" ~5                                     | title 域中 junit 和 action 之间距离小于5的文档               |
+| java*                                                        | 包含由java 开头的项的文档，例如 javaspaces, javaserver, java.net 和java本身 |
+| java~                                                        | 包含与单词java 相近的项的文档，如 lava                       |
+| lastmodified: [1/1/09 ТО 12/31/09]                           | lastmodified 域值在2009年1月1号和2009年12月31号之间的文档    |
+
+比如：如下的json语法
+
+```json
+//  content 字段中搜索包含 "Java" 和 "programming" 但不包含 "mock" 的文档。
+{
+  "query": {
+    "simple_query_string": {
+      "query": "+JUNIT +ANT -MOCK",
+      "fields": ["field"]
+    }
+  }
+}
+
+//在 content 和 title 字段中搜索包含 "Java" 和 "programming" 或者包含 "Elasticsearch" 和 "Lucene" 的文档。
+POST /my_index/_search
+{
+  "query": {
+    "query_string": {
+      "query": "(Java AND programming) OR (Elasticsearch AND Lucene)",
+      "fields": ["content", "title"],
+      "default_operator": "AND"
+    }
+  }
+}
+// default_operator就是当没有指定or还是and时默认使用的运算符，比如"default_operator": "AND"，则Java programming就等于Java AND programming
+```
+
+
+
+> **注意：**如果代码中使用`lucene-queryparser`中的`QueryParser`注意在其构造函数中传入的`analyzer`分析器要和构建索引时的分析器一致，因为文本数据在索引时会通过 `Analyzer` 进行处理，这个过程包括分词、去除停用词、规范化（如小写转换）等操作。如果查询时使用的 `Analyzer` 不同于索引时使用的 `Analyzer`，可能会导致查询的词项与索引中的词项不一致，进而导致查询结果不准确或无法找到匹配的文档。一致的 `Analyzer` 能确保查询字符串经过相同的分词和分析步骤，从而生成与索引中一致的词项。这对于准确和高效的查询非常重要。
+
+
+### 搜索的过程
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-15.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-15.png" style="zoom:50%;" />)
+
+```java
+Directory dir = FSDirectory.open(new File("/path/to/index"));
+
+IndexReader reader = IndexReader.open (dir);
+//也有new IndexSearcher (dir) 的构造方法，其内部也是打开一个IndexReader
+/**
+  *  public IndexSearcher(Directory path) throws CorruptIndexException, IOException {
+  *    this(IndexReader.open(path, true), true);
+  *  }
+  */
+IndexSearcher searcher = new IndexSearcher (reader);
+```
+
+IndexReader 完成了诸如打开所有索引文件和提供底层 readerAPI 等繁重的工作，而 IndexSearcher 则要简单得多。由于打开一个 IndexReader 需要较大的系统开销，因此最好是在所有搜索期间都重复使用同一个 IndexReader 实例，只有在必要的IndexReader时候才建议打开新的 IndexReader。**打开 IndexReader需要较大的系统开销，因此Directory尽可能重复使用同一个 IndexReader实例以用于搜索，并限制打开新 IndexReader的频率。**
+
+
+
+### 搜索结果
+
+| IndexSearcher.search 方法                                    | 使用时刻                                                     |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| TopDocs search (Query query, int n)                          | 直接进行搜索。int n 参数表示返回的评分最高的文档数量         |
+| TopDocs search (Query query, Filter filter, int n)           | 搜索受文档子集约束，约束条件基于过滤策略                     |
+| TopFieldDocs search (Query query, Filter filter, int n, Sort sort) | 搜索受文档子集约束，约束条件基于过滤策略，结果排序通过自定义的 Sort完成 |
+| void search (Query query, collector results)                 | 当使用自定义文档访问策略时使用，或者不想以默认的前 N个搜索结果排序策略收集结果时使用 |
+| void search Query query, Filter filter, Collector results)   | 同上。区别在于结果文档只有在传入过滤策略时才能被接收         |
+
+**注意：**Lucene 的 `search` 方法中，`filter` 是在查询过程中进行过滤的，而不是在搜索结果生成之后才过滤的。`filter` 通过在查询的同时应用限制条件来优化和减少需要检查的文档数量。这意味着过滤条件在查询过程中就会被应用，以便只考虑符合过滤条件的文档，从而提高查询效率。
+
+**结果分页：**
+
+如下两种方式实现分页：
+
+- ﻿﻿将首次搜索获得的多页搜索结果收集起来并保存在 ScoreDocs 和 IndexSearcher 实例中，并在用户换页浏览时展现这几页结果；
+- ﻿﻿每次用户换页浏览时都重新进行查询操作。
+
+重新查询通常是更好的解决方案。这个方案可以不用存储每个用户的当前浏览状态，而这个操作对于 Web 应用程序来说开销巨大，特别是对于拥有巨大用户群的应用程序来说。咋一看，重新查询似乎比较浪费，但Lucene 的快速处理能力正好可以弥补这个缺陷。另外，得益于当今操作系统的I/O缓存机制，重新查询操作通常会很快完成，因为该操作所需要处理的磁盘数据已经被缓存至 RAM了。
+
+###  结果评分
+
+每当搜索到匹配文档时，该文档都会被赋予一定的分值，用以反映匹配程度。该分值会计算文档与查询语句之间的相似程度，更高的分值反映了更强的相似程度和匹配程度。lucene的相似度评分方程如下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-16.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-16.png" style="zoom:50%;" />)
+
+| 评分因子                   | 描述                                                         |
+| -------------------------- | ------------------------------------------------------------ |
+| tf (t in d)                | 项频率因子——文档（d）中出现项（t）的频率                     |
+| idf (t)                    | 项在倒排文档中出现的频率：它被用来衡量项的“唯一”性。出现频率较高的 term 具有较低的idf；出现较少的term 具有较高的idf |
+| boost (t. field in d)      | 域和文档的加权，在索引期间设置（默认为1.0，通过setBoost(float)方法设置）。你可以用该方法对某个域或文档进行静态单独加权 |
+| lengthNorm (t. field in d) | 域的归一化（Normalization）值，表示域中包含的项数量。该值在索引期间计算，并保存在索引 norm 中。对于该因子，更短的域（或更少的语汇单元）能获得更大的加权 |
+| coord (g,d)                | 协调因子（Coordination factor），基于文档中包含查询的项个数。该因子会对包含更多搜索项的文档进行类似 AND的加权 |
+| queryNorm (q)              | 每个查询的归一化值，指每个查询项权重的平方和                 |
+
+这样得到的评分只是原始评分，它是一个大于等于0.0的浮点数。通常，如果搜索程序要将评分呈现给用户的话，最好先将评分进行归一化处理，即用该条查询对应的评分除以最大评分。评分越大说明文档和查询之间的匹配越好。Lucene 默认返回根据评分反向排序的文档，这意味着最上面的文档是最匹配的。
+
+
+
+**得分的计算类**
+
+对大多数因子的控制和实现都是通过`Similarity`抽象类的子类完成的。如果没有指定其他实现`Similarity` 的类，那么 Lucene 会使用 `DefaultSimilarity`类。此外，`DefaultSimilary` 类还负责实现评分中更多的计算；例如，term 频率因子（frequency factor）就是实际频率的平方根。
+
+> es也实现了很多`Similarity`的子类，用以计算结果的得分。其中涉及大量的数学知识，在其源码中也给出了论文的地址。
+
+
+
+**得分计算结果的解释**
+
+如果确实想知道这些因子时如何计算出来的，Lucene 提供了一个称为 ExPlanation 的类来满足这个需求。`IndexSearcher` 类包含一个 explain方法，调用该方法需要传入一个 `Query`对象和一个文档ID，然后该方法会返回一个`Explanation` 对象，包含了所有关于评分计算中各个因子的信息细节。如果需要的话，每个细节都可以访问；但通常还是需要全部输出这些释义的。`toString()`方法可以以良好的文本格式输出 Explanation 对象。
+
+比如使用《lucene实战（第二版）》的代码案例可以看到：
+
+```java
+public class Explainer {
+  public static void main(String[] args) throws Exception {
+    args = new String[2];
+    // 已构建的索引存储路径
+    args[0] = "indexes/MeetLucene";
+    args[1] = "Redistributions";
+
+    if (args.length != 2) {
+      System.err.println("Usage: Explainer <index dir> <query>");
+      System.exit(1);
+    }
+
+    String indexDir = args[0];
+    String queryExpression = args[1];
+
+    Directory directory = FSDirectory.open(new File(indexDir));
+    QueryParser parser = new QueryParser(Version.LUCENE_30,
+                                         "contents", new SimpleAnalyzer());
+    Query query = parser.parse(queryExpression);
+
+    System.out.println("Query: " + queryExpression);
+
+    IndexSearcher searcher = new IndexSearcher(directory);
+    TopDocs topDocs = searcher.search(query, 10);
+
+    for (ScoreDoc match : topDocs.scoreDocs) {
+      Explanation explanation
+         = searcher.explain(query, match.doc);     //#A
+
+      System.out.println("----------");
+      Document doc = searcher.doc(match.doc);
+//      System.out.println(doc.get("title"));
+      System.out.println(doc.get("filename"));
+      System.out.println(explanation.toString());  //#B
+    }
+    searcher.close();
+    directory.close();
+  }
+}
+```
+
+会输入如下格式的Explanation内容：
+
+```java
+Connected to the target VM, address: '127.0.0.1:63131', transport: 'socket'
+Query: Redistributions
+----------
+freebsd.txt
+0.26365077 = (MATCH) fieldWeight(contents:redistributions in 1), product of:
+  1.4142135 = tf(termFreq(contents:redistributions)=2)
+  2.3862944 = idf(docFreq=3, maxDocs=16)
+  0.078125 = fieldNorm(field=contents, doc=1)
+
+----------
+apache1.0.txt
+0.25832394 = (MATCH) fieldWeight(contents:redistributions in 7), product of:
+  1.7320508 = tf(termFreq(contents:redistributions)=3)
+  2.3862944 = idf(docFreq=3, maxDocs=16)
+  0.0625 = fieldNorm(field=contents, doc=7)
+
+----------
+apache1.1.txt
+0.21092062 = (MATCH) fieldWeight(contents:redistributions in 6), product of:
+  1.4142135 = tf(termFreq(contents:redistributions)=2)
+  2.3862944 = idf(docFreq=3, maxDocs=16)
+  0.0625 = fieldNorm(field=contents, doc=6)
+
+Disconnected from the target VM, address: '127.0.0.1:63131', transport: 'socket'
+
+Process finished with exit code 0
+```
+
+
+
+
+### Lucene 的多样化查询
+
+`QueryParser` 的本质就是将查询字符串解析成 Lucene 中的 `Query` 对象（或它的子类），从而形成一个可以在索引中执行的查询组合。解析来说一下具体的`Query` 查询。
+
+在说具体的查询类之前，再解释一下term的概念：
+
+文档中的文本内容会被分词器（Analyzer）处理，在分词(Tokenization)过程中将其拆分成一个个（token）每个 Token 代表了文档中的一个词语、单词或符号，然后与其field形成一个生成`term`(Term Creation)，**`Term` 是 Lucene 中存储和查询的最小单元**。
+
+比如：如下文本生成对应的term
+
+```json
+title: "Lucene in Action"
+content: "Lucene is a search library"
+```
+
+- `title:Lucene`
+- `title:in`
+- `title:Action`
+
+- `content:Lucene`
+- `content:is`
+- `content:a`
+- `content:search`
+- `content:library`
+
+在查询时，如果查询时指定了字段，例如 `title:Lucene`，则查询只会在 `title` 字段中查找 `Lucene` 这个 Term。如果查询时未指定字段，那么具体行为取决于查询解析器和查询类型。常见的默认行为是在所有字段中查找匹配的 Term。`QueryParser`也可以指定默认字段`defaultField`，不指定查询字段时在默认字段中查找。下图中使用`QueryParser`查询时构造函数就能指定分析器和默认查询字段。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-17.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-17.png" style="zoom:30%;" />)
+
+####  TermQuery
+
+对索引中特定项进行搜索是最基本的搜索方式。Term 是最小的索引片段，每个 Term包含了一个域名和一个文本值。
+
+比如`Term t = new Term ("contents", "java");` 使用这个 TermQuery 对象进行搜索，可以返回在 content 域包含单词 “java”的所有文档。值得注意的是，该查询值是区分大小写的，因此搜索前一定要对索引后的项大小写进行匹配；
+
+TermQuery 类在根据关键字查询文档时显得特别实用。如果文档是通过 `Field.Index.NOT_ANALYZED`进行索引的，该值就可以用来检索这些文档，就等同于对应field value全匹配和sql查询中的column=value是等价的。
+
+> 当 `Field.Index.NOT_ANALYZED` 被用于 Lucene 中的字段时，该字段的内容不会经过分词处理。整个字段的内容将被视为一个单一的 token，从而形成一个 term。
+
+#### TermRangeQuery
+
+索引中的各个 rerm 对象会按照字典编排顺序（通过 String.compareTo 方法）进行排序，并允许在 Lucene 的 TermRangeQuery 对象提供的范围内进行文本项的直接搜索。搜索时包含或不包含起始项和终止项。如果这个项为空，那么它对应的端就是无边界的。
+
+举例来说，一个空的 lowerTerm 意味着没有下边界，这样所有比上边界项小的项都会被计算在内。该查询只适用于文本范围，比如搜索从 N 到Q范围内的域名称。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-18.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-18.png" style="zoom:40%;" />)
+
+> **tii**（Term Infos Index）和**tis**（Term Infos）文件， Lucene 通常按照字典编排顺序存储项（使用 String.compareTo，该方法使用UTF16 代码单元进行比较）。所以TermRangeQuery可以按照字母排序来搜索。
+
+#### NumericRangeQuery
+
+`NumericRangeQuery`就是相对`TermRangeQuery`只能查询字符的数字排序查询。如果使用 NumericField 对象来索引域，就能有效地使用 NumericRangeQuery 类在某个特定范围内搜索该域。Lucene 会在后台将提交的搜索范围转换成与前面索引操作生成的树结构（trie structure）等效的括号集。这里每个括号都是索引中各不相同的项，它们对应的文档都会在搜索时进行或运算。使用 NumericRangeQuery 类搜索时所需要的括号数量相对较小，这使得该类运行时与 TermRangeQuery 类相比，性能好很多。
+
+> Trie 是一种树状数据结构，通常用于处理动态集合中的字符串。它能够高效地存储和查询键值对，尤其适用于前缀查询。在 Lucene 中，trie 结构被扩展用于数值范围查询。
+>
+> **数值分解**：当索引一个数值时，Lucene 会将其分解成若干前缀并按照不同精度级别进行索引。例如，数值 `12345` 会产生 `1`, `12`, `123`, `1234`, `12345` 等多个前缀进行索引。*同时为了确保数值的位数一致，Lucene 会在数值的前面添加零进行填充。例如，数值 `123` 可能会被填充为 `000123`。这样可以确保数值在不同精度级别上的比较是正确的。*
+>
+> **范围查询**：当执行数值范围查询时，Lucene 会基于索引的前缀树快速定位落在查询范围内的数值。例如，查询范围 `1000-2000` 会被拆分成若干个前缀范围，如 `1***` 到 `2***`（* 代表任意字符）。
+>
+> **多级精度**：Lucene 通过不同的精度级别来优化查询。例如，查询 `1000-2000` 可以首先通过 `1` 和 `2` 两个前缀定位大范围，然后进一步缩小范围到 `100`, `101`, ..., `199`, `200`, ..., `299` 等更精确的前缀范围。
+
+注意：NumericRangeQuery 类还可以选择性传入与 NumericField 相同的 precisionStep 参数。如果在索引期间改变了该参数的默认值，那么你一定得在搜索期间输入可接受的新值（要么输入相同的值，要么输入索引期间使用的其他值）。否则，搜索结果可能不会正确
+
+#### PrefixQuery
+
+使用 PrefixQuery来搜索包含以指定字符串开头的项的文档，PrefixQuery就是搜索指定字符串开头的term。
+
+#### BooleanQuery
+
+通过使用 BooleanQuery 类可以将本章讨论的各种查询类型组合成复杂的查询方式，而 Booleanouery 本身是一个Boolean 子句（clauses）的容器。这个子句可以是表示逻辑“与”、逻辑“或”或者逻辑“非”的一个子查询。这些属性允许进行逻辑 AND、OR 和NOT组合。
+
+这个类的组合查询比较多，往往是多个查询条件的嵌套组合。
+
+
+
+#### PhraseQuery
+
+短语搜索：PhraseQuery ，索引时如果不用 omitTermEreqAndPositions 选项（*Field.setomitTermFreqAndPositions （true）方法会让Lucene 跳过对该项的出现频率和出现位置的索引*）建立纯 Boolean域的话，索引会根据默认设置包含各个项的位置信息。PhraseQuery 类会根据这些位置信息定位某个距离范围内的项所对应的文档。例如，假设某个域中包含短语 “the quickbrown fox jumped over the lazy”，即时我们不知道这个短语的完整写法，也一样可以通过查找域中 quick 和 fox 相关并且相距很近的文档。当然，一个简单的TermQuerY类也能够通过对这两个项的单独查询而找到同样的文档，但在该例中，我们仅仅希望查到域中quick紧邻fox （quick fox）的或者两者之间只有一个单词（quick［其他单词］fox）的文档。
+
+在匹配的情况下，两个项的位置之间所允许的最大间隔距离称 slop。这里的距离是指项若要按顺序组成给定的短语所需要移动位置的次数。我们用刚才提到的那个短语看看 slop 因此是怎么工作的。
+
+**slop计算：**
+
+slop是不管左右移动还是中间插入，都是直接计算位置之间的差。
+
+> 假设我们有以下文档：
+>
+> 1. "quick brown fox"
+> 2. "quick fox brown"
+> 3. "fox quick brown"
+> 4. "quick fast brown fox"
+>
+> 如果我们进行短语查询 `quick brown fox`：
+>
+> - **slop = 0**: 短语必须完全匹配，没有其他词插入，且顺序严格一致。因此，只有文档 1 匹配。
+> - **slop = 1**: 允许最多一个位置的变动，这意味着短语中的词语可以有一个位置的调换。因此，文档 1 和文档 2 匹配。
+> - **slop = 2**: 允许最多两个位置的变动。因此，文档 1、文档 2 和文档 3 匹配。
+> - **slop = 3**: 允许最多三个位置的变动，因此文档 1、文档 2、文档 3 和文档 4 匹配。3= 1(brown相对quick移动1) + 2(foxbrown相对quick移动2)
+
+因为lucene在索引文档时会为每个词语记录其在文档中的位置（位置索引），（一般是增量记录的，方便大数值的存储压缩），位置索引指示了词语在文档中的具体位置，从而可以匹配每个term然后根据记录的位置值来计算其位置的位移数值进而匹配slop的值。
+
+**短语查询评分**
+
+短语查询是根据短语匹配所需要的编辑距离来进行评分的。项之间的距离越小，具有的权重也就越大，评分与距离成反比关系，距离越大的匹配其评分越低。
+
+> 计算公式：1/ (distance +1)
+>
+> distance就是单词组之间的距离差，Slop 因子的默认值是0，进而单词组(短语)完全相同时distance就为0
+
+
+
+#### WildcardQuery
+
+通配符查询：WildcardQuery ，通配符查询可以让我们使用不完整的、缺少某些字母的项进行查询，但是仍然可以查到相关匹配结果。Lucene 使用两个标准的通配符：*代表0个或者多个字母，？代表0个或者1个字母。可以将 wildcardQuery 类看做一个更通用的 PrefixQuery类，因通配符是没有两端的，PrefixQuery只能左匹配。
+
+虽然通配符模式并不是显式地使用精确项来进行查询，但在搜索时，Lucene还是会如同创建 Term 类一样其创建用于匹配的模式。在Lucene 内部，通配符查询被用来作为索引中匹配项的一种模式。一个 term 实例是一个便利的占位符，它代表了一个域名和一个任意字符串。
+
+**注意：通配符进行查询时，可能会降低系统性能。较长的前缀（第一个通配符前面的字符）可以減少用于查找匹配搜枚举的项的个数。如以通配符为首的查询模式会强制枚举所有索引中的项以用于搜索匹配。**
+
+**并且通配符匹配查询对评分没有任何影响。比如通配符"?ild*"，wild 和mild 就应该比 mildew 匹配得更好一些，但它们在评分上没有任何区别。**
+
+
+
+#### FuzzyQuery
+
+FuzzyQuery是基于 [Levenshtein](http://en.wikipedia.org/wiki/Levenshtein_Distance) 距离算法用来决定索引文件中的项与指定目标项的相似程度的查询。距离算法它是两个字符串之间相似度的一个度量方法，编辑距离就是用来计算从一个字符串转换到另一个字符串所需的最少插人、删除和替换的字母个数。例如，“three” 和 “tree” 两个字符串的编辑距离为1，因为前者只需要删除一个字符它们就一样了。
+
+Levenshtein 距离计算不同于 PhraseQuery 和 PhrasePrefixQuery 中所使用的距离计算方法。短语查询距离是为了匹配目标文档短语所需移动项的次数，而 Levenshtein距离则是一个项内部字母移动的次数。
+
+FuzzyQuery通过一个阈值来控制匹配，而不是单纯依靠编辑距离。这个阈值是通过字符串长度除以编辑距离得到的一个因子。编辑距离能影响匹配结果的评分，编辑距离越小的项所获得的评分就越高。
+
+> FuzzyQuery距离公式：1-(distance/min(textlen,targetlen))
+
+**注意：FuzzyOuery 类会尽可能地枚举出一个索引中所有项。因此，最好尽量少地使用这类查询。**
+
+> FuzzyOuery的应用场景：
+>
+> 1. **拼写错误纠正**：用户在搜索时可能会拼错单词，通过模糊查询，可以返回与拼错单词相似的正确单词的结果。
+> 2. **同义词处理**：可以查找与指定词项相似的同义词，从而扩展搜索范围，提供更多相关结果。
+> 3. **容错搜索**：在数据输入不准确或存在差异的情况下，模糊查询可以提高搜索结果的容错能力。
+
+
+
+#### MatchAlIDocsQuery
+
+在Lucene中，`MatchAllDocsQuery` 是一个非常简单而直接的查询，它会匹配索引中的所有文档，不管它们的内容是什么。这个查询通常用于需要获取所有文档的情况，比如统计、调试或者简单的搜索界面。
+
+- `MatchAllDocsQuery`会匹配索引中的所有文档。
+- 默认情况下，结果按照文档ID升序排序。
+- 可以通过`Sort`对象指定排序字段和方式，例如按某个字符串字段排序。
+
+这种查询方式在需要获取索引中的所有文档或者简单地浏览索引内容时非常有用。通过结合排序功能，可以更灵活地控制结果的显示顺序。
+
+
+
+#### 查询的分类
+
+查询可以大致分为两类：**相关性查询**和**明确条件查询**
+
+**全文检索查询**（Full-text search queries），也称为**相关性查询**，主要用于搜索文档内容。这些查询会计算文档的相关性评分，根据匹配度返回排序结果。相关性查询的典型特征是它们考虑词频、逆文档频率等因素来评估文档与查询的相关性。
+
+常见的全文检索查询包括：
+
+- `match`
+- `match_phrase`
+- `multi_match`
+- `query_string`
+- `simple_query_string`
+
+**过滤查询**（Filter queries），也称为**明确条件查询**，主要用于精确匹配字段值。这类查询不计算文档的相关性评分，只返回满足条件的文档。这些查询通常用于精确匹配和布尔逻辑过滤等操作。
+
+常见的过滤查询包括：
+
+- `term`
+- `terms`
+- `range`
+- `exists`
+- `prefix`
+- `wildcard`
+
+
+
+### 聚合查询
+
+**聚合查询**（Aggregation queries）用于对数据进行统计和分析，而不是检索单个文档。这类查询返回聚合结果，如计数、平均值、最小值、最大值、总和等。
+
+常见的聚合类型包括：
+
+- `terms` 聚合
+- `date_histogram` 聚合
+- `stats` 聚合
+- `avg` 聚合
+- `sum` 聚合
+
+
+
+
+
+
+
+### QueryParser表达式
+
+QueryParser是更加直观更有可读性的查询语句。比写booleanQuery更加有可读性，并且es中的QueryBuilders和`org.elasticsearch.index.query.QueryBuilder`也是通过其`Query toQuery(QueryShardContext context) throws IOException`方法来转化为lucene中的Query执行实际查询的。es中也依赖了`org.apache.lucene:lucene-core`。所以学会使用QueryParser就会使lucene查询更加方便。
+
+> QueryParser 在各个项中使用反斜杠（\）来表示转转义字符。需要进行转义的字符有：`\ + - ! () : ^ ] { } ~ * ?`
+
+#### TermQuery
+
+``` java
+  public void testTermQuery() throws Exception {
+    QueryParser parser = new QueryParser(Version.LUCENE_30,
+                                         "subject", analyzer);
+    Query query = parser.parse("computers");
+    System.out.println("term: " + query);
+    /*
+     * term: subject:computers
+     */
+  }
+```
+
+
+
+#### TermRangeQuery
+
+```java
+public void testTermRangeQuery() throws Exception {
+    Query query = new QueryParser(Version.LUCENE_30,                        //A
+                                  "subject", analyzer).parse("title2:[Q TO V]"); //A
+    assertTrue(query instanceof TermRangeQuery);
+
+    TopDocs matches = searcher.search(query, 10);
+    assertTrue(TestUtil.hitsIncludeTitle(searcher, matches,
+                      "Tapestry in Action"));
+
+    query = new QueryParser(Version.LUCENE_30, "subject", analyzer)  //B
+                            .parse("title2:{Q TO \"Tapestry in Action\"}");    //B
+    matches = searcher.search(query, 10);
+    assertFalse(TestUtil.hitsIncludeTitle(searcher, matches,  // C
+                      "Tapestry in Action"));
+  }
+```
+
+针对文本或日期的范围查询所采用的是括号形式，并且只需要在查询范围两端的项之间用`TO` 进行连接就可以了。**注意这里的`TO `必须都为大写字母**。而括号的类型就决定了所指定的搜索范围是包含在内（用中括号表示）还是排除在外（用大括号表示）。**注意这里与编程构建 `NumericRangeQuery`或`TermRangeQuery`对象不同的是，我们不能将同时进行包含和排除操作：搜索范围的起点和终点要么都是包含在内的，要么都是排除在外的。**
+
+> 对于非日期范围的查询，Lucene 会在用户输入查询范围后将查询边界转换为小写字母形式，除非程序调用了 QueryParser.setlowercaseExandedTerms （false）方法，这样的话程序就不会对输入的文本进行分析。如果查询范围的起点或终点之间不包含空格，那它们必须用双引号括起来，否则程序会解析失败。
+
+#### NumericRangeQuery
+
+在 Lucene 中，`QueryParser` 本身并不直接处理日期和时间类型的数据。相反，它依赖于索引时的处理和查询时的自定义分析器和解析器来处理日期和时间。具体的日期和时间查询处理通常涉及以下步骤：
+
+1. **索引时格式化日期和时间**：在将日期和时间字段添加到索引之前，通常需要将它们转换为字符串格式。常用的格式包括 ISO-8601（例如，`yyyy-MM-dd'T'HH:mm:ss'Z'`）等。
+2. **定义日期解析器**：在查询时，可以使用自定义的解析器来解析日期字符串并生成相应的查询。Lucene 中的 `DateTools` 类可以帮助处理日期转换。
+3. **使用自定义的 `QueryParser` 或 `Analyzer`**：在查询过程中，可以扩展 `QueryParser` 或使用自定义的 `Analyzer`来处理日期字段。
+
+> 相关查询：lucene中QueryParser如何转化日期和时间的查询
+
+#### PrefixQuery
+
+```java
+public void testPrefixQuery() throws Exception {
+    QueryParser parser = new QueryParser(Version.LUCENE_30,
+                                         "category",
+                                         new StandardAnalyzer(Version.LUCENE_30));
+    parser.setLowercaseExpandedTerms(false);
+    System.out.println(parser.parse("/Computers/technology*").toString("category"));
+    /*
+     * /Computers/technology*
+     */
+  }
+// 用 QueryParser 类进行通配符查询时，默认情况是不支持项开端包含通配符的，若要改变这个默认限制，可以调用 setAl1owleadingwildcard方法，但这个调用会牺牲掉一部分程序性能。
+public void testLowercasing() throws Exception {
+    Query q = new QueryParser(Version.LUCENE_30,
+                              "field", analyzer).parse("PrefixQuery*");
+    assertEquals("lowercased",
+        "prefixquery*", q.toString("field"));
+
+    QueryParser qp = new QueryParser(Version.LUCENE_30,
+                                     "field", analyzer);
+    qp.setLowercaseExpandedTerms(false);
+    q = qp.parse("PrefixQuery*");
+    assertEquals("not lowercased",
+        "PrefixQuery*", q.toString("field"));
+  }
+```
+
+
+
+#### BooleanQuery
+
+使用 `AND`、`OR` 和 `NOT` 操作符通过 `QueryParser` 建立文本类型的布尔查询。需要注意的是，这些布尔操作符必须全部使用大写形式。列出的项之间如果没有指定布尔操作符，那么系统会使用暗含的操作符，默认情况为OR。对于“abc xyz”的查询会被系统解释为 “abc OR xyz”或者“abc AND xyz”，具体选择哪种布尔逻辑取决于程序对于隐含操作符的设置。
+
+```java
+ QueryParser parser = new QueryParser(Version.LUCENE_30,
+                                         "contents", analyzer);
+ parser.setDefaultOperator(QueryParser.AND_OPERATOR);
+```
+
+**若在查询项前面放置 NOT 操作符将使程序进行不匹配该项的搜索操作。针对某个项的否定操作必须与至少一个非否定项的操作联合起来进行，否则程序不会返回结果文档；换句话说，我们不可能使用类似 “NOT term” 的查询来找到所有不包含该项的文档。**
+
+| 详细语法    | 快捷语法 |
+| ----------- | -------- |
+| a AND b     | +a +b    |
+| a OR b      | ab       |
+| a AND NOT b | +a -b    |
+
+#### PhraseQuery
+
+查询语句中用双引号扩起来的项可以用来创建一个 Phraseguery。引号之间的文本将被进行分析；作为分析结果，PhraseQuery 可能不会跟原始短语一样精确。这个分析过程一直以来都是给我们带来一些困惑的主要原因。举例来说，查询语句
+
+“This is Some Phrase*”被 standardAnalyzer 分析时，将被解析成用短语“somephrase” 构成的 PhraseQuery 对象。而 standardAnalyzer 会删除单词 this 和 is，因为这两个单词出现在默认的停用词列表中，因此最后的解析结果会删除这两个单词并用空格代替其位置。一个经常被提及的问题就是：为什么星号不能被解释成模糊查询？**请记住：双引号内的文本会促使分析器将之转换 PhraseQuery**。单项短语（single-term phrase）将被转化成了TermQuery查询。
+
+```java
+public void testPhraseQuery() throws Exception {
+    Query q = new QueryParser(Version.LUCENE_30,
+                              "field",
+                              new StandardAnalyzer(
+                                Version.LUCENE_30))
+                .parse("\"This is Some Phrase*\"");
+    assertEquals("analyzed",
+        "\"? ? some phrase\"", q.toString("field"));
+    // 这里没有指定slop，默认slop=0，"This is Some Phrase*" 被转化成了"? ? some phrase"
+
+    q = new QueryParser(Version.LUCENE_30,
+                        "field", analyzer).parse("\"term\"");
+    assertTrue("reduced to TermQuery", q instanceof TermQuery);
+    // 单词"term" 被转化成了TermQuery查询
+  }
+```
+
+```java
+public void testSlop() throws Exception {
+    Query q = new QueryParser(Version.LUCENE_30,
+                              "field", analyzer)
+            .parse("\"exact phrase\"");
+    assertEquals("zero slop",
+        "\"exact phrase\"", q.toString("field"));
+
+    // slop为0，就是"exact phrase"就是"exact phrase"
+    QueryParser qp = new QueryParser(Version.LUCENE_30,
+                                     "field", analyzer);
+    qp.setPhraseSlop(5);
+    q = qp.parse("\"sloppy phrase\"");
+    assertEquals("sloppy, implicitly",
+        "\"sloppy phrase\"~5", q.toString("field"));
+    // slop setPhraseSlop(5)，就是"sloppy phrase"就是"\"sloppy phrase\"~5"
+  }
+```
+
+
+
+#### FuzzyQuery
+
+波浪符（～）会针对正在处理的项来创建模糊查询。需要注意的是，波浪符还可以用于指定松散短语查询，但具体环境是各不相同的。双引号表示短语查询，它并不能用于模糊查询。你可以选择性指定一个浮点数，用来表示所需的最小相似程度。
+
+```java
+  public void testFuzzyQuery() throws Exception {
+    QueryParser parser = new QueryParser(Version.LUCENE_30,
+                                         "subject", analyzer);
+    Query query = parser.parse("kountry~");
+    System.out.println("fuzzy: " + query);
+
+    query = parser.parse("kountry~0.7");
+    System.out.println("fuzzy 2: " + query);
+    /*
+     * fuzzy: subject:kountry~0.5
+     * fuzzy 2: subject:kountry~0.7
+     */
+  }
+```
+
+> `subject:kountry~0.5` ，**subject**: 这是要查询的字段名。查询会在名为`subject`的字段中进行。**kountry**: 这是要查找的词项。**~0.5**: 这个波浪号和数字表示模糊度（fuzziness）参数。模糊度参数的取值范围是0到1，值越高表示允许更多的变化和差异。这里的`0.5`表示允许一定程度的变化，但不是最大的变化。
+>
+> 模糊查询使用Levenshtein距离（编辑距离）来计算两个字符串之间的相似度。编辑距离是指将一个字符串转换成另一个字符串所需的最小编辑操作数（插入、删除或替换）。
+
+
+
+#### MatchAlIDocsQuery
+
+当输入**后，QueryParser 会生成 MatchAllDocsQuery。
+
+这个操作会将 QueryParser 所产生的所有 Lucene 核心查询类型进行包装。但这并不是 QueryParser 的一切：它还支持一些非常实用的 Query 子句分组语法、加权子句以及将子句限制在特定的域上。
+
+#### 分组查询
+
+Lucene 的BooleanQuery允许你构建复杂的嵌套子句；同样，QueryParser 使用分组后的文本类型的查询表达式来支持同样的功能。使用括弧来形成子查询，这样就能建立高级的BooleanQuery：
+
+```java
+public void testGrouping() throws Exception {
+    Query query = new QueryParser(
+        Version.LUCENE_30,
+        "subject",
+        analyzer).parse("(agile OR extreme) AND methodology");
+    TopDocs matches = searcher.search(query, 10);
+  }
+```
+
+Query 可以包含任意嵌套的结构，可以用 QueryParser 分组来表示。过解析表达式（+“brown fox” +quick）“red dog”可以得到如下的查询结构
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-19.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-19.png" style="zoom:40%;" />)
+
+> (+“brown fox” +quick）“red dog”，括号将查询分成了两部分，然后“brown fox”和“red dog”是双引号，被解析成了phrase查询
+
+
+
+
+#### 自定义查询语法
+
+QueryParser能够快捷有效地用户提供强大的查询构建，但它并不能适合所有的场合。QueryParser 不能通过API 创建所有的查询类型。内置 QueryParser 所使用的语法可能并不能满足你的需要。你可以通过继承QueryParser 来施加一些有限的控制。如果你需要一些超出 QueryParser 能力范围的查询表达式语法或者功能，那么诸如 [ANTLR ](http://www.antlr.org)和[JFlex](http:/jiflex.de/)将成你的最佳选择。
+
+| 特性             | ANTLR                                                        | JFlex                                                  |
+| ---------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| **功能和复杂度** | 生成词法分析器和语法分析器，适用于复杂语言处理和编译器开发   | 仅生成词法分析器，专注于处理正则表达式和生成扫描器     |
+| **灵活性**       | 能处理复杂语法规则和上下文无关文法，适合高级编译器和解析器开发 | 专注于词法分析，适合需要高效处理文本和生成扫描器的场景 |
+| **集成性**       | 提供综合解决方案，可单独使用，也可与其他工具集成             | 通常与其他语法分析器生成器（如 CUP）配合使用           |
+| **目标语言**     | 支持多种目标语言（Java、C#、Python、JavaScript 等）          | 主要生成 Java 代码，适用于 Java 生态系统               |
+| **学习曲线**     | 较高的学习曲线，特别是复杂语法的处理和调试                   | 相对简单，易于上手，适合快速生成词法分析器             |
+
+
+
+
+
+### field选择
+
+在创建查询时，QueryParser 需要知道域名，但一般来说，要求用户来标识被搜索的域是不够友善的（终端用户可能不必知道或者不想知道域名）。正如我们所看到的那样，默认的域名是在创建 QueryParser 时提供的。然而被分析后的查询语句并不仅限制在搜索这个默认的域。如果使用域选择器表示法，你就可以对非默认域中的项进行指定。举例来说，如果将查询解析器设置默认搜索所有域，那么你的用户仍然可以使用title:lucene 的形式将搜索范围限制在 title 域。
+
+同时可以使用`MultiFieldQueryParser`来在多个域中查询，默认情况下，多个字段之间是 `OR` 的关系。这意味着，如果查询字符串在任何一个字段中匹配，文档就会被返回。或者设置
+
+> parser.setDefaultOperator(Operator.AND);
+
+来设置多个域的查询结果为`and`才返回文档。
+
+es中也指出多域查询，比如：
+
+```json
+{
+  "query": {
+    "multi_match": {
+      "query": "lucene search",
+      "fields": ["title", "content", "author"]
+    }
+  }
+}
+```
+
+
+
+### 查询权重
+
+在 Lucene 中，可以通过设置子查询的权重来影响查询结果的评分。权重的设置是通过在查询字符串后添加 `^` 符号和一个浮点数值来实现的，这个值表示权重的大小。权重越高，该查询的影响力越大。权重会影响 Lucene 在评分和排序文档时的计算。权重越高的查询词，对评分的贡献越大。通过这种方式，可以提升特定查询词在搜索结果中的重要性。
+
+> 比如: junit^2.0 testing
+
+查询 `junit` 的权重是 2.0，而 `testing` 的权重是 1.0。构建的 `BooleanQuery` 包含了两个子查询，并将它们的权重应用在查询评分过程中。
+
+
+
+
+
+### 补充：es的数据聚合的不准确性
+
+es采用了一下几种手段来优化处理数据统计的功能：
+
+1. **基于有限内存的计算**:
+- 计数算法：Elasticsearch 使用的主要算法之一是 HyperLogLog (HLL)，这是一种基于概率的数据结构，特别适合大规模数据集的去重计数操作。HLL 能够在有限的内存中存储大量数据的去重计数结果，但它提供的是估计值，而不是精确值。
+- 文档稀疏性：Elasticsearch 使用分片（shards）来分散数据存储和计算。在分片之间进行聚合计算时，会先在每个分片上计算局部聚合结果，然后再合并这些结果。这种分布式计算的特点使得结果是近似的，而不是精确的。
+
+2. **数据结构优化统计**:  Elasticsearch 使用 *BKD 树*来进行数值范围查询和聚合。这种数据结构在处理高维空间和大量数据时非常高效，但也会带来一些近似计算的结果。
+
+3. **文档采样**：为了提高查询性能，Elasticsearch 在聚合计算中有时会对数据进行采样。采样可以显著减少需要处理的数据量，从而提高速度，但也会导致结果是近似值而非精确值，特别是采样精度不足时。
+
+因为 Elasticsearch 使用了这些数据结构和算法来提高聚合操作的效率，同时减少内存消耗和计算时间。特别是在针对处理大规模数据时。而这也导致了*es聚合结果通常是近似值，而不是绝对精确的*，而且随着数据量的增加，每个返回的bucket中数据越大就越不精确。
+
+同时由于es分片机制也会导致总体统计数据的不准确：
+
+> **分片内聚合**：每个分片在其数据子集上执行聚合计算，产生局部聚合结果。这些结果在分片内部是精确的，但当这些局部结果被合并时，可能会出现误差。
+>
+> **合并阶段**：Elasticsearch 的聚合操作在每个分片上分别计算聚合结果，然后将这些结果合并成最终结果。这个合并过程有可能引入误差比如计数和去重、分片不均匀而使得采样误差，尤其是在处理大型数据集时，因为合并算法是基于近似值的。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

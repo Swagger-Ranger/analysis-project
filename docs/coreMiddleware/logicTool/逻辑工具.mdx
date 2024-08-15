@@ -1,0 +1,180 @@
+---
+title: 逻辑运算工具
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+当我们需要处理动态的boolean运算时，特别是代码中涉及复杂的业务规则判断，其中运算符都是动态填充的，此时就可以使用`jbool_expressions`开源工具。
+
+其官方的解释：
+
+> jbool_expressions is a simple open-source library for creating and manipulating boolean expressions in java.
+>
+> A basic propositional expression is built out of the types `And`, `Or`, `Not`, `Variable` and `Literal`. All of these extend the base type Expression.
+
+[GitHub](https://github.com/bpodgursky/jbool_expressions)
+
+
+### 代码实操
+
+```xml
+<dependency>
+    <groupId>com.bpodgursky</groupId>
+    <artifactId>jbool_expressions</artifactId>
+    <version>1.23</version>
+</dependency>
+
+<!-- 引入JUnit 5方便写代码测试 -->
+<!-- JUnit 5 API -->
+<dependency>
+  <groupId>org.junit.jupiter</groupId>
+  <artifactId>junit-jupiter-api</artifactId>
+  <version>5.7.1</version>
+  <scope>test</scope>
+</dependency>
+<!-- JUnit 5 Engine -->
+<dependency>
+  <groupId>org.junit.jupiter</groupId>
+  <artifactId>junit-jupiter-engine</artifactId>
+  <version>5.7.1</version>
+  <scope>test</scope>
+</dependency>
+```
+
+
+```java
+import com.bpodgursky.jbool_expressions.*;
+import com.bpodgursky.jbool_expressions.parsers.ExprParser;
+import com.bpodgursky.jbool_expressions.rules.RuleSet;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+/**
+ * @author liufei
+ **/
+public class JboolExpressionTest {
+
+    @Test
+    @DisplayName("构建表达式")
+    public void test1() {
+        Expression<String> expr = And.of(
+                Variable.of("A"),
+                Variable.of("B"),
+                Or.of(Variable.of("C"), Not.of(Variable.of("C"))));
+        System.out.println(expr);
+
+        // 也可以直接用字符串来parse
+        Expression<String> exprStr = ExprParser.parse("(A & B & (C | !C)) ");
+        System.out.println(exprStr);
+
+        assertEquals(expr, exprStr);
+    }
+
+    @Test
+    @DisplayName("简化表达式")
+    public void test2() {
+        Expression<String> expr = ExprParser.parse("(A & B & (C | !C)) ");
+        // (A & B & (C | !C)) --> (A & B)
+        Expression<String> simplified = RuleSet.simplify(expr);
+        System.out.println(simplified);
+
+        // 简化表达式是新输出值，不会修改原有的值的
+        System.out.println(expr);
+    }
+
+    @Test
+    @DisplayName("变量赋值")
+    public void test3() {
+        Expression<String> simplified = ExprParser.parse("(A & B)");
+        Expression<String> halfAssigned = RuleSet.assign(simplified, Collections.singletonMap("A", true));
+        System.out.println(halfAssigned);
+
+        Expression<String> resolved = RuleSet.assign(halfAssigned, Collections.singletonMap("B", true));
+        System.out.println(resolved);
+    }
+
+    @Test
+    @DisplayName("表达式DNF/CNF")
+    public void test4() {
+        /**
+         * 通过使用布尔代数规则，例如分配律、交换律和结合律等使得逻辑表达式可以统一处理和简化，有助于进行逻辑表达式的简化和优化，特别是在逻辑电路设计中。
+         * 数学运算：^与，∨或，¬非，→推到：a->b表示a为真b也为真，↔对等A ↔ B：A和B都为真或都为假。
+         * toDNF 和 toCNF 是可以相互转化的，比如：toDNF后，再toCNF就还原回去了
+         *
+         * DNF(Disjunctive Normal (Sum-of-Products) Form)一种规范形式，用于表示布尔逻辑表达式，
+         * DNF就是将内部或运算全部转化为一系列与运算的集合
+         * 比如：((A | B) & (C | D)) -->  ((A & C) | (A & D) | (B & C) | (B & D))
+         *
+         * CNF（Conjunctive Normal（product-of-sums） Form）（合取范式）：主要用于满足性问题和布尔逻辑公式的证明
+         * CNF就是将内部与运算全部转化一系列或运算的集合
+         * 比如：((A & B) | (C & D)) -->  ((A | C) & (A | D) & (B | C) & (B | D))
+         */
+
+        // toDNF
+        Expression<String> nonStandard = ExprParser.parse("((A | B) & (C | D))");
+        System.out.println(nonStandard);
+
+        Expression<String> sopForm = RuleSet.toDNF(nonStandard);
+        System.out.println(sopForm);
+        assertEquals(sopForm.toString(), "((A & C) | (A & D) | (B & C) | (B & D))");
+
+
+        // toCNF
+        Expression<String> nonStandard1 = ExprParser.parse("((A & B) | (C & D))");
+        System.out.println(nonStandard1);
+
+        Expression<String> posForm = RuleSet.toCNF(nonStandard1);
+        System.out.println(posForm);
+        assertEquals(posForm.toString(), "((A | C) & (A | D) & (B | C) & (B | D))");
+
+    }
+
+
+    @Test
+    @DisplayName("计算表达式")
+    public void test5() {
+        // 解析布尔表达式
+        Expression<String> expr = ExprParser.parse("(A & B) | (C & D)");
+        // 定义变量值
+        Map<String, Boolean> values = new HashMap<>();
+        values.put("A", true);
+        values.put("B", false);
+        values.put("C", true);
+
+        // 计算布尔表达式的结果
+        Expression<String> assign = RuleSet.assign(expr, values);
+        System.out.println("Evaluation Result: " + assign);
+        assertEquals(assign.toString(), "D");
+
+        values.put("D", true);
+        Expression<String> assign1 = RuleSet.assign(expr, values);
+        System.out.println("Evaluation Result: " + assign1);
+        assertEquals(assign1.toString(), "true");
+    }
+
+}
+```
+
+### jbool_expressions的实现
+
+jbool_expressions是基于`antlr3`构建，来生成的动态语法树，它按定义的规则，将输入的字符串词法分析，解析成一个个token，然后再语法分析生成表达式的AST (抽象语法树)。然后再动态赋值并进行规则运算而得出结果。
+
+> ANTLR（Another Tool for Language Recognition）是一种强大的工具，用于生成词法分析器和语法分析器。它可以用来处理语言的解析任务，从源代码或文本中生成抽象语法树（AST）。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/logicTool/jbool.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jbool.png" alt="image" style="zoom:36%;" />)
+
+`com.bpodgursky.jbool_expressions.eval` 是jbool_expressions用于解析、构建和评估布尔表达式，包含了一些用于定义和处理布尔表达式规则的类。
+
+`com.bpodgursky.jbool_expressions.parsers`是jbool_expressions的antlr编译生成的token和语法树。
+
+`com.bpodgursky.jbool_expressions.rules` 是jbool_expressions用于处理规则集的代码包

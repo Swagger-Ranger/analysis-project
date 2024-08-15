@@ -1,0 +1,67 @@
+---
+title: JDK-安装和卸载
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+基于centos7.9环境
+
+## 安装
+
+1. [下载](https://download.oracle.com/java/17/latest/jdk-17_linux-x64_bin.rpm)
+
+2. 安装
+
+```bash
+rpm -ivh jdk-17_linux-x64_bin.rpm
+   ```
+
+​		`-i` 或 `--install`：表示安装一个新的包。
+
+​		`-v` 或 `--verbose`：表示详细模式，显示更多的安装信息。
+
+​		`-h` 或 `--hash`：表示显示安装进度，通常以哈希标记（`#`）形式显示。
+
+3. 配置环境变量
+
+`/etc/profile`，增加如下内容
+
+```java
+export JAVA_HOME=/usr/java/jdk-17
+export PATH=$PATH:$JAVA_HOME/bin
+   ```
+
+再使改动生效 `source /etc/profile`
+
+
+
+## 卸载
+
+1. 运行以下命令查找已安装的 JDK 21 包的确切名称：
+
+```bash
+rpm -qa | grep jdk
+   ```
+
+这将列出所有安装的 JDK 包。例如，你可能会看到类似于 `jdk-21-0-1.x86_64` 的输出。
+
+2. 使用以下命令卸载找到的包：
+
+```bash
+sudo rpm -e jdk-21-0-1.x86_64
+   ```
+
+3. 卸载
+
+```bash
+yum remove
+yum list installed | grep jdk
+   ```
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-4.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jdk/jdk-4.png" alt="image-20240610212901351" style="zoom: 50%;" />)
+

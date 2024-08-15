@@ -49,7 +49,8 @@ const config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            // 'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/Swagger-Ranger/analysis-project',
         },
         blog: {
           showReadingTime: false,// 是否显示阅读时长
@@ -60,7 +61,8 @@ const config = {
           // Please change this to your repo.
           // Remove this to remove the "edit this page" links.
           editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            // 'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+            'https://github.com/Swagger-Ranger/analysis-project',
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -108,7 +110,7 @@ const config = {
             type: 'docSidebar',
             sidebarId: 'jdkSidebar',
             position: 'left',
-            label: 'JavaDocs',
+            label: 'Codes',
           },{
             type: 'docSidebar',
             sidebarId: 'devopsSidebar',
@@ -134,7 +136,8 @@ const config = {
       prism: {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
-        additionalLanguages: ['java'],
+        // markdown ```代码块中支持的语法高亮
+        additionalLanguages: ['java','cypher','bash','sql'],
       },
     }),
 

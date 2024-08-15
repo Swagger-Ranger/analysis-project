@@ -1,0 +1,1127 @@
+---
+title: neo4j手册
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## 快速入门
+
+### neo4j介绍
+
+Neo4j 是一种基于图形数据库（Graph Database）的数据库管理系统。它专门用于存储和处理高度连接的数据，通过图结构（包括节点和关系）来表示和查询数据。与传统的关系型数据库不同，Neo4j 更加适合处理那些具有复杂关系的数据，如社交网络、推荐系统、供应链管理等。如下图是neo4j与mysql的对比
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-0.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-0.png" style="zoom:60%;" />)
+
+
+
+
+
+
+
+### 使用场景示例
+
+**优化业务逻辑中复杂而频繁的跨系统调用**
+
+利用图数据库（如 Neo4j）集中存储和管理系统中的固定关系，可以显著优化跨系统调用的效率，减少网络延迟和开销，同时简化业务逻辑。通过图数据库的快速查询能力，可以在一次查询中完成复杂的关系验证和数据处理，从而提高系统的整体性能和灵活性。
+
+以下是详细的解释和具体的优势：
+
+在传统的系统架构中，多个数据系统之间的调用通常通过 REST API、RPC 或者数据库查询等方式来进行。这种方式存在一些问题：
+
+1. **高延迟**：每次跨系统调用都会带来网络延迟，增加响应时间。
+2. **高开销**：频繁的服务间调用会增加系统的网络开销和负载。
+3. **复杂性**：处理跨系统调用的逻辑较为复杂，可能涉及重试机制、错误处理和事务管理。
+
+通过引入图数据库，可以将系统中的固定关系和业务逻辑规则预先存储在图数据库中，通过一次性查询来代替频繁的服务间调用。
+
+**示例**
+
+假设有一个电商系统，包括用户管理系统、订单系统和库存系统。每次下单时，系统需要验证用户身份、检查库存和确认订单。
+
+**传统方法**：
+
+- 系统 A 调用用户管理系统验证用户身份。
+- 系统 A 调用库存系统检查库存。
+- 系统 A 调用订单系统确认订单。
+
+**使用图数据库**：
+
+- 将用户、订单和库存信息以及它们之间的关系存储在图数据库中。
+- 系统 A 通过查询图数据库来验证用户身份、检查库存和确认订单。
+
+```plaintext
+MERGE (u:User {id: 'user123'})
+MERGE (p:Product {id: 'product456'})
+MERGE (o:Order {id: 'order789'})
+MERGE (u)-[:PLACED]->(o)
+MERGE (o)-[:CONTAINS]->(p)
+MERGE (p)-[:IN_STOCK {quantity: 10}]->(Inventory {location: 'warehouse1'})
+```
+
+通过一条复杂查询，系统 A 可以同时验证用户、检查库存和确认订单：
+
+```cypher
+MATCH (u:User {id: 'user123'})-[:PLACED]->(o:Order)-[:CONTAINS]->(p:Product)
+MATCH (p)-[:IN_STOCK]->(i:Inventory)
+WHERE i.quantity >= 1
+RETURN u, o, p, i
+```
+
+
+
+### 部署
+
+#### 容器部署
+
+#创建容器
+
+`docker pull neo4j:community`和`docker pull neo4j:latest`是一样的，因为两个镜像摘要是完全一样的。
+
+> Digest: sha256:fd01c22d482011718d40120796204226ff555bbe14a1060519c862acd94f4670
+>
+> 其中Digest:表这是镜像摘要而sha256表明是用的sha256哈希计算的，fd01c22d482011718d40120796204226ff555bbe14a1060519c862acd94f4670就是具体的值
+
+```sh
+# 创建一个容器但是不运行
+docker create --name neo4j --restart=always -p7474:7474 -p 7687:7687 -v /Users/liufei/docker-data/neo4j:/data neo4j:community
+
+# 创建一个容器并且运行
+docker run -p 7474:7474 \
+       -p 7687:7687 \
+       -v /Users/liufei/docker-data/neo4j:/data \
+       -e NEO4J_AUTH=none \
+       neo4j
+# 创建之后运行就是start命令，attach就是将输出打到命令行界面
+docker start --attach neo4j
+# Ctrl + P, Ctrl + Q 使终端会话分离（detach），而不终止容器。这样，容器会继续运行，而你可以安全地关闭终端窗口。否则直接关闭窗口可能导致容器退出
+
+# 参数说明
+-e NEO4J_AUTH=none \ #不通过用户名密码进行认证，初始的用户名密码为 neo4j/neo4j，进入之后会要求改密码  liufei-neo4j
+-e NEO4j_dbms_memory_heap_initial__size=1G \  # 内存设置
+-e NEO4j_dbms_memory_heap_max__size=2G \ # 内存设置
+-e NEO4j_dbms_memory_pagecache_size=4G \ # 内存设置
+```
+
+访问 `http://{ip}:7474/browser/`就能够看到启动的neo4j 管理页面
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-1.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+
+### 核心概念
+
+在部署好了之后，可以通过执行`:play concepts`来查看neo4j的核心概念。如下图：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-2.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+核心概念：
+
+1. 图基于三个基础概念：节点、关系、属性
+
+> A graph database can store any kind of data using a few simple concepts:
+   >
+   > 1. Nodes - graph data records
+   > 2. Relationships - connect nodes
+   > 3. Properties - named data values
+
+> - Nodes are the name for data records in a graph --节点是图数据库中存储数据的主要方式
+   > - Data is stored as Properties -- 数据以属性的方式被存储
+   > - Properties are simple name/value pairs -- 属性是简单的kv键值对
+
+2. 节点通过标签label分组/归类
+
+> Nodes can be grouped together by applying a Label to each member.
+   >
+   > A node can have zero or more labels  -- 一个节点可以有零个、一个或多个标签。标签不是必须的，但可以根据需要添加多个标签来更好地分类和查询节点。
+   >
+   > Labels do not have any properties -- 标签本身不包含任何属性。它们只是用于标识和分组节点的标识符，而不存储具体的数据
+
+3. 节点的属性可以是不同的数据类型，包括字符串（strings）、数字（numbers）和布尔值（booleans）
+
+> Similar nodes can have different properties Properties can be strings, numbers, or booleans. Neo4j can store billions of nodes
+
+4. 关系具有方向，决定图的数据的模式
+
+> - Relationships always have direction -- 在 Neo4j 中，关系是有方向的。这意味着每个关系都有一个起点节点（起始节点）和一个终点节点（目标节点），关系的方向可以表示特定的语义或含义。
+   >
+   > - Relationships always have a type -- 每个关系在 Neo4j 中有且只有一个类型，表示关系的性质或种类。关系类型帮助明确描述两个节点之间的具体关系
+   >
+   > - Relationships form patterns of data
+   >
+   > - 关系可以指向自己，但两头不能为空
+   >
+   > - 如果需要创建相互的关系，比如两个人相互认识，则需要创建两条独立的关系，比如：
+   >
+   >   ```cypher
+   >   CREATE (a:Person {name: 'Alice'})
+   >   CREATE (b:Person {name: 'Bob'})
+   >   CREATE (a)-[:KNOWS]->(b)
+   >   CREATE (b)-[:KNOWS]->(a)
+   >   ```
+
+5. 关系可以有多个属性
+
+>In a property graph, relationships are data records that can also contain properties.  -- 每个关系在 Neo4j 中有且只有一个类型，但可以有多个属性。如上图
+
+
+
+### Cypher
+
+Cypher 是一种言简意赅的图数据库查询语言。尽管现在它还是 Neo4j特有的语言，但它和使用示意图来表示图的方式非常相似，因此非常适合程序化地描述图。正因如此，Cypher 可以说是最易懂的图查询语言了，对于我们学习图来说也很有帮助。一旦学会了Cypher，对其他图查询语言也都能触类旁通。
+
+> 也有别的查询语言，比如 [SPARQL](http://www.w3.org/TR/rdf-sparql-query/)，和支持必要的基于路径的查询语言 [Gremlin](https://github.com/tinkerpop/gremlin/wiki/)
+
+#### Cypher语法规则
+
+> **Cypher句法上大小写敏感**
+>
+> `() `：表示节点
+>
+> `{}`：表示属性
+>
+> `[]`：表示关系，关系也可以具有属性，属性使用花括号 `{}` 表示
+>
+> `:` ：表示节点标签或者关系类型，关系类型有且仅有一个，而节点可以有一个或多个标签或者没有标签
+>
+> `--`：表示关系方向，在创建关系时，需要明确指定关系的方向 (`-->` 或 `<--`)，在查询中，可以使用双减号 `--` 表示不限定关系方向，Cypher 将考虑任何方向的关系。
+
+
+
+#### CREATE
+
+先来几个实例：
+
+**创建节点: **
+
+```cypher
+CREATE (TheMatrix:Movie {title:'The Matrix', released:1999, tagline:'Welcome to the Real World'})
+```
+
+语法：`CREATE(n:$Tag{$PropertyKey:$PropertyKeyVal}) return n`，`n` 是创建的节点，`return n`不是必选的，指代创建之后返回创建的节点n。
+
+标签可以有多个，比如下面创建多有个标签节点的语法：
+
+```cypher
+CREATE (n:Person:Student:Developer {name: 'Alice', age: 25})
+RETURN n
+```
+
+**创建关系：**
+
+```cypher
+CREATE
+(Keanu)-[:ACTED_IN {roles:['Neo']}]->(TheMatrix),
+(Hugo)-[:ACTED_IN {roles:['Agent Smith']}]->(TheMatrix),
+(LillyW)-[:DIRECTED]->(TheMatrix)
+```
+
+语法：`(node)-[:$Type {$PropertyKey:$PropertyKeyVal}]->(node)`，`PropertyKeyVal`可以是一个数组。
+
+创建节点和关系的语法也可以合并在一起
+
+```cypher
+CREATE (a:Person {name: 'liufei'})-[:FRIENDS_WITH]->(b:Person {name: 'liufeifei'})
+RETURN a, b
+```
+
+> 在 Neo4j 中，每个节点和关系在创建时都会被赋予一个唯一的内部标识符（ID）。这个 ID 是由 Neo4j 自动生成和管理的，用于唯一标识节点或关系。可以使用 `ID()` 函数来检索这个唯一 ID。
+>
+> ```cypher
+> CREATE (n:Person {name: 'Alice'})
+> RETURN n, ID(n) AS nodeId
+>
+> // 使用关系id来匹配查询
+> MATCH ()-[r]->()
+> WHERE ID(r) = 456
+> RETURN r
+> ```
+
+
+
+#### MERGE
+
+`MERGE` 用于保证图数据库中的某个模式存在。它结合了 `MATCH` 和 `CREATE` 的功能：如果匹配到现有的节点或关系，`MERGE` 不会创建新的，而是返回已有的；如果没有匹配到，则创建新的节点或关系。
+
+1. 创建或匹配节点：
+
+```cypher
+MERGE (n:Person {name: 'Alice'})
+RETURN n
+   ```
+
+- 如果一个名为 'Alice' 的节点已经存在，则返回该节点。
+- 如果不存在，则创建一个新的 `Person` 节点，并设置属性 `name` 为 'Alice'。
+
+2. 创建或匹配关系：
+
+```cypher
+MERGE (p1:Person {name: 'Alice'})-[r:FRIENDS_WITH]->(p2:Person {name: 'Bob'})
+RETURN p1, r, p2
+   ```
+
+- 如果已存在名为 'Alice' 和 'Bob' 的 `Person` 节点，并且它们之间存在 `FRIENDS_WITH` 关系，则返回该关系。
+- 如果不存在，则创建相应的节点和关系。
+
+3. `ON CREATE` 和 `ON MATCH`
+
+`MERGE` 还可以结合 `ON CREATE` 和 `ON MATCH` 子句来定义在创建和匹配时的不同操作：
+
+```cypher
+// 使用 ON CREATE 设置属性
+// 如果 Alice 节点不存在，创建新节点并设置 created 属性为当前时间戳。
+MERGE (n:Person {name: 'Alice'})
+ON CREATE SET n.created = timestamp()
+RETURN n
+   ```
+
+```cypher
+// 使用 ON MATCH 设置属性
+// 如果 Alice节点存在，更新 lastSeen 属性为当前时间戳。
+MERGE (n:Person {name: 'Alice'})
+ON MATCH SET n.lastSeen = timestamp()
+RETURN n
+   ```
+
+```cypher
+// 结合 ON CREATE 和 ON MATCH
+// 如果 'Alice' 节点不存在，创建新节点并设置 created 属性。
+// 如果 'Alice' 节点存在，更新 lastSeen 属性。
+MERGE (n:Person {name: 'Alice'})
+ON CREATE SET n.created = timestamp()
+ON MATCH SET n.lastSeen = timestamp()
+RETURN n
+   ```
+
+
+
+#### DELETE
+
+**删除节点：**
+
+```cypher
+MATCH (n:Label {property: 'value'})
+DELETE n
+```
+
+**删除带有关系的节点：**
+
+```cypher
+MATCH (a:Person {name: 'liufei'})-[r:FRIENDS_WITH]->(b:Person {name: 'liufeifei'})
+DELETE r, a, b
+```
+
+**仅删除关系，保留节点：**
+
+```cypher
+MATCH (a:Person {name: 'Alice'})-[r:FRIENDS_WITH]->(b:Person {name: 'Bob'})
+DELETE r
+```
+
+> 在 Neo4j 中，当你删除一个节点时，如果该节点有任何关系，那么默认情况下你不能直接删除它。试图删除一个有关系的节点将会导致错误。这是为了避免数据不一致的情况。因此，在删除节点之前，必须显式地删除节点上的所有关系。比如：
+>
+> ```cypher
+> MATCH (a:Person {name: 'liufei'})-[r:FRIENDS_WITH]->(b:Person {name: 'liufeifei'})
+> delete  a, b
+> ```
+>
+> 仅仅删除节点，而节点上有关系则会报错`Neo.ClientError.Schema.ConstraintValidationFailed`
+>
+> 而`delete r, a, b`则是正确的，因为会先删除关系再删除节点(删除操作的顺序确实不需要严格按照节点和关系的顺序进行。在 Cypher 中，当你使用 `DELETE` 语句时，Neo4j 会确保在删除节点之前删除相关的关系。)
+
+**删除节点并删除所有相关的关系**
+
+为了确保删除节点之前删除所有相关关系，在某些情况下，可能更建议使用 `DETACH DELETE`，尤其是当节点可能有多个关系时。`DETACH DELETE` 会自动删除节点的所有关系，然后再删除节点：
+
+> **注意：**`DETACH DELETE` 最好只删除少量数据，而`MATCH(n) DETACH DELETE n`  就等于删库跑路
+
+```cypher
+MATCH (a:Person {name: 'liufei'}), (b:Person {name: 'liufeifei'})
+DETACH DELETE a, b
+```
+
+
+
+#### 更新（SET 和 REMOVE）
+
+使用 `SET` 关键字来更新节点或关系的属性时，如果属性不存在，它会创建该属性；如果属性已经存在，它会覆盖现有的值。即`set`操作是幂等的。
+
+**更新节点的属性：**
+
+```cypher
+MATCH (n:Label {property: 'value'})
+SET n.property1 = 'newValue1', n.property2 = 'newValue2'
+RETURN n
+```
+
+**添加或更新标签：**
+
+```cypher
+MATCH (n:Label {property: 'value'})
+SET n:NewLabel
+RETURN n
+```
+
+**同时更新多个属性**：
+
+```cypher
+MATCH (n:Person {name: 'Alice'})
+SET n.age = 32, n.address = '456 Elm St'
+RETURN n
+```
+
+**添加多个标签**：
+
+```cypher
+MATCH (n:Person {name: 'Alice'})
+SET n:Student:Developer
+RETURN n
+```
+
+使用`REMOVE` 关键字来更新属性或者标签，其有两个主要用途：
+
+**移除节点或关系的属性**
+
+```cypher
+MATCH (n:Label {property: 'value'})
+REMOVE n.property
+RETURN n
+```
+
+**移除节点的标签**
+
+```cypher
+MATCH (n:Label)
+REMOVE n:LabelToRemove
+RETURN n
+```
+
+
+
+#### MATCH
+
+`[MATCH WHERE] `//条件查询
+`[OPTIONAL MATCH WHERE]`//选择查询，查询不到的用null代替
+`[WITH [ORDER BY] [SKIP] [LIMIT]]` //查询的结果以管道的形式传递给下面的语句，**聚合查询比必须使用`WITH`**
+`RETURN [ORDER BY] [SKIP] [LIMIT]` //返回、排序、跳过、返回个数
+
+**查询所有节点：**
+
+```cypher
+MATCH (n)
+RETURN n
+```
+
+**查询带有特定标签的节点：**
+
+```cypher
+MATCH (n:Label)
+RETURN n
+```
+
+**查询带有特定属性的节点：**
+
+```cypher
+MATCH (n:Label {property: 'value'})
+RETURN n
+```
+
+**查询节点及其关系：**
+
+```cypher
+MATCH (a:Person)-[r:FRIENDS_WITH]->(b:Person)
+RETURN a, r, b
+```
+
+**查询路径：** 指定深度，`r:FRIENDS_WITH*1..3`，是指通过 `FRIENDS_WITH` 关系到另一个节点关系深度为1到3
+
+```cypher
+MATCH path = (a:Person)-[r:FRIENDS_WITH*1..3]->(b:Person)
+RETURN path
+
+MATCH path = (a:Person)-[r:FRIENDS_WITH*3]->(b:Person) // 只查询关系FRIENDS_WITH深度为3的
+```
+
+**聚合查询：**
+
+```cypher
+MATCH (n:Label)
+RETURN n.property, COUNT(n)
+```
+
+**查询特定条件的关系：**
+
+```cypher
+MATCH (a:Person)-[r:FRIENDS_WITH]->(b:Person)
+WHERE a.age > 30 AND b.age < 25
+RETURN a, r, b
+```
+
+**查询示例：**
+
+```cypher
+CREATE (n: Singer {name:'张宇'})
+CREATE(n) -[:SING] -> (:Song {title:"月亮惹的祸"})
+CREATE(n) -[:SING]-> (:Song {title:"雨一直下"})
+CREATE(n) -[:SING]-> (:Song {title:"大女人"})
+CREATE(n) -[:LOVE]-> (:User {name:"十一郎"})
+```
+
+```cypher
+MATCH（n） return n //查询所有节点
+MATCH (n:Singer) return n //查询所有 Singer 节点
+MATCH (n:Singer {name:"张宇"})-- (m)return n,m //查询所有与“张宇”有关系的节点
+MATCH (n:Singer {name:"张宇"})-->(m:Song) return n, m //查询所有“张宇”演唱的歌曲
+MATCH (n:Singer {name:"张宇"})-[r:SING]-(m) return n,r,m //查询所有“张宇“演唱的歌曲
+```
+
+```cypher
+MATCH (n: Singer{name："张宇"})-- (m)return n,m
+```
+
+语句解释：
+
+`MATCH` 是 Cypher 的查询子句，用于匹配图中的节点和关系。
+
+`(n: Singer {name: "张宇"})` 匹配一个具有标签 `Singer` 且属性 `name` 为 `"张宇"` 的节点。这个节点被命名为 `n`。
+
+`--` 是一个没有方向的关系匹配符号，它匹配与节点 `n` 直接连接的任何节点，无论关系的方向。
+
+`(m)` 是一个任意节点的占位符，表示与 `n` 通过某种关系连接的节点。
+
+
+
+```cypher
+MATCH p=(n:Singer {name:"张宇"})-->(m:Song)
+RETURN p
+```
+
+语句解释：
+
+`p=` 是一个变量，用于将整个匹配的路径存储为一个单独的变量 `p`。
+
+`(n:Singer {name:"张宇"})` 匹配一个具有标签 `Singer`，且 `name` 属性为 `"张宇"` 的节点，这个节点被命名为 `n`。
+
+`-->(m:Song)` 表示从节点 `n` 出发，通过任何类型的单向关系连接到标签为 `Song` 的节点 `m`。
+
+
+
+```cypher
+MATCH (n:Singer {name:"张宇"})-[r]->(m:Song {title:"月亮惹的祸"}) return type(r)
+```
+
+语句解释：返回具体的类型
+
+
+
+```cypher
+MATCH (n:Singer {name:"张宇"})-[:SING]->(m) return n,m
+```
+
+语句解释：返回具体的节点数据
+
+
+
+```cypher
+MATCH (n:Singer {name:"张宇"})-[:SING|:LOVE]-> (m) return n,m
+```
+
+语句解释：指定多种关系标签查询
+
+
+
+```cypher
+MATCH p=shortestPath(
+(bacon:Person {name:"Kevin Bacon"})-[*]-(meg:Person {name:"Meg Ryan"}))
+RETURN p
+```
+
+语句解释：shortestPath()是一个最短路径的函数，`-[*]-`表示任意数量的关系，用于匹配两个节点之间的路径，可能包含多个关系
+
+，这里如果`-[*]-`和`--`不同，`--`就是指不考虑方向的一个路径长度的关系。
+
+语句也可以这样写：`[*1.. 10]`就是范围，也可以写成`[*.. 10]  `或者`[*1.. ]`来取上下界
+
+```cypher
+MATCH (n:Person {name: 'Keanu Reeves'}), (m:Person {name: 'Danny DeVito'}),
+p = shortestPath((n)-[*1.. 10]-(m))
+return p
+
+// allshortestPaths所有的路径中最短的，shortestPath 通常比 allShortestPaths 更快，因为它只需要找到并返回一条路径，而 allShortestPaths 需要找到所有可能的最短路径。
+MATCH (n:Person {name: 'Keanu Reeves'}), (m:Person {name: 'Danny DeVito'}),
+p = allshortestPaths((n)-[*]-(m))
+return p
+```
+
+
+
+```cypher
+MATCH (tom:Person {name:"Tom Hanks"})-[:ACTED_IN]->(m)<-[:ACTED_IN]-(coActors),
+  (coActors)-[:ACTED_IN]->(m2)<-[:ACTED_IN]-(cocoActors)
+WHERE NOT (tom)-[:ACTED_IN]->()<-[:ACTED_IN]-(cocoActors) AND tom <> cocoActors
+RETURN cocoActors.name AS Recommended, count(*) AS Strength ORDER BY Strength DESC
+```
+
+语句解释：` <>` 是不等于运算符，用于比较两个值是否不相等。查询语句的目的是通过分析演员 `Tom Hanks` 参演的电影，找到与他有间接合作关系的其他演员，并根据合作强度推荐演员。
+
+
+
+```cypher
+MATCH (tom:Person {name:"Tom Hanks"})-[:ACTED_IN]->(m)<-[:ACTED_IN]-(coActors),
+  (coActors)-[:ACTED_IN]->(m2)<-[:ACTED_IN]-(cruise:Person {name:"Tom Cruise"})
+RETURN tom, m, coActors, m2, cruise
+```
+
+语句解释：通过两个模式匹配来找到 Tom Hanks 和 Tom Cruise 之间的间接合作关系。
+
+
+
+#### OPTIONAL MATCH
+
+`MATCH` 关键字：用于强制匹配模式。如果模式不存在，则整个查询将失败，不会返回任何结果。
+
+`OPTIONAL MATCH` 关键字：用于可选匹配模式。如果模式不存在，查询不会失败，查询仍然返回其他匹配的部分，未匹配的部分会返回 `null`。
+
+
+
+#### WHERE
+
+```cypher
+// 设置属性条件
+match (n:Song) where n.title ='雨一直下'
+return n
+// 设置布尔运算，其它还有AND、NOT等
+match(n:Song)where n.title ='雨一直下'or n.title ='大女人'return n
+// 关系属性过滤，
+match (n:Person) -[r: ACTED_IN]-> (m:Movie) where r.roles = ['Neo'] return n,r,m
+// ACTED_IN关系被定义为数组则查询也必须是数组，否则不会匹配出结果，如果要用包含的查询则使用如下语句
+match (n:Person) -[r: ACTED_IN]-> (m:Movie) where 'Neo' IN r.roles return n,r,m
+
+// 属性值以xxx开始，同理还有ENDS WITH
+match (n:Person) where n.name starts with 'K' return n
+// 属性包含xxx
+match (n:Person) where n.name contains 'un' return n
+// 属性比较
+match (n:Person) where n.born >1980 return n
+match (n:Person) where n.born >1970 AND n.born <1980 return n
+```
+
+
+
+#### 分页和排序
+
+```cypher
+// 通过skip和1imit实现分页
+match (n:Person) return n order by n.born desc skip 5 limit 10
+// 排序并且分页
+match (n:Person) return n order by n.born desc skip 5 limit 10
+```
+
+
+
+#### WITH
+
+`WITH` 是一个非常有用的子句，用于在查询中定义和传递中间结果。`WITH` 允许你将之前 `MATCH`、`OPTIONAL MATCH`、`CREATE` 等子句中的结果传递到后续的子句中进行进一步的处理、筛选或者聚合。
+
+```cypher
+//order by写到return前面
+match (n:Person) with n
+order by n.born desc limit 10 return n
+// with传递并且限制条件，查询Keanu Reeves相关的电影选取3个，再查询和其电影相关的其他任意相关关系的节点
+match (n:Person {name:"Keanu Reeves"}) -- (m:Movie)
+with m,n limit 3 match (m) -- (k)
+return k,m,n
+```
+
+> **注意**：`m,n limit 3`是指m,n的组合即m和n的3对关系，而不是限制m和n各3个，如果要限制每队关系都是3则需要分开写比如：
+>
+> ```cypher
+> MATCH (n:Person {name:"Keanu Reeves"})--(m:Movie)
+> WITH m LIMIT 3
+> MATCH (m)--(k)
+> WITH m, k LIMIT 3
+> RETURN m, k
+> ```
+
+
+
+#### 字符串比较
+
+- `STARTS WITH` 用于检查字符串是否以指定的前缀开头。它是大小写敏感的，意味着要精确匹配前缀。
+- `ENDS WITH`：用于检查字符串是否以指定的后缀结尾。
+- `CONTAINS`：用于检查字符串是否包含指定的子字符串。
+- `TOLOWER` 和 `TOUPPER`：用于将字符串转换为小写或大写。
+
+
+
+
+
+### Spring Data Neo4j
+
+Spring Data Neo4j 是 Spring Framework 生态系统中的一个模块，用于简化在基于图数据库 Neo4j 上进行数据访问和操作的开发。
+
+**特点**
+- 对象映射：Spring Data Neo4j 允许开发者将 Java 对象直接映射到 Neo4j 数据库中的节点和关系。这样可以在应用程序中使用面向对象的方式来操作和查询图数据库中的数据。
+- 注解驱动的实体映射：开发者可以使用注解（如 `@Node` 和 `@Relationship`）来标记 Java 类，指定类和图数据库中节点或关系的映射关系。这种方式简化了实体的定义和数据库的映射配置。
+- Repository 支持：类似于 Spring Data JPA，Spring Data Neo4j 也提供了 Repository 接口和一组默认实现，用于定义和执行对图数据库的常见数据访问操作，如保存、更新、删除和查询等。
+- Cypher 查询支持：Spring Data Neo4j 支持使用 Cypher 查询语言与 Neo4j 进行交互。Cypher 是 Neo4j 的查询语言，专门用于描述和操作图数据库中的节点、关系和属性。
+- 事务管理：Spring Data Neo4j 集成了 Spring 的事务管理功能，可以通过注解（如 `@Transactional`）来声明和管理图数据库操作的事务边界，确保数据的一致性和事务性。
+
+
+#### 对象映射
+
+Spring data neo4j对象的pojo映射，可以在spring.data.neo4j的`org.springframework.data.neo4j.core.schema`包下面看到，所有neo4j定义在Java中的对象映射枚举
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-3.png" alt="image" style={{ maxWidth: '70%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+#### 示例代码
+
+直接看源码，对应neo4j配套官网的movie数据的代码，我fork出来补充了增删改查和分页。
+
+[code地址](https://github.com/Swagger-Ranger/movies-java-spring-data-neo4j.git)
+
+
+## 数据结构
+
+
+
+### 查询与索引
+
+#### 查询过程
+
+在 Neo4j 的查询中，主要包含以下几个组成部分：
+
+1. 扫描（Scan）：
+- 节点扫描：扫描所有匹配指定标签或属性的节点。
+- 关系扫描：扫描所有匹配指定关系类型的关系。
+2. 索引查找（Index Lookup）：使用已创建的索引来快速查找匹配特定属性值的节点或关系。
+3. 合并（Merge）：将多个子查询的结果合并成一个最终的结果集。
+4. 过滤（Filter）：应用过滤条件来排除不符合条件的节点或关系。
+5. 排序（Sort）：对结果进行排序，以满足查询中的排序要求。
+6. 聚合（Aggregate）：对结果进行聚合操作，例如计算总数、求和、平均值等。
+
+
+
+说一下扫描，因为cypher的查询语句都是match来模式匹配的，match首先就是定位到节点或者关系；所以扫描至关重要。关系或者节点是通过neo4j中的特定类型扫描器执行查询的，比如:
+
+- `NodeByLabelScan` 用于扫描具有特定标签的所有节点
+- `DirectedRelationshipTypeScan` 用于扫描所有具有特定类型的有向关系
+- `NodeIndexSeek`：用于基于索引查找具有特定属性值的节点。这个操作会在节点属性索引中进行查找。
+- `RelationshipIndexSeek`：类似于 `NodeIndexSeek`，但用于查找具有特定属性值的关系。它在关系属性索引中进行查找。
+- `NodeByIdLookup`：用于通过节点 ID 直接查找节点。这种查找通常很快，因为它基于节点的唯一标识符进行定位。
+- `RelationshipByIdLookup`：用于通过关系 ID 直接查找关系。与 `NodeByIdLookup` 类似，这种查找也是基于关系的唯一标识符进行定位。
+- `LabelScan`：扫描所有具有指定标签的节点。它是一个不使用索引的全表扫描操作
+- `PropertyScan`：扫描具有特定属性的节点或关系。通常用于属性值未被索引的情况，可能会导致较慢的扫描操作。
+- `Unwind`：扫描并展开集合中的元素。常用于将集合或列表展开为单独的行。
+
+这些扫描器在explain和profile时，就会看到，语句执行使用的是哪个，每一个内部都有不同的实现逻辑。
+
+
+
+#### 索引
+
+并且为了支持快速查询，neo4j为节点和关系都维护了索引
+
+**标签索引（Label Indexes）**
+
+- 对于节点，Neo4j 为每个标签维护了一个基于 B+ 树索引，提供了一个快速查找具有该标签的节点的方法。
+- 为什么使用b+树：
+- 节点对应多个属性键值对，对磁盘存储友好，减少对属性的查询；
+- 并且b+树底层数据存储具备有序性能支持节点标签的范围扫描
+- 并且b+树结构和节点设计支持高效的并发操作。可以使用锁定机制来处理并发的读写操作，确保一致性和隔离性以支持事务。（*注：neo4j是支持事务的*）
+
+**关系类型索引（Relationship Type Indexes）**：
+
+- 对于关系，Neo4j 为每个关系类型维护了一个索引（主要是 B+ 树和关系类型表Relationship Type Table），提供了一个快速查找具有该关系类型的关系的方法。
+- 关系类型表：这是图结构相关的算法；todo
+
+> 注意：Neo4j 会为节点的每个标签维护，这带来了一个考虑就是当建模的时候是使用更通用的节点标签然后用属性来区别，还是使用更细的标签直接区别。考虑的点就是，如果更细粒度的节点标签是有限集合时，建议用细粒度的标签，因为可以使用`MATCHUSer- [:HOME_ADRESS|WORK_ADDRESS|DELIVERY_ADDRESS]- >address`多标签来查询，当无法确认粒度的范围时才使用更通用的标签。
+>
+> 因为无限集合而细粒度的标签，将使得查询更大范围的数据变得困难
+>
+> 有限集合而通用粒度，将导致在scan数据和filter属性时有额外的io。
+>
+> 当然也可以同时记录多种粒度的标签
+>
+> 并且不要担心细粒度会灌入大量的数据，也不要去做反范式的方式去冗余额外的字段。neo4j即使存储了非常大量的数据，图数据库的查询速度依然良好。当学着去组织我们的图并且不用去反规范化它们的时候，我们要学会去相信图数 据库，这是很重要的。
+
+
+
+**属性索引**
+
+尽管不强制要求预定义模式，Neo4j 允许用户定义模式约束和索引，以提高数据一致性和查询性能。neo4j会对节点标签和关系类型自动创建索引，也可以手动对属性创建索引和约束。
+
+```cypher
+// 单属性索引
+CREATE INDEX FOR (n:Person) ON (n.name)
+```
+
+```cypher
+// 复合索引
+CREATE INDEX FOR (n:Person) ON (n.firstName, n.lastName)
+```
+
+```cypher
+// 唯一约束
+CREATE CONSTRAINT FOR (n:Person) REQUIRE n.email IS UNIQUE
+```
+
+
+
+#### 执行计划
+
+Neo4j 在执行查询时，会使用各种优化技术，例如选择合适的索引、利用统计信息来优化查询计划等，从而提高查询性能。并且提供了 `EXPLAIN` 和 `PROFILE` 关键字来分析查询计划和性能。
+
+**EXPLAIN**
+
+`EXPLAIN` 用于生成查询计划的解释，不实际执行查询，只会显示一个查询计划的概述，包括节点扫描、索引使用、查询匹配等操作的预估成本。比如：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-4.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/ne04j-4.png" alt="image" style="zoom:36%;" />)
+
+
+
+**PROFILE**
+
+`PROFILE` 会实际执行查询，会显示执行查询的详细信息，如操作步骤、节点扫描、关系遍历等的具体统计数据。并提供详细的执行统计信息，包括每一步的实际执行时间、行数等。这比 `EXPLAIN` 提供了更多的执行细节，有助于识别性能瓶颈。比如：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-5.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-5.png" alt="image" style="zoom:36%;" />)
+
+
+
+
+
+### neo4j的结构
+
+neo4j的整体架构如下图：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-10.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-10.png" alt="image" style="zoom:50%;" />)
+
+说一下neo4j的存储文件和存储的设计
+
+#### 文件结构
+
+具体的neo4j图存储的文件，先看个实际的neo4j存储文件，如下图：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-6.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-6.png" alt="image" style="zoom:38%;" />)
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-7.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-7.png" alt="image" style="zoom:36%;" />)
+
+可以看到，有元数据、标签、点、属性、关系、关系类型和schema等不同类别的文件，neo4j的存储文件分类如下:
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-8.webp" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+
+#### 存储组织
+
+在neo4j中，点、关系和属性等图的组成元素都是基于neo4j内部维护的ID进行访问的。而且可以认为这些元素的定长存储的。这样做的好处在于，知道了某点/关系/属性的ID，就能直接算出该ID在对应文件中的偏移位置，直接进行访问，不需要基于索引扫描。
+
+> 节点存储文件和联系存储文件只关注图的结构而不是属性数据。这两种存储文件都使用固定大小的记录，以便存储文件内任何记录的位置都可以根 据ID迅速计算出来。这些都是强调Neo4j 的高性能遍历的关键设计决策。比如每个记录长度为9 字节。通过大小固定的记录可以快速 查询存储文件中的节点。如果我们有 一个ID为100的节点，那么我们知道其记录在文 件开始的第900 字节。基于这种格式，数据库可以直接计算 一个记录的位置，其成本 次`O(1)`，而不是执行成本为`O(logn)`的搜索。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-9.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-9.png" alt="image" style="zoom:56%;" />)
+
+**节点**
+
+如上图所示，节点存储文件用来存储节点的记录，节点结构为定长15字节(15B)。每个用户级的图中创建的节点最终会终结于节点 存储，其物理文件是`neostore.nodestore.db`。
+
+分布是： 15 = 1 + 4 + 4 + 5(1+4) + 1
+
+- 一个Byte存inUse+属性和关系id的高位信息
+
+- 一个Int（*`int` 在 Java 和大多数现代编程环境中都是占用 4 个字节32 位*）存nextRel
+- 一个Int存nextProp
+- 一个Int存lsbLabels
+- 一个Byte存hsbLabels，跟4组属性成5个B的labels
+- 最后一个Byte保留字段extra，存记录是否为dense，dense的意思是是否为一个supernode，这样一个标志是用来标识紧密连接节点的， 而省下的空间为将来预留。
+
+> 节点记录是相当轻量级的:它真的只是几个指向联系和属性列表的指针。
+
+
+
+**关系**
+
+关系被存储于联系存储文件中，定长34B，物理文件是 `neostore.relationshipstore.db`。 像节点存储 一样，联系存储区的记录的大小也是固定的。每个联系记录包含联系的起 始节点ID和结束节点ID、联系类型的指针(存储在联系类型存储区)，起始节点和结 束节点的上一个联系和下一个联系，以及一个指示当前记录是否位于联系链 `relationshipschain`最前面 。
+
+分布是： 34 = 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 1
+
+- 一个Byte，存该关系记录是否在使用中，以及关系的起点和下一个属性的高位信息，如下所示：
+
+- 一个Int（*`int` 在 Java 和大多数现代编程环境中都是占用 4 个字节32 位*）存该关系的起点
+- 一个Int存该关系的终点
+- 一个Int存关系的类型，以及关系的终点、关系的起点的前一个和后一个关系、关系的终点的前一个和后一个关系的高位信息，如下所示：
+
+- 一个Int存该关系的起点的前一个关系 -`SP`*(代号后面解释会用到)*
+- 一个Int存该关系的起点的下一个关系-`SN`
+- 一个Int存该关系的终点的前一个关系-`EP`
+- 一个Int存该关系的终点的下一个关系-`EN`
+- 一个Int存该关系的第一个属性
+- 一个Byte存该关系是不是起点和终点的第一个关系
+
+> **`firstPrevRelId` 和`secondNextRelId`、`secondPrevRelId` 和`secondNextRelId`这四个字段是用来表示链表的，也就是每个关系存储了本关系头节点和尾节点的带方向的关系引用以维护链表结构。这些字段在关系记录中存储了与当前关系相关的前一个和下一个关系的 ID，分别用于源节点和目标节点。通过这种链表结构，Neo4j 能够高效地管理和遍历节点之间的关系。**
+>
+> Neo4j 能够高效地管理和遍历节点之间的关系。这种设计使得在插入、删除和遍历关系时只需要更新或读取少量指针，而不需要遍历整个数据结构，从而提高了操作的效率。四个指针字段在关系记录中的存在，使得这种链表结构成为可能
+
+**属性**
+
+属性的存储结构如下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-11.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-11.png" alt="image" style="zoom:56%;" />)
+
+- 一个Byte存辅助信息，即前后属性结构ID的高位信息
+- 一个Int存前一个属性
+- 一个Int存下一个属性
+- 默认存4个属性块，每个块一个Long
+
+属性块的读取逻辑，首先会读取第一个属性块，判断是否被使用，若否，直接返回。若被使用，则获取本属性记录中用了多少个属性块（该信息存储在第一个属性块中）
+
+> 从上面的节点、关系和属性的存储可以知道，neo4j使用35位保存点和边的ID，用36位保存属性ID
+>
+> ```text
+> 2^35 = 34,359,738,368
+> 2^36 = 68,719,476,7362
+> ```
+>
+> 也就是说理论上neo4j最大能够保存34B(billion)的点和边，68B(billion)个属性。更直观说就是340亿的点和边，680亿个属性。所以，从规模上，neo4j图数据库能够容纳足够大的图。
+
+
+
+**存储文件的交互**
+
+此交互参考的来源[知乎引用](https://zhuanlan.zhihu.com/p/83962186)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-12.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+上图就是节点、关系、属性如何存储的大致关系。
+
+下面用更详细的过程来阐述三者是如何存储的。
+
+首先图如下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-13.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+- 第一步，先把属性解构出来。图中的属性还是采用单链表，请忽略。
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-14.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+- 第二步，将点解构出来，建立点对象结构。每个点有个粉色箭头指向第一个属性，红色箭头指向第一条边；
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-15.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+- 边最为复杂，分为多步进行构建；首先是边对象结构建立起来；一共有上下左右中五条边。SP和SN表示起点的前一条和下一条边，EP和EN表示终点的前一条和下一条边。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-16.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+> 1. 先解释一下这些含义：**`SP`和`SN`就是上面`图6-4`存储图标中的`firstPrevRelId` 和`secondNextRelId`，`EP`和`EN`就是上面存储图标中的`secondPrevRelId` 和`secondNextRelId`。这4个字段都是为了维护节点之间关系的链表的，原因可以上面关系存储结构的解释**
+  > 2. 先看左边。它的起点为左下点，是第一条边，所以SP为空。其终点左上点有3条边，按照顺时针排序，该边是左上边的最后一条边，所以EN为空；*（所以最左边的关系中sp为空就是因为其开始节点即左下角的节点除了此节点没有别的关系，所以sp为空）。*下面的以此类推：
+  > 3. 再看上边。它是起点为左上点，是第一条边，也是终点-右上点的第一条边，所以SP和EP均为空；
+  > 4. 接着看右边。它是起点-右下点的最后一条边，也是重点-右上点的最后一条边，所以SN和EN均为空；
+  > 5. 继续看下边。它是起点-右下点的第一条边，所以SP为空。也是终点-左下点的最后一条边，所以EN为空；
+  > 6. 最后看中边。它是最普通的边，既不是起点-左上点，也不是终点-右下点的第一条边或最后一条边，所以SP、EP、SN和EN均不为空。
+
+
+
+- 接下来继续完善边对象结构的起点和终点指向。绿色的线是边指向点的，实心圆表示起点，箭头表示终点，很好理解。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-17.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-17.png" alt="img" style="zoom:36%;" />)
+
+- 最后完成补全剩余的非空SP、EP、SN和EN。看起来很乱，但我们可以理出来。完整的链表引用如下图：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-18.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-18.png" alt="img" style="zoom:36%;" />)
+
+> 1. 还是先看左边。它是起点-左下点的第一条边，左下点的第二条边为下边，即SN指向下边。它是终点-左上点的最后一条边（第三边），左上点的第二条边，也就是EP为中边；
+  > 2. 再看上边。它是起点-左上点的第一条边，左上点的第二条边，也就是SN为中边。它的终点-右上点的第一条边，右上点的第二条边，也就是EN为右边；
+  > 3. 接着看右边。它是右上和右下点的最后一条边。起点-右下点的前一条边，也就是SP为中边。终点-右上点的前一条边，也就是EP为上边；
+  > 4. 继续看下边。它是起点-右下点的第一条边，起点的下一条边，也就是SN为中边。它是终点-左下点的最后一条边，终点的前一条边，也就是EP为左边；
+  > 5. 最后，看看中边。4个ID均非空。它是起点-左上点的第二条边，起点第一条边，即SP为上边，起点第三条边，即SN为左边；它也是终点-右下点的第二条边，终点第一条边，即EP为下边，终点第三条边，即EN为右边。
+
+至此，示例的属性图就在neo4j中构建完毕。
+
+
+
+**节点的遍历**
+
+一个典型的图遍历操作，比如找一个人的3阶以内好友：需要从某个点出发，通过朋友关系来进行深度+广度查找。返回所有的结果。这里涉及到2个步骤，首先得找到这个点（这就是`cypher`查询是`match`开始的原因，就是在匹配节点），然后才能进行图遍历。 遍历开始时的找点和找边操作，需要通过索引来加速查找。关系型数据库是这样，图数据库也是这样。neo4j支持多种索引类型，包括基于lucene和基于btree的。索引文件在neo4j数据目录的index子目录中。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/neo4j/neo4j-19.jpg" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/neo4j/neo4j-19.jpg" alt="image" style="zoom:56%;" />)
+
+假设从Name为Alistair的节点出发，找出其所有认识的人（KNOWS）：
+
+```text
+match (n:Person{name:'Alistair'})-[r:KNOWS]->(m:Person) return n.name;
+```
+
+1. 首先基于索引找到该点ID。然后通过该ID计算点的存储偏移位置ID*15。从`neostore.nodestore.db`文件中读取`NodeRecord`对象；
+2. 从节点对象的`nextRelId`获取第一条边，即上边的ID，计算其存储偏移位置`nextRelId`*34，到`neostore.relationshipstore.db`文件读取`RelationshipRecord`对象；
+3. 从边的对象中获取`relationshipType`，判断是否为`KNOWS`类型；若是，进一步判断`secondNode`是否为其他节点，若是则保存该节点ID；
+4. 继续通过上边的`SN`字段获取下一条边，即中边的`ID`，重复2和3；
+5. 对于左上点来说，上边和中边是出边，左边是入边，所以，上边和中边指向的是认识的人。
+6. 获取两条边终点`ID`对应的节点的`Name`，返回客户端；
+
+
+
+
+### 原生图存储(native graph storage)
+
+什么是原生图：在数据库引擎的内存中存在无数种图的编码方法和表示方 式。对于很多不同的引擎体系结构，假如图数据库存在**免索引邻接**属性，那么我们说它具有原生处理能力。
+
+免索引邻接的数据库引擎中的每个节点都会维护其对相邻节点的引用。因此每个 节点都表现为其附近节点的微索引，这比使用全局索引代价小很多。这意味着查询时 间与图的整体规模无关，它仅和所搜索图的数量成正比。使用免索引邻接，图数据库可以将复杂的`join` 查询转化成快速的图遍历，因此无论数据集有多大，都可以维持毫秒级的性能。
+
+通过固定大小的记录和类指针记录ID，通过在数据结构周围跟随指针就可以简单地实现遍历并高速执行。要遍历 一个节点到另一个节点间特定的联系，数据库只需执行几个低成本的ID计算(这些计算比搜索全局索引成本低很多，当我们在 一个非原生图数 据库中存储图时就需要搜索全局索引)。
+
+1. 从一个给定的节点记录定位联系链中第 一个记录的位置，可以通过计算它在联系存储的偏移量来获得 ，也就是说，通过用联系记录的固定大小乘以它的ID。这让我们 在联系存储文件中可以直接定位到正确的记录。
+2. 在联系记录中，搜索第二个节点字段来找到第二个节点的ID。用节点记录的大小乘以ID来定位存储中正确的节点记录。
+
+> 要理解为什么原生图处理比基于重索引图的效率高得多，应该考虑以下几点 。 根据实现，查找索引的算法复杂度可能是O (logn)，而查找直接联系的算法复杂度为O(1). 要遍历一个m步的网络 ，索引方法需要花费 O(mlogn)的时间，这面对成本仅为O(m)的免索引邻接就显得相形见绌了。
+>
+> 并且图还有一个优势就是由于其高效紧凑的存储布局，使得neo4j在查询关系连接和遍历图时，更容易批量顺序读取和命中页缓存。
+
+> 注意：Neo4j 在创建关系时需要指定方向，但在存储层面上，这些关系是双向可遍历的。这使得查询时更加灵活，可以从任意一端开始遍历关系，从而方便地进行数据查询和处理。
+
+
+
+#### 图的遍历
+
+上面说了neo4j的原生图存储免索引邻接使得图的遍历非常高效，下面说一下图的遍历的一点算法。
+
+**Dijkstra**
+
+Dijkstra算法是一种用于计算图中单源最短路径的经典算法。它适用于有向图和无向图，但要求图中的边权重为非负。Dijkstra是一种广度优先的搜索算法，执行逻辑如下：
+
+> *深度优先搜索：很像递归（可以使用栈（隐式调用栈或显式栈）来实现），它会沿着关系或者叫边尽可能深入到图的深层节点，然后回溯*
+>
+> *广度优先搜索：很像迭代（可以使用队列来实现），因为它会逐层访问图的节点*
+
+1. 选出起始节点和终止节点 ，将起始节点添加到已完成节点集合(即已知的以起始节 点为起点的最短路径的节点集合)，并将其值标记为0(起始节点被定义为距离自身 的路径长度为0)。
+
+2. 从起始节点开始，广度优先遍历最近的邻居节点，并记录距离每个邻居节点的路径长度。
+3. 选出邻居节点中的最短路径(假如路径相同可任选一个)并标记该节点为已完成， 因为我们现在已经知道了起始节点到这个邻居节点的最短路径。
+4. 从已完成节点集合中，访问最近的邻居(注意使用广度优先算法进行演进)并记录 起始节点到这些新邻居节点的路径长度 。不要访问任何已经被标记为已完成的邻居 节点，因为我们已经知道了到它们的最短路径。
+5. 重复步骤3和步骤4，直到所有目标节点都被标记为已完成。
+
+
+
+**Dijkstra算法分析**
+
+Dijkstra算法在最坏情况下的性能是`O(|R|+|N|*1og|N|)` 。 也就是说 ，算法的运行时间与图中关系的数量`|R|`再加上节点的数量`|N|`乘以节点数量的对数成正比。原始性能是 `O(|R|^2)`，这表示其运行时间和图中联系的数量的平方成正比。
+
+> *在算法分析中，符号 |R|和 |N|中的竖线不是指绝对值，而是表示集合的大小或数量。*
+
+Dijkstra算法优化的地方就在于计算最短路径时，不用从头计算所有的点，而是可以利用已经计算好的结果，这就是`O(|R|^2)` --> `O(|R|+|N|*1og|N|)` 的优化。但其仍然有缺点，就是对于点对点的最短路径计算，Dijkstra 算法没有特别的优化，还是会计算所有可能的路径直到找到终点节点。这会影响效率，特别是在大规模图或不需要知道所有节点的最短路径时。有如下的一些算法改进：
+
+- A\* 算法：A* 算法是一种启发式搜索算法，通过使用启发函数来指导搜索过程，通常用于路径规划和导航系统。与 Dijkstra 算法相比，A* 算法更加高效，因为它更倾向于优先探索离目标节点更近的节点。
+
+> 在A\*算法中，将路径成本分成两个部分:一部分是g(n)，表示节点n 与开始节点 之间的路径的成本，以及h(n)，表示节点n 与终止节点之间的路径的估算成本，该成本 由启发式方法计算(一种智能猜测)。A\*算法在迭代图的时候对g(n)和h(n)进行平衡， 因此确保每个迭代能够选择成本f n)=g(n)+g(n)最低的那个节点。
+
+- Bidirectional Dijkstra（双向 Dijkstra）：这种算法从起点和终点同时进行搜索，当两边搜索的路径相遇时，便找到了最短路径。双向搜索可以大大减少搜索空间，提高效率。
+
+- ALT 算法（A\* + Landmark + Triangle inequality）：结合 A* 算法和三角不等式来优化路径搜索，使用预先计算的标志点来指导搜索过程。
+
+
+
+### 事务
+
+Neo4j 是支持事务的，事务实现是每个事务被表示为一个内存对象，同时把数据库 中的状态表示为写人状态。该对象由锁管理器提供支持，锁管理器在节点和联系被创建、更新和删除时它们加锁。当事务回滚时，事务对象被丢弃，同时释放写锁，而事务成功完成 时，事务被提交到磁盘。
+Neo4j中提交数据到磁盘会使用预写日志，借此将更改作为可操作的条目附加到活动事务日志中。当提交事务时(在准备阶段有积极的响应)提交条目会写入日志。这会使得日志刷新到 磁盘上，从而将更改持久化。一旦磁盘被刷新，所做的更改就会应用到图本身。当所有更改被应用到图之后，任何与事务相关的写锁都会被释放。
+
+
+
+## APOC
+
+`APOC`（Awesome Procedures On Cypher） 是一个非常流行且广泛使用的库，它为 Neo4j 的 Cypher 查询语言提供了大量的实用存储过程和函数。这些扩展大大增强了 Neo4j 的功能和灵活性，允许开发者更高效地执行复杂的图数据库操作。
+
+**主要功能和特点:**
+
+APOC 提供了许多功能，涵盖数据集成、数据转换、图算法、数据库管理等方面。
+
+1. 数据导入和导出：
+- 支持从各种数据源导入数据，如 CSV、JSON、XML、JDBC 数据库等。
+- 提供将数据导出为 CSV、JSON、XML 等格式的功能。
+2. 数据转换和操作：
+- 提供各种数据转换函数，如字符串操作、日期时间处理、数学函数等。
+- 支持批量数据更新和处理。
+3. 图算法：
+- 内置多种图算法，如 PageRank、最短路径、社区检测等。
+- 提供图形分析和处理工具。
+4. 数据库管理：
+- 提供数据库备份、还原和清理工具。
+- 支持数据库的元数据查询和管理。
+5. 实用工具：
+- 包含各种实用工具函数，如随机数生成、哈希计算等。
+- 提供与外部系统的集成功能，如调用外部 REST API。
+
+todo。。。
+
+
+
+
+
+
+
+
+

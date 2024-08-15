@@ -1,0 +1,471 @@
+---
+title: Lucene手册2-分析
+sidebar_position: 2
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+分析（Analysis），在 Lucene 中指的是将域 （Field）文本转换成最基本的索引表示单元—项（Term）的过程。在搜索过程中，这些项用于决定什么样的文档能够匹配查询条件。
+
+## 分析器
+
+### 分析（Analysis）和分析器（Analyzer）
+
+**分析**
+
+分析器对分析操作进行了封装。它通过执行若干操作，将文本转换成语汇单元，这些操作可能包括：提取单词、去除标点符号、去掉字母上面的音调符号、将字母转换成小写（也称规范化）、去除常用词、将单词还原词干形式（词干还原），或者将单词转换成基本形式（词形归并 lemmatization）。这个处理过程也称为语汇单元化过程（tokenization），而从文本流中提取的文本块称语汇单元（token）。语汇单元与它的域名结合后，就形成了项（Term）。
+
+开发 Lucene 的主要目的就是让信息检索变得更容易。我们强调检索是很重要的。作为用户，你一定希望向 Lucene 中加入大量文本，并且希望通过文本中的单词迅速找到相关文档。为了让 Lucene 理解“单词”是什么，就需要在索引时对文本进行分析，并将项从文本中提取出来，而这些项则构成了搜索的基础构件。
+
+使用 Lucene 时，选择一个合适的分析器是非常关键的。对分析器的选择没有唯一标准。待分析的语种是影响分析器选择的因素之一，因为每种语言都有其自身特点。影响分析器选择的另一个因素是被分析的文本所属的领域，不同的行业有不同的术语、缩写词和缩略语，我们在分析时一定要注意这点。尽管我们在选择分析器时考虑了很多因素，但是不存在能适用于所有情况的分析器。有可能所有的内置分析器都不能满足你的要求，这是就得创建一个自定义的分析方案；令人振奋的是，Lucene 的构件模块使得这一过程非常容易。
+
+> 在建立索引时，通过分析过程提取的语汇单元就是被索引的项(term)。而且最重要的是，只有被索引的项才能被搜索到！
+>
+> 只有由分析器产生的语汇单元才能被搜索，例外情况是索引对应的域时使用`Field.Index.NOT_ANALYZED`或者 `Field.Index.NOT_ANALYZED_NO_NORMS` 选项，该情况下可以理解为整个域(field)作为一个term。查询时输入整个域的值也能被检索到。
+
+**分析器**
+
+分析结果中的语汇单元取决于对应的分析器，所以选择分析器十分重要，比如如下4个分析器来分析短语
+
+> “XY&Z Corporation-xyz@example.com”
+
+生成的结果如下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-20.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-20.png" style="zoom: 50%;" />)
+
+- WhitespaceAnalyzer： 顾名思义，该分析器通过空格来分割文本信息，而并不对生成的语汇单元进行其他的规范化处理。
+
+- SimpleAnalyzer： 该分析器会首先通过非字母字符来分割文本信息，然后将语汇单元统一为小写形式。需要注意的是，该分析器会去掉数字类型的字符，但会保留其他字符。
+
+- StopAnalyzer：该分析器功能与 SimpleAnalyzer 类似。区别在于，前者会去除常用单词。在默认情况下，它会去除英文中的常用单词（如the、a 等），但你也可以根据需要自己设置常用单词。
+
+- standardAnalyzer： 这是 Lucene 最复杂的核心分析器。它包含大量的逻辑操作来识别某些种类的语汇单元，比如公司名称、E-mail 地址以及主机名称等。它还会将语汇单元转换成小写形式，并去除停用词和标点符号。
+
+### 索引过程的分析
+
+在索引期间，文档域值所包含的文本信息需要被转换成语汇单元，如下图所示：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-21.png" alt="image" style={{ maxWidth: '40%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-21.png" style="zoom:40%;" />)
+
+> Field 1 和 Field 2被分析处理，并输出语汇单元序列；Field3 未被处理，原因是该域值被整个索引成一个单独的语汇单元
+
+文档中的文本内容会被分词器（Analyzer）处理，在分词(Tokenization)过程中将其拆分成一个个（token）每个 Token 代表了文档中的一个词语、单词或符号，然后与其field形成一个生成`term`(Term Creation)，可以理解为term的格式等于`feild:处理后的token`，**`Term` 是 Lucene 中存储和查询的最小单元**。
+
+
+
+### 查询QueryParser过程的分析
+
+`QueryParser`能够很好地为搜索用户提供形式自由的查询。为了完成这个任务，`QueryParser`使用分析器将文本信息分割成各个项以用于搜索。在实例化 `QueryParser`对象时，同样需要传入一个分析器对象：
+
+```java
+QueryParser parser = new QueryParser (Version. LUCENE_30,"contents", analyzer) ;
+Query query = parser.parse (expression) ;
+```
+
+分析器会接收表达式中连续的独立的文本片段，但不会接收整个表达式。这个表达式可能包含操作符、圆括号或其他表示范围、通配符以及模糊查询在内的特表达式语法。
+
+例如如下查询语句：
+
+> "president obama"  +harvard +professor
+
+`QueryParser` 会3次调用分析器，首先是处理文本 “president obama”，然后是文本“harvard”，最后是 “professor”。`QueryParser` 对全部的文本进行的都是同样的分析，而不管它们究竟是如何被索引的。因此，当查询一个被索引过但没有被语汇单元化的域时，会出现相当棘手的问题。
+
+查询时，QueryParser 所使用的分析器必须和索引期间使用的分析器相同吗？不一定。如果你使用基本的内置分析器，那么在以上两种情况下使用相同的分析器可能行得通。但是在我们使用更复杂的分析器时，使用相同的分析器是很重要的，否则查询结果将不准确。因为存在如下问题：
+
+1. **分词一致性**：分析器负责将文本分解成一系列的词元（Tokens）。如果在索引和查询时使用不同的分析器，分词的结果可能不同，导致查询词与索引中的词不匹配。例如，假设在索引时使用的分析器将 "New York" 分成两个词 "new" 和 "york"，而查询时使用的分析器将 "New York" 作为一个单词处理，那么查询 "New York" 将无法匹配到索引中的文档。
+2. **标准化一致性**：分析器还负责对词元进行标准化处理，如小写化、去除停用词、词干提取等。如果索引和查询时的标准化处理不一致，同样会导致查询词与索引词不匹配。例如，索引时将所有词转为小写，而查询时未进行小写化处理，那么查询 "New York" 也无法匹配到索引中的 "new york"。
+3. **特殊字符处理**：不同的分析器可能对特殊字符和标点符号处理方式不同。如果在索引和查询时处理方式不同，结果也会不一致。例如，某些分析器会去掉所有的标点符号，而有些可能会保留，这也会影响查询结果。
+
+
+
+### 分析(Analysis) vs 解析(Parsing)
+
+分析器可以用于每次分析一个特定的域并且将域内容分解为语汇单元；但是在分析器内不可以创建新的域。
+
+分析器不能用于从文档中分离和提取域，因为分析器的职责范围只是每次处理一个域。所以为了对域进行分离，就要在分析之前预先解析这些文档。例如，一个常见的做法就是把 HTML 文档中的`<title>`和`<body>`部分分离为一些单独的域。在这种情况下，文档应该被解析或者预处理过，从而用独立的文本块表示各个域。即分析不能完成解析的功能。
+
+解析指的是将用户输入的查询字符串或文档数据，转换为计算机可以理解和处理的数据结构或对象。主要用于以下两个方面：
+
+1. **查询解析（Query Parsing）**：
+- 将用户输入的查询字符串（比如搜索关键词、布尔表达式等）解析成一个查询对象。
+- 查询解析器（比如 Lucene 中的 `QueryParser`）负责将用户的查询语法解析成对应的查询结构（如布尔查询、短语查询等）。
+2. **文档解析（Document Parsing）**：
+- 将从外部获取的文档数据解析成内部数据结构，以便进行索引或其他操作。
+- 文档解析可以包括从不同格式（如JSON、XML、文本文件等）中提取出结构化数据，并映射到适合索引的字段中。
+
+
+
+## 剖析分析器
+
+为了便于理解 Lucene 分析过程，需要进行一些深入的剖析，因为可能需要搭建自己的分析器，所以理解 Lucene 分析器的架构和构件模块就显得非常重要了。
+
+Analyzer 类是一个抽象类，是所有分析器的基类。它通过 `TokenStream` 类以一种很好的方式将文本逐字转换为语汇单元流。分析器实现 `TokenStream` 对象的唯一声明方法是：
+
+```java
+// 要么指定字符流java.io.Reader
+public final TokenStream tokenStream(final String fieldName,final Reader reader)
+// 或者直接从文本中读取
+public final TokenStream tokenStream(final String fieldName, final String text)
+```
+
+> 上面的方法都是`org.apache.lucene:lucene-core`包提供的。
+
+
+### 词汇单元(token)
+
+语汇单元流(`tokenStream`)是分析过程所产生的基本单元。在索引时，Lucene使用特定的分析器来处理需要被语汇单元化的域，而每个语汇单元相关的重要属性随即被编入索引中。一个语汇单元`token`携带了一个文本值（即单词本身）和其他一些元数据。
+
+一个语汇单元`token`携带了一个文本值（即单词本身）和其他一些元数据：**原始文本从起点到终点的偏移量**、**语汇单元的类型**、以及**位置增量**。语汇单元可以选择性包含一些由程序定义的标志位和任意字节数的有效负载，这样程序就能根据具体需要来处理这些语汇单元。
+
+比如以对文本“the quick brown fox”的分析为例。该文本中每个语汇单元都表示一个独立的单词。下图展示了用 `simpleAnalyzer` 类分析该短语所产生的带有位置信息和偏移信息的语汇单元流：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-22.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-22.png" style="zoom:60%;" />)
+
+词汇单元组成:
+
+- **起点的偏移量**：起点的偏移量是指语汇单元文本的起始字符在原始文本中的位置，而终点偏移量则表示语汇单元文本终止字符的下一个位置。偏移量对于在搜索结果中用高亮显示匹配的语汇单元非常有用。
+
+- **语汇单元的类型**：语汇单元的类型是用 String 对象表示的，其默认值为“word”，如果需要的话，你可以在语汇单元的过滤过程中控制和利用到其类型属性。
+
+- **位置增量**：文本被语汇单元化之后，相对于前一个语汇单元的位置信息以位置增量值保存。
+
+位置增量使得当前语汇单元和前一个语汇单元在位置上关联起来。一般来说位置增量为1，表示每个单词存在于域中唯一且连续的位置上。位置增量因子会直接影响短语查询(phareQuery)和跨度查询，因这些查询需要知道域中各个项之间的距离。
+
+- 位置增量默认为1
+- 如果位置增量大于1，则允许语汇单元之间有空隙，可以用这个空隙来表示被删除的单词。
+- 位置增量为0的语汇单元表示将该语汇单元放置在前一个语汇单元的位置上。同义词分析器可以通过0增量来表示插人的同义词。这个做法使得 Lucene 在进行短语查询时，输入任意一个同义词都能匹配到同一结果。比如同义词分析器（Synonymanalyzer），该分析器使用了0位置增量。
+
+- **有效负载**: 每个语汇单元还带有多个选择标志；一个标志即32比特数据集（以int 型数值保存），Lucene 的内置分析器不使用这些标志，但你自己设计的搜索程序是可以使用它们的。此外，每个语汇单元都能以 byte[]数组形式记录在索引中，用以指向有效负载。
+
+当文本在索引过程中进过分析后，每个语汇单元都作为一个项被传递给索引。*位置增量、起点和终点偏移量和有效负载是语汇单元携带到索引中的唯一附加元数据*。语汇单元的类型和标志位都被抛弃了——它们只在分析过程使用。
+
+
+
+### 词汇单元流(Tokenstream)
+
+语汇单元流(`tokenStream`)是分析过程所产生的基本单元。在 Lucene 中，分析器（Analyzer）主要由分词器（Tokenizer）和过滤器（TokenFilter）组成。选择了分析器，也就默认选择了该分析器内部定义的分词器和过滤器。
+
+`Tokenstream` 是一个能在被调用后产生语汇单元序列的类，但 `TokenStream` 类有两个不同的类型：`Tokenizer` 类和 `TokenFilter` 类。这两个类都都从抽象类TokenStream继承而来。
+
+- `Tokenizer `对象通过`java.io.Reader` 对象读取字符并创建语汇单元，而`TokenFilter` 则负责处理输入的语汇单元，然后通过新增、删除或修改属性的方式来产生新的语汇单元。
+- `TokenFilter` 类封装另外一个`Tokenstream` 抽象类的组合模式（该TokenStream 抽象可能对应于另外一个TokenFilter 类），负责过滤其他的`TokenStream` 对象。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-23.png" alt="image" style={{ maxWidth: '36%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-23.png" style="zoom:50%;" />)
+
+> `Tokenstream`为抽象基类；`Tokenizer` 对象从Reader 对象中创建语汇单元；`TokenFilter`对象负责过滤其他的`TokenStream` 对象
+
+当分析器从它的 tokenstream 方法或者 reusablerokenstream 方法返回`tokenStream `对象后，它就开始用一个`tokenizer`对象创建初始语汇单元序列，然后再链接任意数量的tokenFilter 对象来修改这些语汇单元。这被称分析器链（analyzer chain）。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-24.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-24.png" style="zoom:50%;" />)
+
+> tokenstream是个抽象类，实际分析是其子类Tokenizer抽象类的子类和其子类TokenFilter抽象类的子类完成。分析器链以一个 Tokenizer 对象开始，通过 Reader 对象读取字符并产生初始语汇单元，然后用任意数量链接的 TokenFilter 对象修改这些语汇单元
+
+比如`public class StandardAnalyzer extends Analyzer`，会在`tokenStream`方法中创建`StandardTokenizer`并且绑定`StandardFilter`，`LowerCaseFilter`，`StopFilter`。
+
+```java
+  /** Constructs a {@link StandardTokenizer} filtered by a {@link
+  StandardFilter}, a {@link LowerCaseFilter} and a {@link StopFilter}. */
+  @Override
+  public TokenStream tokenStream(String fieldName, Reader reader) {
+    StandardTokenizer tokenStream = new StandardTokenizer(matchVersion, reader);
+    tokenStream.setMaxTokenLength(maxTokenLength);
+    TokenStream result = new StandardFilter(tokenStream);
+    result = new LowerCaseFilter(result);
+    result = new StopFilter(enableStopPositionIncrements, result, stopSet);
+    return result;
+  }
+```
+
+**注意：TokenFilter过滤顺序至关重要，过滤器往往都假定上一个语汇单元的处理任务已经完成了。当你指定过滤操作顺序时，必须考虑顺序的正确性，因为上一个过滤器会影响后面的过滤器，同时还应该考虑这样的安排对应用程序性能可能带来的影响。**
+
+**lucene的一些核心 Tokenizer 类和 TokenFilter类**
+
+| 类 名               | 描述                                                         |
+| ------------------- | ------------------------------------------------------------ |
+| TokenStream         | 抽象 Tokenizer 基类                                          |
+| Tokenizer           | 输入参数为 Reader 对象的 TokenStream 子类                    |
+| CharTokenizer       | 基于字符的 Tokenizer 父类，包含抽象方法 isTokenChar()。当isTokenChar()为true 时输出连续的语汇单元块。该类还能将字符规范化处理（如转换为小写形式）。输出的语汇单元所包含的最大字符数为255 |
+| WhitespaceTokenizer | isTokenizer()为true 时的Charrokenizer 类，用于处理所有非空格字符 |
+| KeywordTokenizer    | 将输入的整个字符串转换为一个语汇单元                         |
+| LetterTokenizer     | isTokenChar()为 1true，并且 Character.isLetter true 时的 CharTokenizer类 |
+| LowerCaseTokenizer  | 将所有字符规范化处理为小写形式的 LetterTokenizer类           |
+| SinkTokenizer       | rokenizer 子类，用于吸收语汇单元，能将语汇单元缓存至一个私有列表中，并能递归访问该列表中的语汇单元。该类与 TeeTokenizer 联合使用，用于“拆分” TokenStream 对象 |
+| StandardTokenizer   | 复杂而基于语法的语汇单元产生器，用于输出高级别类型的语汇单元，如 E-mail 地址。每个输出的语汇单元标记为一个特殊类型，这些类型中的一部分需要用 standardFilter 特处理 |
+| TokenFilter         | 输入参数为另一个 TokenStream 子类的TokenStream 子类          |
+| LowerCaseFilter     | 将语汇单元转换成小写形式                                     |
+| StopFilter          | 移除指定集合中的停用词                                       |
+| PorterStemFilter    | 利用 Porter 词干提取算法（Porter Strmming Algorithm）将语汇单元还原为其词干。 例如，将单词 country 和 countries 还原为词干 countri |
+| TeeTokenFilter      | 通过将语汇单元写入 Sinkrokenizer 对象，完成对 Tokenstream 对象的“拆分”。该类还会返回未被修改的语汇单元 |
+| ASCIIFoldingFilter  | 将带音调的字符映射为不带音调符的字符                         |
+| CachingTokenFilter  | 存储从输入字符流中提取的所有语汇单元，调用该类 reset()方法后能重复以上处理 |
+| LengthFilter        | 支持特定文本长度的语汇单元                                   |
+| StandardFilter      | 接收一个 standardrokenizer 对象作为参数。用于去除缩略词中的点号，或者在带有单引号的单词中去掉‘s（适用于单引号后面跟s的情况） |
+
+TokenFilter 类和Tokenizer 类层次结构：
+
+TokenFilter 类和Tokenizer 类层次结构：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-25.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-25.png" style="zoom:40%;" />)
+
+
+
+#### 观察语汇单元(token)
+
+通常情况下，分析过程所产生的语汇单元会在毫无提示的情况下用于索引操作。可以使用工具类`AnalyzerUtils`展示语汇单元所携带的几个属性：项（term）、位置增量（position-Increment）、偏移量（offset）、类型（type）、标志位（flags）和有效负载。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-20.png" alt="image" style={{ maxWidth: '30%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-26.png" style="zoom:30%;" />)
+
+`AnalyzerUtils` 来展示token的详情是通过token中的`Attribute`属性，`TermAttribute term = stream.addAttribute(TermAttribute.class);` 其实就是获取`TermAttribute.class`，然后再打印出term。
+
+```java
+public class AnalyzerUtils {
+  public static void displayTokens(Analyzer analyzer,
+                                   String text) throws IOException {
+    displayTokens(analyzer.tokenStream("contents", new StringReader(text)));  //A
+  }
+
+  public static void displayTokens(TokenStream stream)
+    throws IOException {
+		// public <A extends Attribute> A addAttribute(Class<A> attClass)，如果存在就直接返回已有的。同理可以获取其他属性来查看
+    TermAttribute term = stream.addAttribute(TermAttribute.class);
+    while(stream.incrementToken()) {
+      System.out.print("[" + term.term() + "] ");    //B
+    }
+  }
+```
+
+Lucene 内置的语汇单元属性还有
+
+
+| 语汇单元属性接口           | 描述                             |
+| -------------------------- | -------------------------------- |
+| TermAttribute              | 语汇单元对应的文本               |
+| PositionIncrementAttribute | 位置增量（默认值为1）            |
+| OffsetAttribute            | 起始字符和终止字符的偏移量       |
+| TypeAttribute              | 语汇单元类型（默认为单词）       |
+| FlagsAttribute             | 自定义标志位                     |
+| PayloadAttribute           | 每个语汇单元的byte[]类型有效负载 |
+
+> TokenStream 继承类 `AttributeSource`并生成子类。`AttributeSource` 是一个实用方法，它能在程序非运行期间提供增强类型并且能够完全扩展的属性操作，这可以带来很好的运行性能。Lucene 在分析期间使可以自由加入自己的属性，方法是创建实现 `Attribute` 接口的具体类。需要注意的是，Lucene 在索引期间不会对这些新属性作任何操作，因此，这种方式只有当分析链早期的 `Tokenstream` 想要向另一个后来生成的 `TokenStream`发送消息时才能使用。
+
+比如如下代码可以查看token的属性：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/lucene/lucene-27.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/lucene/lucene-27.png" style="zoom:30%;" />)
+
+
+
+
+
+**token的类型**
+
+在分析过程中分词器会为每个 Token 赋予一个类型，这些类型是由`Tokenizer `生成的。在不同的 Analyzers 的Tokenizers 中，可能会有不同的类型或进一步的细化，分析器（Analyzer）通常是绑定分词器（Tokenizer）的，分析器内部会定义好分词器的使用，不需要手动配置(也可以手动配置)。Token 的类型（type）可以帮助标识和分类文本中的不同元素，以在索引和查询过程中更好地理解和处理文本。
+
+1. **APOSTROPHE**：包含撇号的单词，例如 "O'Reilly"。
+2. **ALPHANUM**：包含字母和数字的词汇单元，例如 "abc123"。
+3. **EMAIL**：电子邮件地址，例如 "user@example.com"。
+4. **NUM**：纯数字，例如 "12345"。
+5. **CJ**：中文或日文字符。
+6. **HOST**：互联网主机名，例如 "www.example.com"。
+7. **IP**：IP 地址，例如 "192.168.0.1"。
+8. **URL**：URL 地址，例如 "http://www.example.com"。
+9. **ACRONYM**：首字母缩略词，例如 "NASA"。
+10. **COMPANY**：公司名称，例如 "Acme Corp."。
+
+
+
+### 分析示例
+
+#### 近音词
+
+查询 近音词，也是通过分析器，比如`MetaphoneReplacementFilter` 将词token都转化为发音词根来索引，然后查询时也使用此分析器获取查询词的发音词根。比如下面列出的两个发音相近的词组的输出 mataphone 编码样本：:
+
+> "Tha quik brown phox jumpd ovvar tha lazi dag"
+>
+> \[0\] \[KK\] \[BRN\] \[FKS\] \[JMPT\] \[OFR\] \[0\] \[LS\] \[TKS\]
+>
+> "The quick brown fox jumped over the lazy dog"
+>
+> \[0\] \[KK\] \[BRN\] \[FKS\] \[JMPT\] \[OFR\] \[0\] \[LS\] \[TKS\]
+
+除非在一些特殊场合下，用户不太可能以发音相似作匹配条件进行搜索；否则搜索程序将会返回相当多的用户并不需要的结果。以相似发音作为匹配条件的做法，只会在下述情景下才能发挥其作用，即用户每个输人的单词都出现拼写错误，因而没有搜索到任何匹配文档；此时，搜索程序会建议用户使用替代单词重新进行搜索。实现这种处理方式的一种方法便是对所有文本进行同音分析，并在需要进行修改时提供一个相互参照的列表以供查询。
+
+
+
+#### 同义词、别名
+
+同义词分析，其实就是分析器比如` SynonymAnalyzer` 会输出 词源的一些同义词，并将单词的所有同义词都会和它位于相同位置上（位置增量为0）
+
+类似于"Tha quik brown phox jumpd ovvar tha lazi dag"会分析成如下结果：
+
+> 2: \[quick\] \[speedy\] \[fast\]
+> 3: \[brown\]
+> 4: \[fox\]
+> 5: \[jumps\] \[hops\] \[leaps\]
+> 6: \[over\] \[above\]
+> 8: \[lazy\] \[sluggish\] \[apathetic\]
+> 9: \[dog\] \[pooch\] \[canine\]
+
+同义词都会被放到相同的位置，因为这些查询都会被转化为`phraseQuery`，位置差异为0。在phraseQuery中默认slop=0，这样就能实现近义词的查询。
+
+
+
+#### getPositionIncrementGap
+
+文档可能包含同名的多个 Field实例，而Lucene 在索引过程中在逻辑上将这些域的语汇单元按照顺序附加在一起。分析器可以在每个域值边界处对以上操作进行一些控制。这点对于确保查询语句（如短语查询和跨度查询等）和语汇单元位置的对应关系是很重要的，这样就不会意外地对两个分离的Field 实例进行匹配。举例来说，如果一个域值是 “it's time to pay income tax”而下一个域值是“retur library books on time”，那么对于短语“tax return”的搜索将会匹配到这个域。
+
+可以通过继承 Analyzer 类来创建自己的分析器，然后重载其中的 `getPositionIncrementGap` 方法（以及 `tokenStream`或 `reusablerokenstream` 方法）。默认情况下，`getPositionlncrementGap` 方法会返回0（无间隙），意思是它在运行时会认为各个域值是连接在一起的。如果将这个值增加到足够大（如100），那么位置查询就不会错误地在各个域值边界进行匹配了。
+
+
+
+#### 指定不同的分析器
+
+在 Lucene 中，处理不同字段使用不同的分析器可以通过自定义的 `PerFieldAnalyzerWrapper` 实现。在索引时和查询时都可以指定不同的分析器来处理不同的字段。
+
+**索引时指定不同字段使用不同的分析器**
+
+1. **创建不同的分析器**：定义每个字段需要的分析器。
+2. **使用 `PerFieldAnalyzerWrapper`**：将不同的分析器与字段对应起来。
+3. **构建索引时使用 `PerFieldAnalyzerWrapper`**。
+
+```java
+public class CustomAnalyzerExample {
+    public static void main(String[] args) throws IOException {
+        // 创建分析器
+        Analyzer standardAnalyzer = new StandardAnalyzer();
+        Analyzer whitespaceAnalyzer = new WhitespaceAnalyzer();
+
+        // 设置每个字段对应的分析器
+        Map<String, Analyzer> analyzerPerField = new HashMap<>();
+        analyzerPerField.put("field1", standardAnalyzer);
+        analyzerPerField.put("field2", whitespaceAnalyzer);
+
+        // 创建 PerFieldAnalyzerWrapper
+        Analyzer analyzer = new PerFieldAnalyzerWrapper(standardAnalyzer, analyzerPerField);
+
+        // 索引文档
+        Directory directory = new RAMDirectory();
+        IndexWriterConfig config = new IndexWriterConfig(analyzer);
+        IndexWriter writer = new IndexWriter(directory, config);
+
+        Document doc = new Document();
+        doc.add(new TextField("field1", "This is a test", Field.Store.YES));
+        doc.add(new TextField("field2", "Another test", Field.Store.YES));
+        writer.addDocument(doc);
+        writer.close();
+    }
+}
+```
+
+**查询时指定不同字段使用不同的分析器**
+
+1. **创建查询分析器**：与索引时相同，使用 `PerFieldAnalyzerWrapper` 创建查询分析器。
+2. **使用 `QueryParser`**：指定字段和对应的分析器进行查询。
+
+```java
+public class CustomQueryExample {
+    public static void main(String[] args) throws IOException, ParseException {
+        // 假设索引已经创建并存在于 directory 中
+        Directory directory = new RAMDirectory(); // 使用实际的索引目录
+
+        // 创建查询时使用的分析器
+        Analyzer standardAnalyzer = new StandardAnalyzer();
+        Analyzer whitespaceAnalyzer = new WhitespaceAnalyzer();
+        Map<String, Analyzer> analyzerPerField = new HashMap<>();
+        analyzerPerField.put("field1", standardAnalyzer);
+        analyzerPerField.put("field2", whitespaceAnalyzer);
+        Analyzer queryAnalyzer = new PerFieldAnalyzerWrapper(standardAnalyzer, analyzerPerField);
+
+        // 创建查询
+        QueryParser parser = new QueryParser("field1", queryAnalyzer);
+        Query query = parser.parse("test");
+
+        // 搜索索引
+        DirectoryReader reader = DirectoryReader.open(directory);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        TopDocs results = searcher.search(query, 10);
+        for (ScoreDoc scoreDoc : results.scoreDocs) {
+            System.out.println(searcher.doc(scoreDoc.doc));
+        }
+        reader.close();
+    }
+}
+```
+
+
+
+### 非英语文本的分析
+
+**设置正确的字符编码**
+
+在Lucene 内部，所有的字符都是以标准的UTF-8编码存储的。Java 会在字符串对象内对 Unicode 编码进行自动处理，用UTF16格式表示字符，从而把我们从繁琐的编码处理中解放出来。然而，你必须负责把外部文本传递给Java 以及 Lucene。要正确索引文件，需要知道这些文件时以何种编码方式保存的，这才能保证你可以正确地读取文件内信息。
+
+**字符规范化处理**
+
+lucene在分析非英语的文本时，在读取文本内容和tokenizer之间都需要字符规范化处理。一般有如下步骤：
+
+> 1. 统一编码格式：非英语文本，特别是汉字、日文、韩文等字符集，通常涉及多种编码格式。规范化处理可以统一这些编码，避免因为编码不一致导致的分词错误或查询不准确。
+> 2. 去除变音符号和特殊字符：某些语言的字符可能带有变音符号（如法语、德语、西班牙语等）。规范化处理可以去除或标准化这些变音符号，使得相同的词在不同的书写形式下能够被正确识别和处理。
+>
+> 3. 处理大小写：对于区分大小写的语言（如德语、土耳其语等），规范化处理可以统一大小写，使得同一词在不同大小写形式下能够被正确索引和查询。
+>
+> 4. 去除空格和标点符号：非英语文本中，空格和标点符号的使用规则可能不同。规范化处理可以去除或标准化这些字符，确保分词过程更加准确。例如，在中文文本中，标点符号需要被去除，单词之间的空格需要处理。
+>
+> 5. 处理同义词和词形变化：在一些语言中，单词可能有多种词形变化（如动词的不同时态，名词的不同数等）。规范化处理可以统一这些词形变化，使得查询更加一致和准确。
+>
+> 6. 处理繁简转换：对于中文文本，繁体字和简体字需要进行转换，确保同一个词语在繁体和简体形式下都能够被正确处理。
+
+
+
+**中文分析器**
+
+常用的中文分析器的简介及其特性总结：
+
+| 分析器名称                         | 特性与描述                                                 | 优势                                     | 劣势                                     | 使用场景                   |
+| ---------------------------------- | ---------------------------------------------------------- | ---------------------------------------- | ---------------------------------------- | -------------------------- |
+| IKAnalyzer                         | 基于词典的中文分词器，支持细粒度和智能分词模式             | 开源、分词精度高、灵活性强               | 需要手动维护词典，无法处理新词和歧义问题 | 搜索引擎、全文索引         |
+| Jieba                              | 支持三种分词模式（精确模式、全模式、搜索引擎模式）         | 使用简单、支持自定义词典、性能优异       | 对长文本处理速度较慢，准确率依赖词典质量 | 自然语言处理、文本分析     |
+| Ansj                               | 基于NLP的中文分词器，支持多种分词方式                      | 速度快、准确率高、支持人名识别、用户词典 | 对内存要求较高，初始化时间长             | 大数据处理、文本挖掘       |
+| HanLP                              | 提供多种中文语言处理功能，包括分词、词性标注、命名实体识别 | 功能全面、扩展性强、支持多种语言处理功能 | 学习成本高，配置复杂                     | 自然语言处理、机器学习     |
+| Stanford NLP                       | 提供分词、词性标注、依存句法分析等功能的中文处理工具       | 功能强大、支持多种语言                   | 对资源需求高，处理速度慢                 | 研究型项目、复杂语言处理   |
+| THULAC                             | 清华大学推出的中文分词工具                                 | 高效、准确、支持多种分词粒度             | 支持功能相对较少                         | 学术研究、文本分析         |
+| SnowNLP                            | 轻量级中文自然语言处理工具                                 | 易于使用、支持情感分析                   | 功能有限，准确性不如其他工具             | 微博分析、社交媒体文本处理 |
+| LTP (Language Technology Platform) | 中文语言处理平台，提供分词、词性标注、依存句法分析等       | 支持丰富的语言处理功能、准确性高         | 使用复杂，依赖较多                       | 复杂文本处理、语义分析     |
+| RMMseg                             | 基于最大匹配法的分词算法                                   | 简单高效、实现简单                       | 分词精度较低，无法处理歧义和新词         | 基本文本分词               |
+
+
+
+
+
+
+

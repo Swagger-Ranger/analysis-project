@@ -1,0 +1,846 @@
+---
+title: JDK-版本手册
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+Java一直在与时俱进发布新的特性JEP，这里从jdk9开始Mark一下jdk的版本新特性，将有用有趣的新特性过一下。
+
+> "JDK Enhancement Proposal"（JDK 增强提案），JEP 是用于描述、讨论和追踪 JDK（Java Development Kit）中变更和新特性的一种文档格式和流程。
+
+每个新特性都可以在openjdk官网上看到其文档，地址：[jeps-index](https://openjdk.org/jeps/0)
+
+> 注意：不全，主要是语法新特性
+
+
+
+### JDK9
+
+#### JShell
+
+允许开发者立即输入和执行 Java 代码，可以直接测试 Java 表达式、方法调用和变量，而不必先编译成类文件，也无需编写完整的程序。适合快速验证算法、语法或 API 的使用。
+
+```sh
+jshell
+|  欢迎使用 JShell -- 版本 21.0.2
+|  要大致了解该版本, 请键入: /help intro
+
+jshell> 1+1
+$1 ==> 2
+
+jshell>
+```
+
+
+
+#### 集合工厂方法
+
+添加了便捷的集合工厂方法，用于创建不可变的集合，例如`List.of()`, `Set.of()`, `Map.of()`等。
+
+```java
+// java8写法
+Set<String> set = Collections.unmodifiableSet(Stream.of("a", "b", "c").collect(toSet()));
+List<Integer> list = Collections.unmodifiableList(Stream.of(1, 2, 3).collect(toList()));
+
+// java9写法
+Set<String> set = Set.of("a", "b", "c");
+List<Integer> list = List.of(1, 2, 3);
+// map要成对写
+Map<String, String> map = Map.of("a", "1", "b", "2", "c", "3");
+
+```
+
+注意：便捷的集合工厂方法创建的集合都是不可变的
+
+1. `List.of`创建的是不可变集合，而`Arrays.asList`是可变集合
+2. `List.of`和`Arrays.asList`都不允许add和remove元素，但`Arrays.asList`可以调用set更改值，而`List.of`不可以，会报`java.lang.UnsupportedOperationException`异常
+3. `List.of`中不允许有null值，`Arrays.asList`中可以有null值
+
+
+
+#### 进程API增强
+
+提供了`java.lang.Process`和`java.lang.ProcessHandle`，提供了更多jvm进程控制和信息获取功能。
+
+- **`Process`**: 用于启动和管理外部进程，提供与进程的基本交互功能，如输入输出流和进程状态。
+
+- **`ProcessHandle`**: 用于查询和管理系统进程的详细信息，提供更现代化的进程管理功能，如获取进程的 PID、状态、子进程等。
+
+
+
+#### 新增的流API
+
+增加了对`Stream`接口的增强功能，如`takeWhile`, `dropWhile`, `iterate`等新方法。
+
+**`takeWhile(Predicate<T> predicate)`**
+
+`takeWhile` 方法用于从 Stream 中保留满足给定条件的元素，直到遇到第一个不满足条件的元素为止。这个方法在处理序列中前缀的操作时非常有用。它是一种前缀取样操作，意味着它从流的开头开始，并持续取出元素直到遇到不满足条件的元素为止。
+
+```java
+// `takeWhile` 方法会从流的开始取出元素，直到遇到第一个不小于 5 的元素为止。
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 3, 9);
+        List<Integer> result = numbers.stream()
+                .takeWhile(n -> (n < 5))
+                .collect(Collectors.toList());
+        System.out.println(result);  // 输出: [1, 2, 3, 4]
+```
+
+
+
+**`dropWhile(Predicate<T> predicate)`**
+
+`dropWhile` 方法与 `takeWhile` 相反，它从流的开头开始，丢弃所有满足给定条件的元素，直到遇到第一个不满足条件的元素。这个方法在处理序列的后缀操作时非常有用。
+
+```java
+// dropWhile 方法会从流的开始丢弃元素，直到遇到第一个大于或等于 5 的元素为止。
+List<Integer> numbers = Arrays.asList(1, 2, 3, 4, 5, 6, 7, 3, 8, 9);
+        List<Integer> result = numbers.stream()
+                .dropWhile(n -> n < 5)
+                .collect(Collectors.toList());
+        System.out.println(result);  // 输出: [5, 6, 7, 3, 8, 9]
+```
+
+
+
+**`iterate(T seed, UnaryOperator<T> next)`**
+
+`iterate` 方法用于生成一个无限流，它从给定的种子值开始，然后通过指定的 UnaryOperator 递归地生成后续元素。这个方法可以用来生成基于前一个值计算的无限序列，通常配合 `limit` 方法使用来限制流的长度。
+
+```java
+// iterate 方法创建了一个从 0 开始的无限流，每次递增 2，然后通过 `limit` 方法限制了流的长度为 10。
+List<Integer> numbers = Stream.iterate(0, n -> n + 2)
+                              .limit(10)
+                              .collect(Collectors.toList());
+System.out.println(numbers);  // 输出: [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+```
+
+
+
+#### VarHandle
+
+`VarHandle` 是在 JDK 9 中引入的一个新的 API，用于提供对字段、数组元素或静态变量的变量句柄访问。这种新的机制旨在替代 `Unsafe` 类，以一种更安全和灵活的方式进行变量操作。`VarHandle` 提供了一种更抽象、更高层次的并发编程方式，同时保留了对低级别变量操作的控制。
+
+`VarHandle` 的设计目的就是提供和`Unsafe` 相同的低级别和灵活的变量访问，同时又比`Unsafe` 有更好的安全性：
+
+> **性能**：与 `Unsafe` 类似的低级别性能优化，能够在高并发环境中高效地操作变量，并且支持对不同类型变量的通用操作，包括实例字段、静态字段和数组元素，也提供了多种内存访问模式，如普通读写、原子更新、释放和获取等。
+>
+> **安全性**：相比于 `Unsafe` 类，`VarHandle` 提供了更加安全的变量访问方式。`Unsafe` 的许多方法在操作不当时会导致 JVM 崩溃，而 `VarHandle` 提供了更高的安全保证。
+
+`VarHandle` 是通过 `MethodHandles.Lookup` 类的各种方法来创建，`MethodHandles.Lookup` 提供了对类、实例字段、静态字段和数组元素的访问权限。
+
+```java
+ // 获取实例字段的 VarHandle
+VarHandle valueHandle = MethodHandles.lookup().findVarHandle(ExampleClass.class, "fieldName", int.class);
+
+// 获取静态字段的 VarHandle
+VarHandle staticValueHandle = MethodHandles.lookup().findStaticVarHandle(ExampleClass.class, "staticFieldName", int.class);
+
+// 获取数组元素的 VarHandle
+VarHandle arrayElementHandle = MethodHandles.arrayElementVarHandle(int[].class);
+```
+
+`VarHandle`提供了对变量比`volatile`更细的内存访问控制，可以理解为`Volatile`= `Acquire` +`Release`：
+
+> **普通模式**：没有内存屏障，适用于不需要线程间可见性的操作。
+>
+> **Volatile模式**：包括内存屏障，确保变量的读取和写入对所有线程都是可见的。
+>
+> **Acquire/Release模式**：介于普通模式和 `volatile` 模式之间，比如`setRelease` / `getAndAddRelease`确保在写操作之前的所有写操作对其他线程是可见的；而 `getAcquire` /`getAndAddAcquire`确保读取操作在读取到变量时，可以看到之前的所有写操作。
+
+
+
+
+
+**VarHandle实现**
+
+`VarHandle` 的具体实现是在 JVM 内部完成的，涉及到 JNI（Java Native Interface）和 C++ 代码。具体是：
+
+- **字段访问**：通过反射机制和 JNI，`VarHandle` 可以直接访问对象的字段，并应用适当的内存屏障。
+- **数组元素访问**：类似于字段访问，但需要额外处理数组索引和类型检查。
+- **原子操作**：使用 CPU 提供的原子操作指令，如 `LOCK CMPXCHG`，来实现高效的原子性。
+
+
+
+
+
+
+
+### JDK10
+
+JDK10一共定义了109个新特性，其中包含12个JEP（*JDK Enhancement Proposal特性加强提议*），还有一些新API和JVM规范以及JAVA语言规范上 的改动。下面是我觉得值得了解的：
+
+1. **局部变量类型推断（Local-Variable Type Inference）**
+
+引入局部变量类型推断，通过 `var` 关键字使得变量声明更加简洁。编译器可以根据初始化表达式来推断变量的类型。
+
+2. **并行完整垃圾收集（Parallel Full GC for G1）**
+
+G1 垃圾收集器引入了并行的完整垃圾收集（Full GC）。这显著提高了 G1 在进行 Full GC 时的性能。
+
+3. **应用类数据共享（Application Class-Data Sharing, AppCDS）**
+
+AppCDS 允许将应用程序类的数据预先加载到共享归档文件中，从而缩短 JVM 启动时间，并且不同的 JVM 实例可以共享这些数据，以减少内存消耗。
+
+> jdk本身就有类数据共享 (CDS) 功能，以减少多个 Java 虚拟机 (JVM) 之间的启动时间和内存占用。引入了应用程序类数据共享 (AppCDS)，它扩展 CDS 以包含从应用程序类路径中选择的类。
+
+[官方文档](https://docs.oracle.com/en/java/javase/17/vm/class-data-sharing.html#GUID-7EAA3411-8CF0-4D19-BD05-DF5E1780AA91)
+
+4. **线程本地握手（Thread-Local Handshakes）**
+
+线程本地握手功能允许 JVM 在不安全点（safepoint）的情况下暂停和恢复单个线程。这改进了 JVM 操作的灵活性和效率。
+
+5. **Root Certificates**
+
+Java 10 包括一组默认的根证书，从而减少了为各种 Java 应用程序手动配置和管理证书的需求。
+
+6. **API 和工具的改进**
+
+引入一些 API 和工具也在 Java 10 中得到了改进，例如对 `Optional.orElseThrow()` 方法的添加和 JavaDoc 的增强。
+
+```java
+/**
+     * If a value is present, returns the value, otherwise throws
+     * {@code NoSuchElementException}.
+     *
+     * @return the non-{@code null} value described by this {@code Optional}
+     * @throws NoSuchElementException if no value is present
+     * @since 10
+     */
+    public T orElseThrow() {
+        if (value == null) {
+            throw new NoSuchElementException("No value present");
+        }
+        return value;
+    }
+
+// 增加了新的收集器方法，例如Collectors.toUnmodifiableList()
+List<String> list = Stream.of("a", "b", "c")
+                          .collect(Collectors.toUnmodifiableList());
+
+// 增强了CompletableFuture类，添加了一些方便的方法
+CompletableFuture.supplyAsync(() -> "Hello")
+                 .thenApplyAsync(result -> result + " World")
+                 .thenAccept(System.out::println);
+
+   ```
+
+
+
+#### 类型推断
+
+类型推断特性只发生在编译阶段，编译器负责推断出类型，并把结果写入字节码文件，和声明的变量类型是完全一样的，与运行时无关，所以对运行时的性能不会产生任何影响。
+
+```java
+// var不是一个关键字，而是一个类型名，只有在编译器需要知道类型的地方才用到它
+var list = List.of("Java", "Python", "JavaScript");
+for (var item : list) {
+    System.out.println(item);
+}
+```
+
+
+
+#### 线程本地握手
+
+这个特性值得提一下，它其实是jdk优化垃圾收集效果的一部分。**线程本地握手（Thread-Local Handshakes）是 JVM 内部的一项优化机制，程序员无法直接调用或使用它。相反，它是在 JVM 执行特定操作时由 JVM 自行触发和管理的。就是为了减少垃圾收集过程中全局停顿时间（即所谓的 "Stop-The-World"）而引入的优化机制。**
+
+> 在传统的 JVM 停顿机制（如 Safepoint）中，当 JVM 需要执行某些全局操作（如垃圾收集、栈遍历等）时，通常会暂停所有的应用线程。这种机制的主要缺点是：
+>
+> 1. **全局停顿时间长：** 所有线程都需要到达安全点（Safepoint），这可能会导致较长时间的全局停顿。
+> 2. **影响性能：** 全局停顿会影响应用的吞吐量和响应时间，特别是在高并发环境下。
+
+而线程本地握手允许 JVM 只暂停和操作某些特定的线程，而不是全局暂停所有线程。这种机制的引入使得 JVM 可以对某些局部性操作进行更精细的控制，减少全局停顿的影响。
+
+[jdk jeps312](https://openjdk.org/jeps/312)
+
+
+
+### JDK11
+
+**JDK 11是Oracle的长期支持版本（LTS）。**
+
+1. **本地变量 Lambda参数的类型推断** (Local-Variable Syntax for Lambda Parameters)
+
+```java
+var list = List.of("a", "b", "c");
+list.forEach((var s) -> System.out.println(s));
+   ```
+
+2. **标准HTTP客户端** (Standard HTTP Client)
+
+JEP 321将HTTP客户端API从孵化阶段提升为标准API，提供了对HTTP/2和WebSocket的支持。
+
+```java
+// 新的`HttpClient` API提供了更多的配置和功能选项，使得构建和发送HTTP请求更加简洁和强大。
+HttpClient client = HttpClient.newHttpClient();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create("https://example.com"))
+    .build();
+HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+System.out.println(response.body());
+   ```
+
+3. **基于ZGC的低暂停时间垃圾收集器** (ZGC: A Scalable Low-Latency Garbage Collector)
+
+JEP 333引入了ZGC，一个高扩展性、低延迟的垃圾收集器，适用于大内存应用。
+
+4. **Flight Recorder**
+
+JEP 328使Java Flight Recorder成为开源工具，帮助开发者分析和调试应用性能问题。
+
+5. **`String` 类的新方法**
+
+引入了一些有用的`String`方法，如`strip()`, `repeat(int count)`, `lines()`等。
+
+```java
+String text = " Hello World ";
+//为什么有了trim还要新增trip方法：因为trim():仅处理Unicode码点小于等于U+0020的字符。strip():处理所有被 Character.isWhitespace(int) 识别为空白的字符，范围更广。
+System.out.println(text.strip());  // "Hello World"
+System.out.println("abc".repeat(3));  // "abcabcabc"
+// lines()按行转化为字符串流
+text.lines().forEach(System.out::println);
+   ```
+
+6. **直接运行源代码文件**
+
+JEP 330允许直接运行Java源代码文件，无需先编译成字节码。比如可以直接在命令行执行:
+
+`java HelloWorld.java`
+
+7. **新的`File`方法**
+
+增加了`Files.writeString`和`Files.readString`方法，简化了文件操作。
+
+```java
+Path path = Paths.get("file.txt");
+Files.writeString(path, "Hello, World");
+String content = Files.readString(path);
+System.out.println(content);  // "Hello, World"
+   ```
+
+
+
+### JDK12
+
+#### Switch Expressions
+
+Switch 表达式是一种预览特性，使得 `switch` 语句可以返回值，从而简化代码并减少错误。它可以用于传统的 `switch` 语句，也可以用于新的表达式形式。
+
+```java
+var day = "THURSDAY";
+        var result = switch (day) {
+            case "MONDAY", "FRIDAY", "SUNDAY" -> 6;
+            case "TUESDAY" -> 7;
+            case "THURSDAY", "SATURDAY" -> 8;
+            case "WEDNESDAY" -> 9;
+            default -> throw new IllegalStateException("Unexpected value: " + day);
+        };
+        System.out.println(result);// 8,并且不需要break
+```
+
+
+
+#### Shenandoah垃圾收集器
+
+和 G1 一样是低停顿时间的垃圾收集器，Shenandoah 的目的也是减少暂停时间(尤其是在大堆上)，对此的解决方法是 执行并发压缩。
+
+垃圾收集器，在`Java Optimizing`中再细讲。
+
+
+
+### JDK13
+
+1. **文本块（Text Blocks）**
+
+文本块是一个多行字符串文字，旨在简化用字符串表示的代码片段，例如JSON、SQL查询和HTML代码。它可以通过减少样板代码、自动格式化字符串内容和增强可读性来提高开发效率
+
+2. **ZGC: Concurrent Thread-Stack Processing**和**Shenandoah GC: Concurrent I/O** 改进
+
+ZGC（Z Garbage Collector）的一项新特性，使线程栈处理可以并发执行，进一步减少了 GC 停顿时间，提高了垃圾回收器的性能。
+
+Shenandoah GC 进行改进，增加了并发 I/O 支持，从而减少了垃圾收集时对 I/O 操作的阻塞，提高了系统的整体性能。
+
+#### 文本块（Text Blocks）
+
+文本块自动处理换行符和缩进，使得多行字符串的书写更加简洁
+
+```java
+// 不需要拼接和写换行符，文本块自动处理换行符和缩进
+String textBlock = """
+            This is a text block.
+            It spans multiple lines.
+            Text blocks automatically handle
+            line breaks and indentation.
+            """;
+        System.out.println(textBlock);
+```
+
+
+
+### JDK14
+
+**改进的NullPointerExceptions**：提供更详细的错误信息
+
+NullPointerExceptions改进（Helpful NullPointerExceptions, JEP 358）改进了空指针异常的信息，使得调试变得更加容易。当出现空指针异常时，JVM现在可以提供更详细的错误信息，指出哪个变量为null。
+
+
+
+
+
+### JDK16
+
+jdk16引入的值得关注的特性，有如下：
+
+1. **Unix-Domain Socket Channels**：提供对 Unix 域套接字的支持，允许本地进程间通信。
+2. **Foreign Linker API (Incubator)**：提供了一种新的 API，用于在 Java 中调用本地代码，提高了与本地库交互的效率和安全性。
+3. **记录类型（Records）**在 JDK 16 中成为正式功能，提供了一种简洁的方式来定义不可变的数据类。
+4. **Pattern Matching for instanceof (JEP 394)**：增强了 `instanceof` 操作符，支持模式匹配，简化了类型检查和转换代码。
+5. **Packaging Tool (JEP 392)**：提供了一个新的打包工具，允许将 Java 应用程序打包成本地安装包，支持多种平台格式。
+6. **Elastic Metaspace (JEP 387)**：改进了元空间的内存管理，使其更加弹性和高效，减少内存占用和垃圾回收开销。
+7. **Remove the Concurrent Mark-Sweep (CMS) Garbage Collector (JEP 363)**：移除了过时的 CMS 垃圾收集器，推荐使用 G1 垃圾收集器作为替代方案。
+
+
+
+#### Record类型
+
+`Record` 类型是一种新的类类型，专门用于表示不可变的数据载体。它自动为所有字段生成标准的方法，如 `toString()`, `equals()`, `hashCode()`, 和 `constructor`，从而减少了大量重复的代码。
+
+- 自动生成的构造函数：`record` 自动生成一个包含所有字段的构造函数。
+
+- 自动生成的访问器方法：对于每个字段，`record` 自动生成一个访问器方法。例如，`name` 字段将有一个 `name()`方法。
+
+- 自动生成的 `toString()` 方法、`equals()` 和 `hashCode()` 方法：`record` 类自动生成 `equals()` 和 `hashCode()` 方法，以便适用于字段值相等性比较，`toString()` 方法，格式化输出为 `Person[name=John, age=30]`。
+
+- 不可变性，字段都是 `final` 的，因此记录对象本身是不可变的。尝试修改字段将导致编译错误。
+
+- 不允许继承但可以实现接口：`record` 不能扩展其他类，也不能被扩展。`record` 自动继承自 `java.lang.Record`。
+
+示例：
+
+```java
+public static void main( String[] args )
+    {
+        Range range = new Range(1, 2);
+        System.out.println(range);// Range[start=1, end=2]
+        System.out.println(range.start());
+        System.out.println(range.end());
+        System.out.println(range.minus());
+
+    }
+
+    // 定义一个 record 类，record 类不能继承但可以实现接口
+    public record Range(int start, int end) implements Runnable{
+
+        // 可以定义方法
+        public int minus() {
+            return start - end;
+        }
+
+        @Override
+        public void run() {
+            System.out.println("run over");
+        }
+    }
+```
+
+上面的record就相当于下面的类，是不是简洁多了
+
+```java
+public final class range{
+    final int start;
+    final int end;
+
+    public range(int start, int end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        range range = (range) o;
+        return start == range.start && end == range.end;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(start, end);
+    }
+
+    @Override
+    public String toString() {
+        return "range[" +
+                "start=" + x +
+                ", end=" + y +
+                "]";
+    }
+
+    public int start(){
+        return start;
+    }
+
+    public int end(){
+        return end;
+    }
+}
+```
+
+
+
+#### 模式增强
+
+模式匹配在 Java 中主要通过 `instanceof` 关键字引入，目标是简化代码中常见的类型检查和类型转换操作。
+
+```java
+Object obj = "Hello, World!";
+if (obj instanceof String) {
+    String s = (String) obj;
+    System.out.println(s.toUpperCase());
+}
+
+// 使用模式增强可以直接写成
+Object obj = "Hello, World!";
+if (obj instanceof String s) {
+    System.out.println(s.toUpperCase());  // 直接使用 s
+}
+```
+
+**在JDK21中还能直接switch进行模式操作**
+
+```java
+Object obj = "Hello, World!";
+        switch (obj) {
+            case String s -> System.out.println("String: " + s);
+            case Integer i -> System.out.println("Integer: " + i);
+            default -> System.out.println("Unknown type");
+        }
+```
+
+**模式增强：嵌套**
+
+```java
+record Point(int x, int y) {}
+
+record Rectangle(Point topLeft, Point bottomRight) {}
+
+Object obj = new Rectangle(new Point(0, 0), new Point(5, 5));
+
+if (obj instanceof Rectangle(Point topLeft, Point bottomRight)) {
+    if (topLeft instanceof Point(int x1, int y1) && bottomRight instanceof Point(int x2, int y2)) {
+        System.out.println("Rectangle from (" + x1 + "," + y1 + ") to (" + x2 + "," + y2 + ")");
+    }
+}
+```
+
+**模式增强：解构**
+
+```java
+record Point(int x, int y) {}
+
+record Rectangle(Point topLeft, Point bottomRight) {}
+
+Object obj = new Rectangle(new Point(0, 0), new Point(5, 5));
+
+if (obj instanceof Rectangle(Point(int x1, int y1), Point(int x2, int y2))) {
+    System.out.println("Rectangle from (" + x1 + "," + y1 + ") to (" + x2 + "," + y2 + ")");
+}
+```
+
+
+
+### JDK17
+
+**JDK 17 是一个长期支持（LTS）版本**，包含了许多重要的新特性和改进。以下是一些关键的新特性和改进：
+
+1. **封闭类和接口（Sealed Classes and Interfaces）JEP 409**: 允许类和接口声明它们的子类或实现者，以实现更严格的控制和优化。
+1. **增强的伪随机数生成器 JEP 356**: 提供新的接口和实现，以提高伪随机数生成器的灵活性和性能。
+1. **强封装 JDK 内部 API JEP 403**: 强制对 JDK 内部 API 进行封装，以提高安全性和稳定性，这意味着直接访问 JDK 内部 API 将会变得更加困难，推荐使用公共 API。
+1. **增强的向量 API JEP 414**: 增强向量 API，以便更好地支持向量化计算，特别是在数值和科学计算领域。
+
+
+
+#### 封闭类和接口
+
+封闭类和接口是用于控制类的继承层次结构（*不是针对如 `public`、`protected` 等访问修饰符的限制，进行约束的*），明确指定了哪些类和接口可以继承或实现它们，从而提供了一种强大的工具来控制继承层次结构。这种机制不仅增强了代码的安全性和可维护性，还为编译器和工具提供了优化的机会，从而提高代码的性能和可靠性。
+
+**封闭修饰符**
+
+- **final**：表示该类不能被进一步继承，通过使用 `final` 修饰符，明确表示该类是封闭类层次结构的终点，不允许有更多的子类。
+- **sealed**：表示该类可以被继承，但继承它的子类必须被指定，并且这些**子类也必须继续遵循同样的规则（即必须是 `final`、`sealed` 或 `non-sealed`**），这种修饰符确保了封闭类层次结构的继续控制，使得继承链条可以在一个受控的范围内扩展，但仍然保持明确的限制。
+- **non-sealed**：表示该类可以被继承，并且继承它的子类不再受限于 `final`、`sealed` 或 `non-sealed` 的约束，**这种修饰符允许开放继承，在需要更灵活的继承结构时提供了一个出口。**
+
+示例：
+
+```java
+/**
+     * Animal 接口是封闭的，只允许 Dog、Cat 和 Bird 实现。
+     */
+    public sealed interface Animal permits Dog, Cat, Bird {
+        void sound();
+    }
+
+    public final class Dog implements Animal {
+        @Override
+        public void sound() {
+            System.out.println("Woof");
+        }
+    }
+
+    /**
+     * Cat 是一个封闭类，只允许 HouseCat 和 WildCat 继承
+     */
+    public sealed class Cat implements Animal permits HouseCat, WildCat {
+        @Override
+        public void sound() {
+            System.out.println("Meow");
+        }
+    }
+
+    /**
+     * 在 Java 中，当一个类或接口被声明为 sealed 时，
+     * 它的直接子类或实现必须使用 final、sealed 或 non-sealed 修饰符。这些修饰符的目的在于明确地表达类层次结构的意图和限制。
+     */
+    public final class HouseCat extends Cat {
+        @Override
+        public void sound() {
+            System.out.println("Purr");
+        }
+    }
+
+    /**
+     * WildCat 是非封闭的，因此它可以被进一步扩展。
+     * non-sealed 给在需要更灵活的继承结构时提供了一个出口
+     */
+    public non-sealed class WildCat extends Cat {
+        @Override
+        public void sound() {
+            System.out.println("Roar");
+        }
+    }
+
+    /**
+     * WildCatSon 扩展 non-sealed的 WildCat
+     */
+    public class WildCatSon extends WildCat {
+        @Override
+        public void sound() {
+            System.out.println("Roar");
+        }
+    }
+
+    public final class Bird implements Animal {
+        @Override
+        public void sound() {
+            System.out.println("Chirp");
+        }
+    }
+```
+
+
+
+#### 伪随机数生成器
+
+提供新的接口和实现，以提高伪随机数生成器的灵活性和性能。
+
+```java
+// L64X128MixRandom L128X1024MixRandom
+RandomGenerator generator = RandomGeneratorFactory.of("L64X128MixRandom").create();
+long randomLong = generator.nextLong();
+```
+
+注意`RandomGeneratorFactory.of("L64X128MixRandom")`传入的是`RandomGenerator`实现类的名称，jdk提供了不少实现类
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-1.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jdk/jdk-1.png" alt="image" style="zoom:36%;" />)
+
+`RandomGeneratorFactory`维护了一个`createFactoryMap`来管理其实现类
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-0.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jdk/jdk-0.png" alt="image" style="zoom:35%;" />)
+
+
+
+### JDK18
+
+#### Simple Web Server
+
+[JEP 408: Simple Web Serveropen](https://openjdk.java.net/jeps/408)，是Java 18推出的一个比较独立的全新功能点。我们可以通过命令行工具来启动一个提供静态资源访问的迷你Web服务器。
+
+> 运行命令就可以直接起来：jwebserver -p 9000 -d / -b 127.0.0.1 -o info
+>
+> - `-b`：要绑定的ip地址
+> - `-p`：要启动的访问端口
+> - `-d`：要提供服务的目录
+> - `-o`：控制台的输出级别
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-2.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jdk/jdk-2.png" alt="image" style="zoom:28%;" />)
+
+
+
+### JDK19
+
+JDK 19 2022 年 9月发布，以下是 JDK 19 的主要新特性：
+
+1. **泛型的类型参数（Generic Types）**：增强了 `switch` 语句的模式匹配能力，使其更加灵活和强大。引入了新的 `case` 语法，使得 `switch` 更容易处理复杂的数据类型和条件。
+
+```java
+     // 泛型方法，早期版本是不支持泛型数组的，也不能泛型for循环
+    public static <T> void printArray(T[] array) {
+        for (T element : array) {
+            System.out.println(element);
+        }
+    }
+
+    public static void main(String[] args) {
+        // 打印 Integer 数组
+        Integer[] intArray = {1, 2, 3, 4, 5};
+        printArray(intArray);
+
+        // 打印 String 数组
+        String[] stringArray = {"A", "B", "C"};
+        printArray(stringArray);
+    }
+   ```
+
+泛型switch也支持
+
+```java
+public static <T> void process(T input) {
+        // 使用类型检查来确定输入的实际类型
+        if (input instanceof Integer intValue) {
+            switch (intValue) {
+                case 1:
+                    System.out.println("One");
+                    break;
+                case 2:
+                    System.out.println("Two");
+                    break;
+                default:
+                    System.out.println("Other Integer");
+                    break;
+            }
+        } else if (input instanceof String strValue) {
+            switch (strValue) {
+                case "A":
+                    System.out.println("Letter A");
+                    break;
+                case "B":
+                    System.out.println("Letter B");
+                    break;
+                default:
+                    System.out.println("Other String");
+                    break;
+            }
+        } else {
+            System.out.println("Unsupported type");
+        }
+    }
+   ```
+
+
+
+2. **压缩字符串（String Compression）**：引入了新的压缩字符串功能，优化了 Java 字符串在内存中的表示。这个功能通过对字符串进行压缩来减少内存占用。
+
+Java 的 `String` 类引入了内部压缩存储机制。字符串会使用 `byte[]` 数组来存储字符数据，而不是传统的 `char[]`数组。这样，当字符串的内容非常相似时，它们可以共享相同的内部数据表示，从而节省内存。在 JDK 9 及之后的版本中，默认情况下启用了字符串压缩。
+
+
+
+### JDK20
+
+JDK20实际的新特性不多，大的更新主要都在接下来的JDK21中
+
+
+
+### JDK21
+
+JDK 21 是一个长期支持（LTS）版本J， 引入了不少重要的新特性和改进，并将之前版本的预览功能给标准确定下来，以下是一部分：
+
+#### 接口的泛型增强
+
+绑定接口的泛型增强 (JEP 433: Generic Interfaces for the Binding Framework)，允许绑定框架的泛型接口支持泛型类型参数，从而提升了泛型接口的灵活性和类型安全性。
+
+```java
+public interface BiConsumer<T, U> {
+    void accept(T t, U u);
+}
+```
+
+
+
+#### 顺序集合
+
+顺序集合（JEP 431 Sequenced Collections），在JDK 21中，Sequenced Collections的引入带来了新的接口和方法来简化集合处理，旨在提供对元素顺序的更加直观和一致的支持。这一增强使得处理有序集合变得更加简单和一致。
+
+Sequenced Collections 引入了几个新接口：
+
+1. **SequencedCollection**: 提供对有序集合的通用支持。
+
+`E getFirst()`: 获取第一个元素。
+
+`E getLast()`: 获取最后一个元素。
+
+`void addFirst(E e)`: 将元素添加到集合的开头。
+
+`void addLast(E e)`: 将元素添加到集合的末尾。
+
+`SequencedCollection<E> reversed()`: 返回一个包含相同元素但顺序相反的集合。
+
+2. **SequencedSet**: 继承自 Set，并添加顺序操作。
+
+`E getFirst()`
+`E getLast()`
+`void addFirst(E e)`
+`void addLast(E e)`
+`SequencedSet<E> reversed()`
+
+3. **SequencedMap**: 继承自 Map，并添加顺序操作。
+
+`Map.Entry<K, V> getFirstEntry()`: 获取第一个键值对。
+
+`Map.Entry<K, V> getLastEntry()`: 获取最后一个键值对。
+
+`void putFirst(K key, V value)`: 将键值对添加到映射的开头。
+
+`void putLast(K key, V value)`: 将键值对添加到映射的末尾。
+
+`SequencedMap<K, V> reversed()`: 返回一个包含相同键值对但顺序相反的映射。
+
+这些接口允许开发者以统一的方式处理元素顺序，包括访问第一个和最后一个元素、反转元素顺序等。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-3.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+#### 虚拟线程
+
+虚拟线程（Virtual Threads），也称为用户模式线程（user-mode threads）或纤程（fibers）。
+
+> 虚拟线程在JDK 21中已作为正式发布的功能，而不再是预览功能。这意味着它经过了广泛的测试和验证，具有生产级别的可靠性和稳定性。
+
+该功能旨在简化并发编程并提供更好的可扩展性。虚拟线程是轻量级的，这意味着它们可以比传统线程创建更多数量，并且开销要少得多。这使得在自己的线程中运行单独任务或请求变得更加实用，即使在高吞吐量的程序中也是如此。
+
+这个单独开一个文档写[JUC-虚拟线程](./JUC-虚拟线程.md)
+
+
+
+
+
+
+
+
+
+
+

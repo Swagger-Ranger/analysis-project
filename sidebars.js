@@ -31,7 +31,7 @@ const sidebars = {
         {
             type: 'doc',
             id: 'AnalysisProject/直观的质检系统设计', // 指向 'docs/introduction.md'
-            label: '直观的质检系统设',
+            label: '直观的质检系统设计',
         },
         {
             type: 'category',
