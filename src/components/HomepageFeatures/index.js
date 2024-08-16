@@ -4,43 +4,41 @@ import styles from './styles.module.css';
 
 const FeatureList = [
   {
-    title: 'Easy to Use',
-    image: require('@site/static/img/img-datacatch.jpg').default,
+    title: '理解问题',
+      Svg: require('@site/static/img/jaeger.svg').default,
     description: (
       <>
-        Docusaurus was designed from the ground up to be easily installed and
-        used to get your website up and running quickly.
+          all for analysis章节是关于如何理解一个质检系统，以及整个的设计是什么样的.
       </>
     ),
   },
   {
-    title: 'Focus on What Matters',
-    image: require('@site/static/img/img-datacatch.jpg').default,
+    title: '找到工具',
+      Svg: require('@site/static/img/xcode.svg').default,
     description: (
       <>
-        Docusaurus lets you focus on your docs, and we&apos;ll do the chores. Go
-        ahead and move your docs into the <code>docs</code> directory.
+          middleware章节就是需要的工具和核心组件：搜索引擎、关系数据库、图数据库、时序数据库等
+        {/*ahead and move your docs into the <code>docs</code> directory.*/}
       </>
     ),
   },
   {
-    title: 'Powered by React',
-    image: require('@site/static/img/img-datacatch.jpg').default,
+    title: 'Dev and Ops it',
+      Svg: require('@site/static/img/coffeescript-color.svg').default,
     description: (
       <>
-        Extend or customize your website layout by reusing React. Docusaurus can
-        be extended while reusing the same header and footer.
+          code和devops章节就是要实际的写编码需要的知识(这里就是Java)，和项目实际运行和维护的知识，blog章节就单纯是个人的一下感受和文章
       </>
     ),
   },
 ];
 
-function Feature({image, title, description}) {
+function Feature({Svg, title, description}) {
   return (
     <div className={clsx('col col--4')}>
       <div className="text--center">
-        {/*<Svg className={styles.featureSvg} role="img" />*/}
-          <img src={image} className={styles.featureImg} alt={title} />  {/* 使用img标签来显示图片 */}
+        <Svg className={styles.featureSvg} role="img" />
+        {/*  <img src={image} className={styles.featureImg} alt={title} />  */}
       </div>
       <div className="text--center padding-horiz--md">
         <Heading as="h3">{title}</Heading>

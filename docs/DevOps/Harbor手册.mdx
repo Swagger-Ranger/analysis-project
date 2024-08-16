@@ -1,0 +1,322 @@
+---
+title: Harbor
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+## 安装
+
+[下载](https://github.com/goharbor/harbor/releases/download/v2.11.0/harbor-offline-installer-v2.11.0.tgz)harbor，使用的离线安装包，这样在部署时下载的内容就要少一次点，毕竟在线安装会时不时的遇到网络问题。
+
+### 操作步骤
+
+0. 前提：已经部署好了docker，harbor是运行在docker中的
+1. 解压` tar zxvf harbor.v2.11.0.tar.gz`，并cd到解压好的harbor目录下
+2. 生成https密钥
+3. 配置`harbor.yml`，已有一个`harbor.yml.tmpl`，复制生成一个harbor.yml，然后编辑配置
+4. `./prepare` 生成harbor要运行的docker compose
+5. `docker compose up -d` 后台启动
+6. `docker compose down` 停止harbor
+
+
+
+### 操作详细
+
+#### 生成https自签名证书
+
+1. **生成私钥**:
+
+```sh
+openssl genrsa -out ca.key 4096
+   ```
+
+2. **生成证书签名请求 (CSR)**: 创建一个 `csr.conf` 文件，内容如下：
+
+> 将ip换成自己的harbor的IP或者域名
+
+```conf
+[ req ]
+default_bits        = 2048
+distinguished_name  = req_distinguished_name
+req_extensions      = req_ext
+prompt              = no
+
+[ req_distinguished_name ]
+countryName                 = CN
+stateOrProvinceName         = Beijing
+localityName                = Beijing
+organizationName            = example
+organizationalUnitName      = Personal
+commonName                  = 192.168.1.60
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1   = 192.168.1.60
+IP.1    = 192.168.1.60
+   ```
+
+3. **生成自签名证书**: 使用上述配置文件生成证书：
+
+```sh
+openssl req -x509 -new -nodes -sha512 -days 3650 \
+    -key ca.key \
+    -out ca.crt \
+    -config csr.conf
+   ```
+
+然后将生成的
+
+ca.crt 和 ca.key路径复制到下面配置文件的certificate，private_key中
+
+
+
+#### 配置文件
+
+```yaml
+# Configuration file of Harbor
+
+# The IP address or hostname to access admin UI and registry service.
+# DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
+hostname: 192.168.1.60
+
+# http related config
+http:
+  # port for http, default is 80. If https enabled, this port will redirect to https port
+  port: 8800
+
+# https related config
+https:
+  # https port for harbor, default is 443
+  port: 8443
+  # The path of cert and key files for nginx
+  certificate: /opt/harbor/certs/test/ca.crt
+  private_key: /opt/harbor/certs/test/ca.key
+  # enable strong ssl ciphers (default: false)
+  # strong_ssl_ciphers: false
+
+# Remember Change the admin password from UI after launching Harbor.
+harbor_admin_password: Harbor12345
+
+# Harbor DB configuration
+database:
+  password: root123
+  max_idle_conns: 100
+  max_open_conns: 900
+  conn_max_lifetime: 5m
+  conn_max_idle_time: 0
+
+# The default data volume
+data_volume: /opt/dockerData/harbor
+
+# 12 hours and published as a new release to GitHub.
+trivy:
+  # ignoreUnfixed The flag to display only fixed vulnerabilities
+  ignore_unfixed: false
+  # skipUpdate The flag to enable or disable Trivy DB downloads from GitHub
+  #
+  # `metadata.json` files and mount them in the `/home/scanner/.cache/trivy/db` path.
+  skip_update: false
+  #
+  # `/home/scanner/.cache/trivy/java-db/trivy-java.db` path
+  skip_java_db_update: false
+
+  # This option doesn't affect DB download. You need to specify "skip-update" as well as "offline-scan" in an air-gapped environment.
+  offline_scan: false
+  #
+  # Comma-separated list of what security issues to detect. Possible values are `vuln`, `config` and `secret`. Defaults to `vuln`.
+  security_check: vuln
+  #
+  # insecure The flag to skip verifying registry certificate
+  insecure: false
+  #
+  # There is upper bound of 30 minutes defined in scan job. So if this `timeout` is larger than 30m0s, it will also timeout at 30m0s.
+  timeout: 5m0s
+
+
+jobservice:
+  # Maximum number of job workers in job service
+  max_job_workers: 10
+  # The jobLoggers backend name, only support "STD_OUTPUT", "FILE" and/or "DB"
+  job_loggers:
+    - STD_OUTPUT
+    - FILE
+    # - DB
+  # The jobLogger sweeper duration (ignored if `jobLogger` is `stdout`)
+  logger_sweeper_duration: 1 #days
+
+notification:
+  # Maximum retry count for webhook job
+  webhook_job_max_retry: 3
+  # HTTP client timeout for webhook job
+  webhook_job_http_client_timeout: 3 #seconds
+
+# Log configurations
+log:
+  # options are debug, info, warning, error, fatal
+  level: info
+  # configs for logs in local storage
+  local:
+    # Log files are rotated log_rotate_count times before being removed. If count is 0, old versions are removed rather than rotated.
+    rotate_count: 50
+    # are all valid.
+    rotate_size: 200M
+    # The directory on your host that store log
+    location: /var/log/harbor
+
+#This attribute is for migrator to detect the version of the .cfg file, DO NOT MODIFY!
+_version: 2.11.0
+
+proxy:
+  http_proxy:
+  https_proxy:
+  no_proxy:
+  components:
+    - core
+    - jobservice
+    - trivy
+
+# Enable purge _upload directories
+upload_purging:
+  enabled: true
+  # remove files in _upload directories which exist for a period of time, default is one week.
+  age: 168h
+  # the interval of the purge operations
+  interval: 24h
+  dryrun: false
+
+# NOTICE
+# If you are deploying Harbor in HA mode, make sure that all the harbor
+# instances have the same behaviour, all with caching enabled or disabled,
+# otherwise it can lead to potential data inconsistency.
+cache:
+  # not enabled by default
+  enabled: false
+  # keep cache for one day by default
+  expire_hours: 24
+```
+
+主要改的内容：
+
+`hostname`, `http.port`, `https.port`, `certificate` , `private_key`, `data_volume`
+
+
+
+## 使用
+
+### 创建项目
+
+创建项目有两种：项目和镜像代理
+
+项目就是自己的镜像仓库，一般用来推送自己的镜像，镜像代理就是作为其他镜像仓库的代理缓存。配置镜像代理后，Harbor 会从上游仓库（如 Docker Hub 或其他镜像仓库）拉取镜像，并在本地缓存这些镜像。主要用于拉取镜像并缓存，不适用于推送镜像。
+
+#### 创建镜像代理
+
+1. 先在仓库管理中创建代理仓库的上游仓库
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/devops-3.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/devops-3.png" alt="image-20240608205943794" style="zoom:67%;" />)
+
+
+
+2. 创建镜像仓库
+
+点开镜像代理，再从仓库管理中选择上游仓库
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/devops-4.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/devops-4.png" alt="image-20240608210053128" style="zoom:50%;" />)
+
+
+
+
+
+### cri容器中配置自己的仓库
+
+在运行时为containerd的容器中，CRI 是 Kubernetes 与容器运行时之间的接口标准，可以使用crictl 工具来和容器环境交互，类似于docker命令。比如`crictl images` , `crictl pull 192.168.1.60:8443/images/my-pilot:1.22.0`
+
+在拉取和推送时，会遇到权限验证不同过的情况，**tls: failed to verify certificate: x509**，此时需要去修改`/etc/containerd/config.toml` 文件中的认证配置
+
+```yml
+    [plugins."io.containerd.grpc.v1.cri".registry]
+      config_path = ""
+
+      [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+        [plugins."io.containerd.grpc.v1.cri".registry.mirrors."192.168.1.60:8443"]
+          endpoint = ["https://192.168.1.60:8443"]
+
+      [plugins."io.containerd.grpc.v1.cri".registry.auths]
+
+      [plugins."io.containerd.grpc.v1.cri".registry.configs]
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.1.60:8443".tls]
+            ca_file = "/etc/containerd/certs.d/ca.crt"
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."192.168.1.60:8443".auth]
+            username = "liufei"
+            password = "Lf123456"
+          [plugins."io.containerd.grpc.v1.cri".registry.configs."sealos.hub:5000".auth]
+            username = "admin"
+            password = "passw0rd"
+```
+
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/devops-5.png" alt="image" style={{ maxWidth: '80%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/devops-5.png" alt="image-20240608184552303" style="zoom:50%;" />)
+
+注意，按这种配置，config_path路径内容要去掉，否则需要调整配置内容。可以参考
+
+[containerd拉取私有仓库镜像报错x509: certificate signed by unknown authority](https://blog.csdn.net/qq_37837432/article/details/124159248)
+
+修改之后需要重启容器服务
+
+`systemctl daemon-reload`
+
+`systemctl restart containerd`
+
+
+
+### 推送镜像
+
+先将本地已有的镜像打tag
+
+命令：`docker tag [OPTIONS] IMAGE[:TAG] [REGISTRYHOST/][USERNAME/]NAME[:TAG]`
+
+eg: `docker tag istio/pilot:1.22.0 192.168.1.60:8443/images/pilot:1.22.0`
+
+再将打了tag的镜像，推送到服务器，
+
+`docker push 192.168.1.60:8443/images/pilot:1.22.0`
+
+
+
+### 拉取镜像
+
+到harbor中，可以看到刚刚推送的镜像
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/devops-6.png" alt="image" style={{ maxWidth: '80%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/devops-6.png" alt="image-20240608184109669" style="zoom:50%;" />)
+
+`docker pull 192.168.1.60:8443/images/pilot:1.22.0`
+
+#### 从镜像代理中拉取镜像
+
+从镜像代理仓库拉取时如果没有镜像则会去上游仓库拉取，有则直接拉取本地缓存，这样能加快镜像的拉取数据
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/devops-7.png" alt="image" style={{ maxWidth: '80%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/devops-7.png" alt="image-20240608205805201" style="zoom:50%;" />)
+
+192.168.1.60:8443/daocloudproxy/

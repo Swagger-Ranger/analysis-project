@@ -10,9 +10,9 @@ import {themes as prismThemes} from 'prism-react-renderer';
 const config = {
   // 这三行是对首页的title配置
   title: 'Analysis Project',
-  tagline: '对数据内容的解析和数据关系的建模：all for analysis是整个的设计就是搞清楚要干什么，middleware就是需要的工具和核心组件，' +
-      'code就是要实际的写代码已经需要的代码知识，devops就是项目往往是需要团队协作而且还需要维护和迭代，blog就单纯是个人的一下感受和文章',
-  favicon: 'img/analysis_favicon.png',// favicon网站标签图标
+  tagline: '为什么叫 analysis project，此项目想要做的事情就是如何在大量的数据中快速识别出特定的内容或者对数据验证大量而且丰富的自定义逻辑，' +
+      '因为依赖于对数据内容的解析和数据关系的建模，这就是analysis的含义。主要是三部分内容：理解并设计系统、合适的工具和中间件、完成它需要的编程知识',
+  favicon: 'img/apachecassandra-color.svg',// favicon网站标签图标
 
   // Set the production url of your site here https://github.com/Swagger-Ranger/analysis-project
   url: 'https://Swagger-Ranger.github.io',
@@ -94,7 +94,7 @@ const config = {
         title: '',
         logo: {
           alt: 'My Site Logo',
-          src: 'img/analysis_favicon.png',
+          src: 'img/apachecassandra-color.svg',
         },
         items: [
           {
