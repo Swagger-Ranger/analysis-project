@@ -1,0 +1,302 @@
+---
+title: ForkJoinPool
+sidebar_position: 7
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+### ForkJoinPool理解
+
+`ForkJoinPool`是JDK7提供的一种“分治算法”的多线程并行计算框架，主要设计目的是为了高效地处理大规模的并行计算任务。可以将`ForkJoinPool`看作一个单机版的`Map/Reduce`，只不过这里的并行不是多台机器并行计算，而是多个线程并行计算。
+
+相比于 `ThreadPoolExecutor` ， `ForkJoinPool`可以更好地实现计算的负载均衡，提高资源利用率。假设有5个任务，在`ThreadPoolExecutor`中有5个线程并行执行，其中一个任务的计算量很大，其余4个任务的计算量很小，这会导致1个线程很忙，其他4个线程则处于空闲状态。而利用`ForkJoinPool`，可以把大的任务拆分成很多小任务，然后 这些小任务被所有的线程执行，从而实现任务计算的负载均衡。
+
+### 使用示例
+
+先来看两个例子：
+
+```java
+package org.liufei.junit5.test;
+
+import java.util.concurrent.RecursiveAction;
+
+/**
+ * @author liufei
+ **/
+public class PrintTask extends RecursiveAction {
+    private final int start, end;
+    private static final int THRESHOLD = 10; // 分治的阈值
+
+    public PrintTask(int start, int end) {
+        this.start = start;
+        this.end = end;
+    }
+
+    @Override
+    protected void compute() {
+        if (end - start <= THRESHOLD) {
+            for (int i = start; i < end; i++) {
+                System.out.println(Thread.currentThread().getName() + "  Processing index: " + i);
+            }
+        } else {
+            int mid = (start + end) / 2;
+            PrintTask leftTask = new PrintTask(start, mid);
+            PrintTask rightTask = new PrintTask(mid, end);
+            invokeAll(leftTask, rightTask); // 并行执行子任务
+        }
+    }
+
+    public static void main(String[] args) {
+        PrintTask printTask = new PrintTask(1, 60);
+        printTask.compute();
+    }
+}
+```
+
+
+
+```java
+package org.liufei.junit5.test;
+
+import java.util.concurrent.RecursiveTask;
+
+/**
+ * @author liufei
+ **/
+public class SumTask extends RecursiveTask<Integer> {
+    private final int[] array;
+    private final int   start, end;
+    private static final int THRESHOLD = 10; // 分治的阈值
+
+    public SumTask(int[] array, int start, int end) {
+        this.array = array;
+        this.start = start;
+        this.end = end;
+    }
+
+    @Override
+    protected Integer compute() {
+        if (end - start <= THRESHOLD) {
+            int sum = 0;
+            for (int i = start; i < end; i++) {
+                sum += array[i];
+            }
+            return sum;
+        } else {
+            int mid = (start + end) / 2;
+            SumTask leftTask = new SumTask(array, start, mid);
+            SumTask rightTask = new SumTask(array, mid, end);
+            leftTask.fork(); // 异步执行左任务
+            int rightResult = rightTask.compute(); // 同步执行右任务并获取结果
+            int leftResult = leftTask.join(); // 等待左任务结果
+            return leftResult + rightResult;
+        }
+    }
+
+    public static void main(String[] args) {
+        int[] array = new int[]{1, 5, 6, 2, 8, 99, 12, 43, 56, 76,
+                                2, 8, 99, 12, 43, 56, 76, 2, 8, 99,
+                                12, 43, 56, 76, 5, 6, 2, 8, 99, 12,
+                                43, 56, 5, 6, 2, 8, 99, 12, 43, 56,
+                                5, 6, 2, 8, 99, 12, 43, 56};
+        SumTask sumTask = new SumTask(array, 0, array.length);
+        Integer compute = sumTask.compute();
+        System.out.println(compute);
+    }
+}
+```
+
+
+
+### ForkJoinTask
+
+可以从上面的例子看到：
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-22.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-22.png" alt="image" style="zoom:42%;" />)
+
+**`ForkJoinTask` 是 `ForkJoinPool` 分治框架的核心抽象。`ForkJoinTask` 提供了一些基本的机制，用于支持分解任务、任务的并行执行以及结果的合并。`ForkJoinPool` 的使用依赖于 `ForkJoinTask` 来提交任务。`ForkJoinTask` 是 `ForkJoinPool` 中任务的基本抽象，所有需要并行执行的任务都必须被封装成 `ForkJoinTask` 的子类，才能被 `ForkJoinPool` 处理。**
+
+除了`RecursiveTask`、`RecursiveAction`还有`CountedCompleter`也是一个核心实现类，其中：
+
+1. `RecursiveTask<V>`：用于有返回值的任务。
+2. `RecursiveAction`：用于没有返回值的任务。
+3. `CountedCompleter<T>`：一种更复杂的任务类型，适用于非递归、异步执行的任务，并且可以自定义完成条件。
+
+**ForkJoinTask 核心方法：**
+
+| 方法                                    | 描述                                                       |
+| --------------------------------------- | ---------------------------------------------------------- |
+| `fork()`                                | 异步地执行任务，安排任务在其他线程中执行。                 |
+| `join()`                                | 等待任务完成并返回其结果（如果有）。                       |
+| `invoke()`                              | 执行任务并等待其完成（结合 `fork` 和 `join`）。            |
+| **`exec()`**                            | **执行任务的核心方法，由子类实现，用于实际任务执行逻辑。** |
+| `invokeAll(...)`                        | 并行地执行一组任务，等待所有任务完成。                     |
+| `isCompletedNormally()`                 | 检查任务是否正常完成。                                     |
+| `cancel(boolean mayInterruptIfRunning)` | 取消任务执行。                                             |
+| `isDone()`                              | 检查任务是否已完成。                                       |
+
+
+
+###  ForkJoinPool数据结构
+
+`ForkJoinPool`最核心的模式如下图：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-23.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-23.png" alt="image" style="zoom:50%;" />)
+
+上面对应的数据结构就是：
+
+- 全局队列对应的就是 `ForkJoinPool`的`WorkQueue[] queues`
+
+- 局部队列对应的就是 `WorkQueue`的`ForkJoinTask<?>[] array`
+
+- 执行线程对应的就是 `WorkQueue`的`ForkJoinWorkerThread owner`
+- 具体的每个任务对应的就是 `ForkJoinTask`封装任务对象
+
+具体的结构和参数如下：
+
+```java
+// ForkJoinPool的数据结构
+// Instance fields
+    volatile long stealCount;            // collects worker nsteals
+    volatile long threadIds;             // for worker thread names
+    final long keepAlive;                // milliseconds before dropping if idle
+    final long bounds;                   // min, max threads packed as shorts
+    final int config;                    // static configuration bits
+    volatile int runState;               // SHUTDOWN, STOP, TERMINATED bits
+    WorkQueue[] queues;                  // main registry
+    final ReentrantLock registrationLock;
+    Condition termination;               // lazily constructed
+    final String workerNamePrefix;       // null for common pool
+    final ForkJoinWorkerThreadFactory factory;
+    final UncaughtExceptionHandler ueh;  // per-worker UEH
+    final Predicate<? super ForkJoinPool> saturate;
+    final SharedThreadContainer container;
+```
+
+```java
+// WorkQueue的数据结构，这里的队列并不是BlockingQueue而就是一个数组，通过base维护队尾和top维护队头，从下面代码中就可以看到
+static final class WorkQueue {
+        int stackPred;             // pool stack (ctl) predecessor link
+        int config;                // index, mode, ORed with SRC after init
+        int base;                  // index of next slot for poll
+        ForkJoinTask<?>[] array;   // the queued tasks; power of 2 size
+        final ForkJoinWorkerThread owner; // owning thread or null if shared
+        // fields otherwise causing more unnecessary false-sharing cache misses
+        @jdk.internal.vm.annotation.Contended("w")
+        int top;                   // index of next slot for push
+        @jdk.internal.vm.annotation.Contended("w")
+        volatile int access;       // values 0, 1 (locked), PARKED, STOP
+        @jdk.internal.vm.annotation.Contended("w")
+        volatile int phase;        // versioned, negative if inactive
+        @jdk.internal.vm.annotation.Contended("w")
+        volatile int source;       // source queue id in topLevelExec
+        @jdk.internal.vm.annotation.Contended("w")
+        int nsteals;               // number of steals from other queues
+  ...
+```
+
+```java
+// ForkJoinWorkerThread 实际的执行线程
+public class ForkJoinWorkerThread extends Thread {
+    /*
+     * ForkJoinWorkerThreads are managed by ForkJoinPools and perform
+     * ForkJoinTasks. For explanation, see the internal documentation
+     * of class ForkJoinPool.
+     *
+     * This class just maintains links to its pool and WorkQueue.
+     */
+    final ForkJoinPool pool;                // the pool this thread works in
+    final ForkJoinPool.WorkQueue workQueue; // work-stealing mechanics
+
+    /**
+     * Full nonpublic constructor.
+     */
+    ForkJoinWorkerThread(ThreadGroup group, ForkJoinPool pool,
+                         boolean useSystemClassLoader,
+                         boolean clearThreadLocals) {
+        super(group, null, pool.nextWorkerThreadName(), 0L, !clearThreadLocals);
+        UncaughtExceptionHandler handler = (this.pool = pool).ueh;
+        this.workQueue = new ForkJoinPool.WorkQueue(this, 0);
+        if (clearThreadLocals)
+            workQueue.setClearThreadLocals();
+        // ForkJoinPool中创建的线程都是守护线程
+        super.setDaemon(true);
+        if (handler != null)
+            super.setUncaughtExceptionHandler(handler);
+        if (useSystemClassLoader)
+            super.setContextClassLoader(ClassLoader.getSystemClassLoader());
+    }
+
+```
+
+
+
+对于上面`ForkJoinPool`的参数，在构造函数中有如下处理：
+
+```java
+// 这个就是ForkJoinPool对应参数
+public ForkJoinPool(int parallelism,
+                        ForkJoinWorkerThreadFactory factory,
+                        UncaughtExceptionHandler handler,
+                        boolean asyncMode,
+                        int corePoolSize,
+                        int maximumPoolSize,
+                        int minimumRunnable,
+                        Predicate<? super ForkJoinPool> saturate,
+                        long keepAliveTime,
+                        TimeUnit unit) {
+        checkPermission();
+        int p = parallelism;
+        if (p <= 0 || p > MAX_CAP || p > maximumPoolSize || keepAliveTime <= 0L)
+            throw new IllegalArgumentException();
+        if (factory == null || unit == null)
+            throw new NullPointerException();
+        this.parallelism = p;
+        this.factory = factory;
+        this.ueh = handler;
+        this.saturate = saturate;
+        this.config = asyncMode ? FIFO : 0;
+        this.keepAlive = Math.max(unit.toMillis(keepAliveTime), TIMEOUT_SLOP);
+        int corep = Math.clamp(corePoolSize, p, MAX_CAP);
+        int maxSpares = Math.clamp(maximumPoolSize - p, 0, MAX_CAP);
+        int minAvail = Math.clamp(minimumRunnable, 0, MAX_CAP);
+        this.bounds = (long)(minAvail & SMASK) | (long)(maxSpares << SWIDTH) |
+            ((long)corep << 32);
+        int size = 1 << (33 - Integer.numberOfLeadingZeros(p - 1));
+        this.registrationLock = new ReentrantLock();
+        this.queues = new WorkQueue[size];
+        String pid = Integer.toString(getAndAddPoolIds(1) + 1);
+        String name = "ForkJoinPool-" + pid;
+        this.workerNamePrefix = name + "-worker-";
+        this.container = SharedThreadContainer.create(name);
+    }
+```
+
+`ForkJoinPool` 构造函数参数的详细解释：
+
+| 参数名                                     | 含义                                                 | 作用                                                         |
+| ------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `int parallelism`                          | 并行度，即线程池中可同时并行执行的任务数量。         | 决定线程池的基本工作线程数，通常设置为 CPU 核心数。          |
+| `ForkJoinWorkerThreadFactory factory`      | 线程工厂接口，用于创建工作线程。                     | 允许自定义工作线程的创建过程，如指定线程名称、优先级等。     |
+| `UncaughtExceptionHandler handler`         | 未捕获异常处理器，用于处理工作线程中未捕获的异常。   | 自定义异常处理逻辑，如记录日志或恢复操作。                   |
+| `boolean asyncMode`                        | 异步模式标志。                                       | `true` 表示 FIFO 顺序处理任务，`false` 表示 LIFO 顺序处理任务。 |
+| `int corePoolSize`                         | 核心线程数，即使在空闲时也保持活动的线程数。         | 保持一定数量的线程常驻，以便随时处理新任务。                 |
+| `int maximumPoolSize`                      | 允许的最大线程数。                                   | 在负载高峰时允许创建更多线程来处理任务。                     |
+| `int minimumRunnable`                      | 最小可运行线程数量。                                 | 强制启动更多线程以达到这个最小值，避免资源闲置。             |
+| `Predicate<? super ForkJoinPool> saturate` | 谓词，用于决定何时阻止新任务的提交以避免线程池饱和。 | 自定义何时停止接收新任务，避免线程池过载。                   |
+| `long keepAliveTime`                       | 非核心线程在终止前保持空闲的时间。                   | 控制空闲非核心线程的存活时间，超时后会被终止。               |
+| `TimeUnit unit`                            | 时间单位，用于指定 `keepAliveTime`参数的单位。       | 决定 `keepAliveTime`是以秒、毫秒、分钟等为单位。             |
+
+
+
+...todo 源码实在太长，后面再补充
+
+
+

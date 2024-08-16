@@ -1,0 +1,521 @@
+---
+title: Atomic类
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+### Atomic基本实现原理
+
+juc中的atomic类基本是基于乐观锁的前提，使用Java中`Unsafe`包中`CAS`操作实现并发安全。
+
+> 乐观锁于悲观锁
+>
+> 悲观锁的前提假设是数据发生并发冲突的概率很大，所以读操 作之前就上锁。synchronized关键字，以及后面要讲的ReentrantLock 都是悲观锁的典型例子。
+>
+> 乐观锁的前提假设是数据发生并发冲突的概率比较小，所以读操作之前不上锁。等到写操作的时候，再判断数据在此期间是否被其他线程修改了。如果被其他线程修改了，就把数据重新读出来，重复该过程;如果没有被修改，就写回去。判断数据是否被修改，同时写回新值，这两个操作要合成一个原子操作，也就是`CAS(Compare And Set)`。
+>
+> *乐观锁在低并发竞争中性能表现较好，但在高并发竞争中则性能不如悲观锁*
+
+
+
+比如`AtomicInteger`类在内部维护一个`volatile`的value值
+
+```java
+public class AtomicInteger extends Number implements java.io.Serializable {
+    private static final long serialVersionUID = 6214790243416807050L;
+
+    /*
+     * This class intended to be implemented using VarHandles, but there
+     * are unresolved cyclic startup dependencies.
+     */
+    private static final Unsafe U = Unsafe.getUnsafe();
+    // 这里变量都是final的，保证其不会被重排序，下一行代码使用上一行的U，必定是能获取到Unsafe的实例的
+    private static final long VALUE
+        = U.objectFieldOffset(AtomicInteger.class, "value");
+
+    private volatile int value;
+```
+
+`Unsafe.getUnsafe()` 方法获取 `Unsafe` 类的一个实例
+
+> `Unsafe` 是一个提供了直接操作内存和执行低级别操作的方法的类，只有在引导类加载器加载的代码中才能访问，因为直接调用 `Unsafe.getUnsafe()` 会抛出 `SecurityException`。在实际生产代码中，获取 `Unsafe` 实例的方式通常是通过反射。
+
+然后`objectFieldOffset` 方法用于获取给定字段在其所属类的实例中的内存偏移量**`VALUE`**，知道字段的内存偏移量是必要的，因为 CAS 操作需要直接操作内存。
+
+*也就是上面代码中，**`VALUE`**是一个 `long` 类型的静态常量，用于存储 `value` 字段在对象内存中的偏移量，然后直接通过CAS操作修改内存`VALUE`对应的内存数据，就修改了`value` 字段。*
+
+```java
+public final int getAndIncrement() {
+        return U.getAndAddInt(this, VALUE, 1);
+    }
+public final int getAndAdd(int delta) {
+        return U.getAndAddInt(this, VALUE, delta);
+    }
+```
+
+
+
+### 一个有意思的例子
+
+交替打印，来对比`Lock`，`Condition`和`atomic`原子类来，对比性能。能很明显看对两者有性能差异
+
+```java
+package org.liufei.junit5.test;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+/**
+ * @author liufei
+ **/
+public class CountAndPrint {
+
+    long          threshold;
+    AtomicInteger counter;
+    AtomicBoolean flag = new AtomicBoolean(true);
+
+    private final Lock      lock      = new ReentrantLock();
+    private final Condition condition = lock.newCondition();
+    private       boolean   flagLock  = true;
+
+    public static CountAndPrint initCounter() {
+        return initCounter(0, 10000L);
+    }
+
+    public static CountAndPrint initCounter(int start, long limit) {
+        CountAndPrint countAndPrint = new CountAndPrint();
+        countAndPrint.counter = new AtomicInteger(start);
+        countAndPrint.threshold = limit;
+        return countAndPrint;
+    }
+
+
+    /**
+     * 使用Lock Condition来协调线程
+     * 最终结果：大概在150ms左右，实际数字只做横行对比，硬件不同结果可能差很多，我的电脑是Mac m1 pro
+     * ...
+     * Thread-1 print number 9993;
+     * Thread-0 print number 9994;
+     * Thread-1 print number 9995;
+     * Thread-0 print number 9996;
+     * Thread-1 print number 9997;
+     * Thread-0 print number 9998;
+     * Thread-1 print number 9999;
+     * Thread-0 print number 10000;
+     * time elapse: 151
+     *
+     * @throws InterruptedException
+     */
+    public void crossPrintWithLock() throws InterruptedException {
+        long l = System.currentTimeMillis();
+
+        Thread t1 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                lock.lock();
+                try {
+                    while (!flagLock) {
+                        condition.await();
+                    }
+                    System.out.println(format(Thread.currentThread().getName(), counter.getAndIncrement()));
+                    flagLock = false;
+                    condition.signal();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock.unlock();
+                }
+            }
+        });
+
+        Thread t2 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                lock.lock();
+                try {
+                    while (flagLock) {
+                        condition.await();
+                    }
+                    System.out.println(format(Thread.currentThread().getName(), counter.getAndIncrement()));
+                    flagLock = true;
+                    condition.signal();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    lock.unlock();
+                }
+            }
+        });
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        long l1 = System.currentTimeMillis();
+        System.out.println("time elapse: " + (l1 - l));
+    }
+
+
+    /**
+     * 使用atomic变量来协调交替打印
+     * 最终结果：大概在100ms左右，实际数字只做横行对比，硬件不同结果可能差很多，我的电脑是Mac m1 pro
+     * ...
+     * Thread-1 print number 9993;
+     * Thread-0 print number 9994;
+     * Thread-1 print number 9995;
+     * Thread-0 print number 9996;
+     * Thread-1 print number 9997;
+     * Thread-0 print number 9998;
+     * Thread-1 print number 9999;
+     * time elapse: 99
+     *
+     * @throws InterruptedException
+     */
+    public void crossPrint() throws InterruptedException {
+        long l = System.currentTimeMillis();
+
+        Thread t1 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                if (flag.get()) {
+                    System.out.println(format(Thread.currentThread().getName(), counter.getAndIncrement()));
+                    flag.compareAndSet(flag.get(), !flag.get());
+                }
+            }
+        });
+
+        Thread t2 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                if (!flag.get()) {
+                    System.out.println(format(Thread.currentThread().getName(), counter.getAndIncrement()));
+                    flag.compareAndSet(flag.get(), !flag.get());
+                }
+            }
+        });
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        long l1 = System.currentTimeMillis();
+        System.out.println("time elapse: " + (l1 - l));
+    }
+
+    /**
+     * 不保证顺序，但是是多线程打印，保证最终结果正确
+     * 最终结果：大概在3ms左右，实际数字只做横行对比，硬件不同结果可能差很多，我的电脑是Mac m1 pro
+     * ...
+     * Thread-0 print number 9989;
+     * Thread-1 print number 9990;
+     * Thread-1 print number 9991;
+     * Thread-1 print number 9992;
+     * Thread-0 print number 9993;
+     * Thread-1 print number 9994;
+     * Thread-1 print number 9996;
+     * Thread-0 print number 9997;
+     * Thread-1 print number 9998;
+     * Thread-0 print number 9999;
+     * time elapse: 3
+     *
+     * @throws InterruptedException
+     */
+    public void selfPrint() throws InterruptedException {
+        long l = System.currentTimeMillis();
+
+        // 注意实际生产中此处会增加内存占用，要隔断时间刷新打印，然后清空集合，再继续处理
+        List<SortHelper> out = new ArrayList<>(10000);
+
+        Thread t1 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                out.add(new SortHelper(Thread.currentThread().getName(), counter.getAndIncrement()));
+            }
+        });
+
+        Thread t2 = new Thread(() -> {
+            while (counter.get() < threshold) {
+                out.add(new SortHelper(Thread.currentThread().getName(), counter.getAndIncrement()));
+            }
+        });
+
+        t1.start();
+        t2.start();
+        t1.join();
+        t2.join();
+        long l1 = System.currentTimeMillis();
+
+        out.stream().sorted().forEach(System.out::println);
+        System.out.println("time elapse: " + (l1 - l));
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        CountAndPrint countAndPrint = CountAndPrint.initCounter();
+        countAndPrint.crossPrintWithLock();
+//        countAndPrint.crossPrint();
+//        countAndPrint.selfPrint();
+    }
+
+
+    private String format(String name, int num) {
+        return String.format("%s print number %d; ", name, num);
+    }
+
+
+    record SortHelper(String printStr, int sort) implements Comparable<SortHelper> {
+
+        @Override
+        public String toString() {
+            return String.format("%s print number %d; ", printStr, sort);
+        }
+
+        @Override
+        public int compareTo(SortHelper o) {
+            return this.sort - o.sort;
+        }
+    }
+}
+
+```
+
+
+
+### AtomicReference
+
+讲一下`AtomicReference`。与 `AtomicInteger` 和 `AtomicLong` 提供针对基础类型的原则操作类似，`AtomicReference` 主要用于对对象的引用进行原子操作，一般用于实现锁、信号量、线程安全的数据结构等场景。提供比 `synchronized` 或 `Lock`更轻量的引用线程安全更新。
+
+**`compareAndSet`**：将当前值从 `expect` 更新为 `update`。如果当前值等于 `expect`，则更新为 `update` 并返回 `true`，否则返回 `false`
+
+```java
+public final boolean compareAndSet(V expect, V update)
+```
+
+**`get`**：返回当前存储的引用
+
+```java
+public final V get()
+```
+
+**`set`**：将当前存储的引用更新为 `newValue`
+
+```java
+public final void set(V newValue)
+```
+
+**`getAndSet`**：将当前存储的引用更新为 `newValue`，并返回更新前的值
+
+```java
+public final V getAndSet(V newValue)
+```
+
+
+
+
+
+### AtomicReference引用原子更新类
+
+上面只是原子的判断更新值，但如果另外一个线 程把变量的值从A改为B，再从B改回到A，那么尽管修改过两次，可是在当前线程做CAS操作的时候，却会因为值没变而认为数据没有被其他线程修改过，这就是所谓的ABA问题。
+
+要解决 ABA 问题，不仅要比较“值”，还要比较“版本号”，而 这正是 AtomicReference这里是个简写，有多个类来完成引用的原子更新，它们思路都是类似的，就是内部维护一个`Pair`内部类，然后其中同时维护值和版本号两个变量，然后更新时通过原子性的更新`Pair`示例来完成对引用的原子更新。
+
+**AtomicStampedReference**
+
+```java
+public class AtomicMarkableReference<V> {
+
+    private static class Pair<T> {
+        final T reference;
+        final boolean mark;
+        private Pair(T reference, boolean mark) {
+            this.reference = reference;
+            this.mark = mark;
+        }
+        static <T> Pair<T> of(T reference, boolean mark) {
+            return new Pair<T>(reference, mark);
+        }
+    }
+```
+
+> **`getReference()`**: 获取当前存储的引用。
+>
+> **`getStamp()`**: 获取当前存储的标记值。
+>
+> **`compareAndSet(V expectedReference, V newReference, int expectedStamp, int newStamp)`**: 试图将当前引用值从 `expectedReference` 更新为 `newReference`，并将标记值从 `expectedStamp` 更新为 `newStamp`。如果当前引用值和标记值都与预期匹配，则更新成功。
+>
+> **`set(V newReference, int newStamp)`**: 设置新的引用值和标记值。
+
+
+
+**AtomicMarkableReference**
+
+`AtomicMarkableReference` 提供了类似的原子操作机制，但与 `AtomicStampedReference` 不同，它只使用一个布尔标记（`mark`）来辅助原子更新。这适用于只需要两个状态（标记为真或假）的场景。
+
+```java
+public class AtomicMarkableReference<V> {
+
+    private static class Pair<T> {
+        final T reference;
+        final boolean mark;
+        private Pair(T reference, boolean mark) {
+            this.reference = reference;
+            this.mark = mark;
+        }
+        static <T> Pair<T> of(T reference, boolean mark) {
+            return new Pair<T>(reference, mark);
+        }
+    }
+```
+
+
+
+### 外部引用原子更新类
+
+如果一个类是自己编写的，则可以在编写的时候把成员变量定义 为Atomic类型。但如果是一个已经有的类，在不能更改其源代码的情 况下，要想实现对其成员变量的原子操作，就需要外部引用原子更新类，比如`AtomicIntegerFieldUpdater`、`AtomicLongFieldUpdater`和 `AtomicReferenceFieldUpdater`。下面以AtomicIntegerFieldUpdater为例介绍其实现原理。
+
+首先，其构造函数是 protected，不能直接构造其对象，必须通 过它提供的一个静态函数来创建：newUpdater(..)静态函数传入的是要修改的类(不是对象)和 对应的成员变量的名字，内部通过反射拿到这个类的成员变量，然后 包装成一个AtomicIntegerFieldUpdater对象。
+
+```java
+@CallerSensitive
+    public static <U> AtomicIntegerFieldUpdater<U> newUpdater(Class<U> tclass,
+                                                              String fieldName) {
+        return new AtomicIntegerFieldUpdaterImpl<U>
+            (tclass, fieldName, Reflection.getCallerClass());
+    }
+
+    /**
+     * Protected do-nothing constructor for use by subclasses.
+     */
+    protected AtomicIntegerFieldUpdater() {
+    }
+```
+
+并且其`new AtomicIntegerFieldUpdaterImpl<U>(tclass, fieldName, Reflection.getCallerClass())`的实现中还限制了**成员变量必须时`volatile`修饰的**
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-3.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-3.png" alt="image" style="zoom:36%;" />)
+
+示例：
+
+```java
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+public class AtomicFieldUpdaterExample {
+    private static class MyClass {
+        volatile int value;
+    }
+
+    public static void main(String[] args) {
+        MyClass myObject = new MyClass();
+        AtomicIntegerFieldUpdater<MyClass> updater =
+            AtomicIntegerFieldUpdater.newUpdater(MyClass.class, "value");
+
+        //  使用 set、get 和 incrementAndGet 方法对字段进行原子操作。这些操作保证了线程安全。
+        updater.set(myObject, 10);
+        System.out.println("Value: " + updater.get(myObject));
+
+        // Atomically increment the value
+        updater.incrementAndGet(myObject);
+        System.out.println("Value after increment: " + updater.get(myObject));
+    }
+}
+```
+
+
+
+### 数组的原子更新操作
+
+juc包提供了`AtomicIntegerArray`、`AtomicLongArray`、`AtomicReferenceArray` 三个数组元素的原子操作。这些类提供了一种高效、线程安全的方式来操作数组元素，避免了使用锁的开销。它们主要用于在多线程环境中对数组的元素进行原子更新操作。
+
+**注意，这里并不是说对整个数组的操作是原子的，而是针对数组中一个元素的原子操作而言。**
+
+**常用方法**:
+
+- `get(int index)`: 原子地获取指定索引的值。
+- `set(int index, long value)`: 原子地设置指定索引的值。
+- `getAndSet(int index, long value)`: 原子地设置指定索引的值并返回旧值。
+- `addAndGet(int index, long delta)`: 原子地将指定索引的值增加 `delta` 并返回更新后的值。
+- `compareAndSet(int index, long expect, long update)`: 原子地将指定索引的值从 `expect` 更新为 `update`，如果当前值等于 `expect`。
+
+示例：
+
+```java
+import java.util.concurrent.atomic.AtomicIntegerArray;
+
+public class AtomicArrayExample {
+    public static void main(String[] args) {
+        AtomicIntegerArray atomicArray = new AtomicIntegerArray(10);
+
+        // 设置索引 0 的值为 5
+        atomicArray.set(0, 5);
+        System.out.println("Value at index 0: " + atomicArray.get(0));
+
+        // 原子地增加索引 0 的值
+        atomicArray.addAndGet(0, 3);
+        System.out.println("Value at index 0 after addition: " + atomicArray.get(0));
+
+        // 比较并设置
+        boolean updated = atomicArray.compareAndSet(0, 8, 10);
+        System.out.println("Update successful: " + updated);
+        System.out.println("Value at index 0 after compare and set: " + atomicArray.get(0));
+    }
+}
+```
+
+
+
+### 更高效的长数据类型的原子更新
+
+`Striped64` 是一个高级的并发数据结构，旨在提高在高并发情况下的性能，特别是当多个线程对单个计数器进行频繁更新时。`Striped64` 使用了一种分段技术来减少线程之间的竞争，从而提高性能。
+
+`Striped64`和其子类提供了更高效的长数据类型的原子更新
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-4.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-4.png" alt="image" style="zoom:50%;" />)
+
+*其思路也就是其将一个long或者dubble类型，在多线程更新下转化为对多个cell(内部也是个long)来更新，各个线程更新自己对应的cell来减少高并发cas带来的性能损耗；而总的结果是多个cell合并后的值。*
+
+`Striped64` 的设计原理就涉及下面几部分：
+
+- **分段计数**：`Striped64` 使用多个 `Cell` 对象来存储计数值。每个 `Cell` 是一个包含 `long` 类型计数器的对象。通过将计数值分散到多个 `Cell` 中，`Striped64` 可以减少对同一个计数器的竞争，避免了高并发下对单一计数器的频繁 CAS 操作，从而提升性能。
+
+- **每个线程更新自己对应的 `Cell`**：当多个线程同时更新计数器时，它们会根据某种哈希机制选择一个 `Cell` 进行更新。这种机制使得每个线程大概率会操作不同的 `Cell`，从而减少了对同一个 `Cell` 的竞争，避免了频繁的锁竞争和 CAS 操作。
+
+- **合并计数值**：当需要获取总计数值时，`Striped64` 会遍历所有的 `Cell` 并将它们的值加到基础计数器 `base` 上。最终的总值就是基础计数器和所有 `Cell` 中值的总和。
+
+示例：
+
+```java
+import java.util.concurrent.atomic.LongAdder;
+
+public class LongAdderExample {
+    private static final LongAdder adder = new LongAdder();
+
+    public static void main(String[] args) {
+        // 启动多个线程并增加计数
+        for (int i = 0; i < 10; i++) {
+            new Thread(() -> {
+                for (int j = 0; j < 1000; j++) {
+                    adder.increment();
+                }
+            }).start();
+        }
+
+        // 等待所有线程完成
+        try {
+            Thread.sleep(5000); // 等待 5 秒
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // 获取总计数
+        System.out.println("Total count: " + adder.sum());
+    }
+}
+```
+

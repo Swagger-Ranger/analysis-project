@@ -1,0 +1,199 @@
+---
+title: data-structure-跳表
+sidebar_position: 14
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+跳表是一种基于多级索引的有序数据结构，它的核心思想是通过在有序链表的基础上引入多级索引，使得在链表上实现二分查找成为可能，从而提高查找效率。跳表通过随机化技术，在平均情况下可以达到 O(log⁡n)O(logn)的时间复杂度，非常适合用于实现有序集合和映射。
+
+### 为什么使用跳表而不是平衡树
+
+#### 1. 顺序访问的效率
+
+跳表中的节点在底层是以链表的形式存储的，且链表中的数据是有序的。对于连续数据的读取，顺序遍历链表比二叉树的中序遍历要更为直接和高效。在跳表中读取连续数据时，只需沿着链表从一个节点遍历到下一个节点，这种操作的局部性非常好，缓存命中率较高。
+在二叉树（特别是平衡二叉树，如AVL树或红黑树）中，即使数据是有序的，中序遍历仍需要在左右子树之间进行切换，这会导致更多的内存跳转和较低的缓存命中率。因此，连续读取时跳表的性能通常优于二叉树。
+
+#### 2. 缓存友好性
+
+跳表的分层结构将高层的索引节点和低层的数据节点分开。高层索引节点相对较少，存储在连续内存区域中，访问时缓存效果较好。底层的完整链表虽然会有新的节点插入，但由于链表节点间通过指针连接，插入操作只涉及少量指针调整，不会破坏链表的整体顺序性和存储局部性。
+跳表的底层链表结构在内存中往往是连续的，这种连续性使得跳表在访问时能够更好地利用 CPU 缓存。在读取连续数据时，跳表中的节点往往预先加载到缓存中，从而减少内存访问的次数。
+相比之下，二叉树的节点在内存中的布局可能是分散的，特别是在动态插入和删除操作之后。访问二叉树时，节点的内存地址可能分布在较大的范围内，这会导致缓存命中率降低，影响读取性能。
+
+#### 3. 预取（Prefetching）
+
+现代处理器具有预取功能，会预测程序即将访问的内存地址并提前加载数据。跳表中连续的链表结构更适合处理器进行预取，使得顺序访问时的性能更高。
+二叉树由于节点不连续，处理器的预取效果不如跳表明显，导致连续数据访问的性能相对较差。
+
+#### 4. 插入和删除的局部性
+
+在跳表中，插入和删除操作对数据布局的影响相对较小，链表中的数据顺序不会被打乱，尽管每次插入都会改变链表结构，但由于跳表的随机化插入策略，插入操作的平均时间复杂度是O(logn)，且插入成本在整体上是分摊的，不会在单次操作中出现大规模的数据移动。。而在二叉树中，特别是平衡二叉树，为了保持平衡性，插入和删除操作可能导致树的结构发生较大变化，影响后续的读取性能。
+
+### 一个代码实现
+
+```Java
+/**
+ * @author liufei
+ **/
+public class SkipList {
+
+    private static final float SKIPLIST_P = 0.5f;
+    private static final int MAX_LEVEL = 16;
+
+    private int levelCount = 1;
+
+    private final Node head = new Node();  // 带头链表
+
+    public Node find(int value) {
+        Node p = head;
+        /*
+         * 这里 外层一个for然后里面一个while，其实就是将跳表压扁，for代表的就是高度即行，while就是高度行里面的那个数组即列数据
+         * forwards 是向下的数组，这里i在向右的同时也在向下，找到低就是值，相等则找到，不相等就是空
+         * 逻辑就是：无脑向右，然后找到不满足的就向下，就这样向右再向下，一直执行下去；
+         *          因为数据是拍好序的，向下就是在一层层遍历索引，直到找到数据节点，并且向右之后不可能向左；
+         */
+        for (int i = levelCount - 1; i >= 0; --i) {
+            while (p.forwards[i] != null && p.forwards[i].data < value) {
+                p = p.forwards[i];
+            }
+        }
+
+        if (p.forwards[0] != null && p.forwards[0].data == value) {
+            return p.forwards[0];
+        } else {
+            return null;
+        }
+    }
+
+    public void insert(int value) {
+        int level = randomLevel();
+        Node newNode = new Node();
+        newNode.data = value;
+        newNode.maxLevel = level;
+        Node[] update = new Node[level];
+        // 新建一个高度是 level的向下的 forwards ，初始化update数组，并且每一层链表的开始都是head节点
+        // 这个update数组记录的是每一层要更新的节点数据，并不是一个向下的索引数组
+        for (int i = 0; i < level; ++i) {
+            update[i] = head;
+        }
+
+        // record every level largest value which smaller than insert value in update[]
+        Node p = head;
+        for (int i = level - 1; i >= 0; --i) {
+            while (p.forwards[i] != null && p.forwards[i].data < value) {
+                p = p.forwards[i];
+            }
+            // 还是继续find 方法的逻辑，只是将每一层小于插入值的最大节点都更新到update数组中
+            update[i] = p;// use update save node in search path
+        }
+
+        /*
+         * 每个node的forwards都是其自身和向右的引用，
+         * 自身对应的代码就是：update[i].forwards[i] = newNode;
+         * 向右的引用的代码就是：newNode.forwards[i] = update[i].forwards[i];
+         * update数组就是要更新新插入节点而改变的向右的引用
+         */
+        // in search path node next node become new node forwords(next)
+        for (int i = 0; i < level; ++i) {
+            // 这里就是在插入新的数组列，将后节点替换为newNode的后节点newNode.forwards[i] = update[i].forwards[i];，将前节点的后节点用newNode代替
+            newNode.forwards[i] = update[i].forwards[i];
+            update[i].forwards[i] = newNode;
+        }
+
+        // update node hight
+        if (levelCount < level) levelCount = level;
+    }
+
+    public void delete(int value) {
+        Node[] update = new Node[levelCount];
+        Node p = head;
+        for (int i = levelCount - 1; i >= 0; --i) {
+            while (p.forwards[i] != null && p.forwards[i].data < value) {
+                p = p.forwards[i];
+            }
+            update[i] = p;
+        }
+
+        // 先判断数据节点存不存在
+        if (p.forwards[0] != null && p.forwards[0].data == value) {
+            for (int i = levelCount - 1; i >= 0; --i) {
+                // 再判断如果删除的节点正好有向上索引位置的数组，则将索引数组中的索引节点也删掉
+                if (update[i].forwards[i] != null && update[i].forwards[i].data == value) {
+                    update[i].forwards[i] = update[i].forwards[i].forwards[i];
+                }
+            }
+        }
+
+        // 如果
+        while (levelCount>1&&head.forwards[levelCount]==null){
+            levelCount--;
+        }
+
+    }
+
+    // 理论来讲，一级索引中元素个数应该占原始数据的 50%，二级索引中元素个数占 25%，三级索引12.5% ，一直到最顶层。
+    // 因为这里每一层的晋升概率是 50%。对于每一个新插入的节点，都需要调用 randomLevel 生成一个合理的层数。
+    // 该 randomLevel 方法会随机生成 1~MAX_LEVEL 之间的数，且 ：
+    //        50%的概率返回 1
+    //        25%的概率返回 2
+    //      12.5%的概率返回 3 ...
+    private int randomLevel() {
+        int level = 1;
+
+        while (Math.random() < SKIPLIST_P && level < MAX_LEVEL)
+            level += 1;
+        return level;
+    }
+
+    public void printAll() {
+        Node p = head;
+        while (p.forwards[0] != null) {
+            System.out.print(p.forwards[0] + " ");
+            p = p.forwards[0];
+        }
+        System.out.println();
+    }
+
+    /**
+     * 结构的核心点在 forwards 属性，即向右是链表，向下是数组
+     * forwards 记录的就是向右的节点，同时 forwards 是一个数组，记录的是从0层即数据层到当前索引高度的 向下的数组
+     * 也就是说 forwards 数组的的长度最长不会超过索引的高度；同时都是由0层到n层的，即forwards[0]就一定是数据节点而非索引节点
+     */
+    public static class Node {
+        private int data = -1;
+        /*
+         * forwards 是向下的数组，其中每个元素的data都是相同的，这个在insert时将每个
+         * 这里空间上还可以优化，因为不是每个节点的向下数组都需要全部的长度
+         */
+        private final Node[] forwards = new Node[MAX_LEVEL];
+        private int maxLevel = 0;
+
+        @Override
+        public String toString() {
+
+            return "{ data: " +
+                    data +
+                    "; levels: " +
+                    maxLevel +
+                    " }";
+        }
+    }
+```
+
+
+
+### 并发安全的跳表
+
+如果是要保证并发安全，Java 中 `ConcurrentSkipListMap` 和 `ConcurrentSkipListSet` 提供了在多线程环境中实现了有序 `Map` 和 `Set` 的高效访问和修改操作。它们是无锁或低锁设计的优秀示例，适合在高并发环境下使用。
+`ConcurrentSkipListSet` 就是基于 `ConcurrentSkipListMap` 实现的，类似于`HashSet`和`HashMap`； `ConcurrentSkipListSet` 的实现解析，在[JUC-并发容器](../JUC/JUC-并发容器)中的ConcurrentSkipListMap里。
+
+
+
+
+
+
+
+
+
+
+

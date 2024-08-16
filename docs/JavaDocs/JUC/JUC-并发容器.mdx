@@ -1,0 +1,681 @@
+---
+title: 并发容器
+sidebar_position: 5
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+JUC提供了多种线程安全的并发容器，这些容器通过不同的机制来确保在多线程环境中的安全和高效操作。集合类都是根据使用的并发策略和集合的数据结构来命名的。
+
+## 基础框架
+
+### 容器的基本框架
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jdk/jdk-collection.png" alt="image" style={{ maxWidth: '90%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jdk/jdk-collection.png" alt="image" style="zoom:32%;" />)
+
+- Collection： 存储着对象的集合
+- List：有序的元素集合，支持通过索引随机访问和在任意位置进行插入、删除操作。
+- Queue：用于按顺序处理元素，强调元素的处理顺序（FIFO 或其他）。不支持随机访问。
+- Deque：双端队列，既可以作为 FIFO 队列也可以作为 LIFO 栈使用，允许在两端插入和移除元素。
+- Set：不重复元素集合，通常不保证顺序（除非使用特定的实现，如 `LinkedHashSet` 或 `TreeSet`）。
+- Map：存储键值对(两个对象)的映射表
+
+
+
+### 并发策略
+
+- Blocking：支持阻塞操作，通常用于生产者-消费者模式，在线程尝试添加或移除元素时，如果条件不满足（例如队列已满或为空），线程将被阻塞。
+- `ArrayBlockingQueue`：基于数组的有界阻塞队列。队列满时，插入操作将被阻塞；队列空时，移除操作将被阻塞。
+- `LinkedBlockingQueue`：基于链表的阻塞队列，支持可选的有界队列。队列满或空时分别阻塞插入或移除操作。
+- `PriorityBlockingQueue`：支持优先级排序的无界阻塞队列。元素根据其优先级顺序出队。
+- `DelayQueue`：包含带有延迟期的元素，只有在延迟期满时才能被取出。适用于定时任务。
+- `SynchronousQueue`：不存储元素的阻塞队列，每个插入操作必须等待另一个线程的移除操作。非常适合传递性设计。
+
+- CopyOnWrite：这些容器在修改操作（如添加、删除元素）时会创建容器的一个副本，修改完副本后再将其替换为新的容器。**这种机制适用于读多写少的场景，读操作无需加锁**，因为写操作是原子性的且会创建新副本，不会影响正在进行的读操作。
+
+- `CopyOnWriteArrayList`：线程安全的动态数组。写操作时创建新数组。
+
+- `CopyOnWriteArraySet`：基于 `CopyOnWriteArrayList` 实现的线程安全集合。
+
+- Concurrent：采用细粒度锁、CAS 操作或其他无锁算法实现高效并发访问，适用于高并发场景。这些容器支持并发读写操作，确保数据的一致性和线程安全。
+
+- `ConcurrentHashMap`：线程安全的哈希表，允许高效并发读写操作。
+- `ConcurrentLinkedQueue`：基于链接节点的无界线程安全队列。
+- `ConcurrentLinkedDeque`：基于链接节点的无界线程安全双端队列。
+- `ConcurrentSkipListMap`：线程安全的有序映射，基于跳表实现。
+- `ConcurrentSkipListSet`：基于 `ConcurrentSkipListMap` 实现的线程安全有序集合。
+
+
+
+## 部分集合实现
+
+### ArrayBlockingQueue
+
+**BlockingQueue api**
+
+以下是`BlockingQueue`接口的方法，后续的几个类都是实现此接口，理解接口的入队和出队的两对方法还是挺重要的，入队和出队都提供了阻塞和非阻塞的方法。
+
+| **方法**                                                | **描述**                                                     | **阻塞行为**           |
+| ------------------------------------------------------- | ------------------------------------------------------------ | ---------------------- |
+| `boolean add(E e)`                                      | 将元素添加到队列，若队列满则抛出异常。                       | 非阻塞                 |
+| `boolean offer(E e)`                                    | 尝试添加元素，若队列满则返回 `false`。                       | 非阻塞                 |
+| `void put(E e)`                                         | 将元素插入队列，若队列满则阻塞直到有空间。                   | 阻塞，直到有空间       |
+| `boolean offer(E e, long timeout, TimeUnit unit)`       | 尝试在指定时间内添加元素，若队列满则等待，超时后返回 `false`。 | 阻塞，直到有空间或超时 |
+| `E remove()`                                            | 移除并返回队列头部的元素，若队列空则抛出异常。               | 非阻塞                 |
+| `E poll()`                                              | 移除并返回队列头部的元素，若队列为空则返回 `null`。          | 非阻塞                 |
+| `E take()`                                              | 移除并返回队列头部的元素，若队列为空则阻塞直到有元素可用。   | 阻塞，直到有元素       |
+| `E poll(long timeout, TimeUnit unit)`                   | 尝试在指定时间内移除并返回队列头部的元素，若队列为空则等待，超时后返回 `null`。 | 阻塞，直到有元素或超时 |
+| `E peek()`                                              | 查看队列头部的元素但不移除，若队列为空则返回 `null`。        | 非阻塞                 |
+| `int size()`                                            | 返回队列中当前元素的数量。                                   | 非阻塞                 |
+| `int remainingCapacity()`                               | 返回队列中剩余的可用空间数量。                               | 非阻塞                 |
+| `void clear()`                                          | 移除队列中的所有元素。                                       | 非阻塞                 |
+| `boolean contains(Object o)`                            | 检查队列中是否包含指定的元素。                               | 非阻塞                 |
+| `int drainTo(Collection<? super E> c)`                  | 移除所有可用元素并将其添加到指定集合中，返回移除的元素数量。 | 非阻塞                 |
+| `int drainTo(Collection<? super E> c, int maxElements)` | 移除最多 `maxElements` 个可用元素并将其添加到指定集合中，返回移除的元素数量。 | 非阻塞                 |
+
+**实现思路**
+
+ArrayBlockingQueue用一个用数组实现的环形队列来存储数据，在构造函数 中，要求传入数组的容量。并且使用了`ReentrantLock`来控制并发，使用两把条件锁来处理读写的等待与唤醒。
+
+```java
+    /** Main lock guarding all access */
+    final ReentrantLock lock;
+
+    /** Condition for waiting takes */
+    @SuppressWarnings("serial")  // Classes implementing Condition may be serializable.
+    private final Condition notEmpty;
+
+    /** Condition for waiting puts */
+    @SuppressWarnings("serial")  // Classes implementing Condition may be serializable.
+    private final Condition notFull;
+```
+
+放和取分别如下：
+
+```java
+public void put(E e) throws InterruptedException {
+        Objects.requireNonNull(e);
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            while (count == items.length)
+                notFull.await();
+            enqueue(e);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+public E take() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            while (count == 0)
+                notEmpty.await();
+            return dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+```
+
+
+
+### PriorityBlockingQueue
+
+队列通常是先进先出的，而PriorityQueue是按照元素的优先级从 小到大出队列的。正因为如此，PriorityQueue中的2个元素之间需要 可以比较大小，要么在`PriorityBlockingQueue`的构造函数中传入`Comparator`比较器，要么其中的元素实现Comparable接口。在放入元素时元素排序的下沉或上浮，会先使用`Comparator`比较器，没有的话会进行转化为Comparable接口，此时没有实现Comparable接口就会报错，无法通过编译。
+
+```java
+// 没有实现Comparable接口就会报错， (Comparable<? super T>)无法通过编译
+private static <T> void siftDownComparable(int k, T x, Object[] es, int n) {
+    // assert n > 0;
+    Comparable<? super T> key = (Comparable<? super T>)x;
+    // ...
+}
+private static <T> void siftUpComparable(int k, T x, Object[] es) {
+        Comparable<? super T> key = (Comparable<? super T>) x;
+        ...
+}
+```
+
+正常PriorityQueue的出队顺序是：
+
+- **没有传入比较器**：如果没有传入比较器，`PriorityBlockingQueue` 会对元素进行自然排序（即元素必须实现 `Comparable` 接口）。这意味着队列中的元素将根据它们的自然顺序进行排序，而不是按入队顺序出队。
+
+- **传入比较器**：如果传入了一个比较器，`PriorityBlockingQueue` 会根据这个比较器对元素进行排序。出队时，队列会优先出队比较器定义顺序中的最小元素。
+
+*而`PriorityBlockingQueue` 可以被视为一个并发安全的 `PriorityQueue`。它在设计上与 `PriorityQueue` 类似，但添加了线程安全性和阻塞功能，适合在多线程环境中使用。*
+
+
+
+**实现思路**
+
+可以看到源码中，PriorityBlockingQueue的实现是一个数组的最小二叉堆，其特性是数组中有n个元素就一定是在数组的0到n-1的位置中；**`[n]`的子节点就是`[2\*n+1]`和` [2\*(n+1)]`，父节点就是 `(i - 1) / 2` 位置**。出堆和入堆，都保持如此。并且默认数组大小11，超过后自动扩容
+
+```Java
+/**
+ * Default array capacity.
+ */
+private static final int DEFAULT_INITIAL_CAPACITY = 11;
+```
+
+```java
+    /**
+     * Priority queue represented as a balanced binary heap: the two
+     * children of queue[n] are queue[2*n+1] and queue[2*(n+1)].  The
+     * priority queue is ordered by comparator, or by the elements'
+     * natural ordering, if comparator is null: For each node n in the
+     * heap and each descendant d of n, n <= d.  The element with the
+     * lowest value is in queue[0], assuming the queue is nonempty.
+     */
+    private transient Object[] queue;
+
+```
+
+当put时调用offer方法，在入堆时从末尾开始插入数据，然后节点上浮`siftUpComparable`来保持平衡，
+
+```java
+public boolean offer(E e) {
+        if (e == null)
+            throw new NullPointerException();
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        int n, cap;
+        Object[] es;
+        while ((n = size) >= (cap = (es = queue).length))
+            tryGrow(es, cap);
+        try {
+            final Comparator<? super E> cmp;
+            if ((cmp = comparator) == null)
+                siftUpComparable(n, e, es);
+            else
+                siftUpUsingComparator(n, e, es, cmp);
+            size = n + 1;
+            notEmpty.signal();
+        } finally {
+            lock.unlock();
+        }
+        return true;
+    }
+```
+
+取则是通过在外层加锁，然后调用dequeue方法来保持平衡，dequeue都是从最小的节点即[0]开始取然后用数组的最后一个元素替换根位置，然后下沉`siftDownComparable`保持堆的平衡
+
+```java
+public E poll() {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            return dequeue();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+private E dequeue() {
+        // assert lock.isHeldByCurrentThread();
+        final Object[] es;
+        final E result;
+
+        if ((result = (E) ((es = queue)[0])) != null) {
+            final int n;
+            final E x = (E) es[(n = --size)];
+            es[n] = null;
+            if (n > 0) {
+                final Comparator<? super E> cmp;
+                if ((cmp = comparator) == null)
+                    siftDownComparable(0, x, es, n);
+                else
+                    siftDownUsingComparator(0, x, es, n, cmp);
+            }
+        }
+        return result;
+    }
+```
+
+**注意：PriorityBlockingQueue没有提供缩容操作，在实际应用中，队列的容量通常在初始化时就设置为一个足够大的值，以避免频繁的扩容操作，而缩容需要通过创建新的实例并转移元素来完成，使用`drainTo`方法可以辅助完成。**
+
+
+
+### DelayQueue
+
+`DelayQueue`也是实现的`BlockingQueue`。处理基于延迟的任务，其核心特性是只能在任务到期后才能从队列中取出。其每个元素必须实现`Delayed`接口。
+
+```java
+public class DelayQueue<E extends Delayed> extends AbstractQueue<E>
+    implements BlockingQueue<E> {
+
+public interface Delayed extends Comparable<Delayed> {
+
+    /**
+     * Returns the remaining delay associated with this object, in the
+     * given time unit.
+     *
+     * @param unit the time unit
+     * @return the remaining delay; zero or negative values indicate
+     * that the delay has already elapsed
+     */
+    long getDelay(TimeUnit unit);
+}
+```
+
+上面源码还可以看到`Delayed`接口：
+
+1. 如果getDelay的返回值小于或等于0，则说明该元素到期， 需要从队列中拿出来执行。
+2. 该接口首先继承了 Comparable 接口，所以要实现该接口， 必须实现 Comparable 接口。具体来说，就是基于getDelay()的返 回值比较两个元素的大小。
+
+```java
+private final transient ReentrantLock lock = new ReentrantLock();
+    private final PriorityQueue<E> q = new PriorityQueue<E>();
+
+    /**
+     * Thread designated to wait for the element at the head of
+     * the queue.  This variant of the Leader-Follower pattern
+     * (http://www.cs.wustl.edu/~schmidt/POSA/POSA2/) serves to
+     * minimize unnecessary timed waiting.  When a thread becomes
+     * the leader, it waits only for the next delay to elapse, but
+     * other threads await indefinitely.  The leader thread must
+     * signal some other thread before returning from take() or
+     * poll(...), unless some other thread becomes leader in the
+     * interim.  Whenever the head of the queue is replaced with
+     * an element with an earlier expiration time, the leader
+     * field is invalidated by being reset to null, and some
+     * waiting thread, but not necessarily the current leader, is
+     * signalled.  So waiting threads must be prepared to acquire
+     * and lose leadership while waiting.
+     */
+    private Thread leader;
+
+    /**
+     * Condition signalled when a newer element becomes available
+     * at the head of the queue or a new thread may need to
+     * become leader.
+     */
+    private final Condition available = lock.newCondition();
+```
+
+上面的这段源码就说了`DelayQueue`的设计思路，即维护一个`PriorityQueue`并且使用一个`ReentrantLock`来处理并发安全，同时在使用`take`(其他获取元素的方法不会阻塞)时使用**Leader-Follower模式**来提高队列的性能，减少不必要的线程上下文切换和 CPU 资源的浪费，也就是当发现leader不为空时，就无限等待，等leader来唤醒，不要设置`available.awaitNanos(delay)`而导致多个线程同时设置延迟而并发竞争。
+
+```java
+public E take() throws InterruptedException {
+        final ReentrantLock lock = this.lock;
+        lock.lockInterruptibly();
+        try {
+            for (;;) {
+                E first = q.peek();
+                if (first == null)
+                    // 为空时只能无限期等待
+                    available.await();
+                else {
+                    long delay = first.getDelay(NANOSECONDS);
+                    // 这个if就是为处理在leader等待中，新加入元素小于最新元素的情况，delay <= 0L
+                    if (delay <= 0L)
+                        return q.poll();
+                    first = null; // don't retain ref while waiting
+                    // 不为空，而领导者也不为空时也要无限期等待，等待唤醒
+                    if (leader != null)
+                        available.await();
+                    else {
+                        Thread thisThread = Thread.currentThread();
+                        leader = thisThread;
+                        try {
+                             // 这里等待就是等延时的时间
+                            available.awaitNanos(delay);
+                        } finally {
+                            if (leader == thisThread)
+                                // 被唤醒后就不要当leader了
+                                leader = null;
+                        }
+                    }
+                }
+            }
+        } finally {
+            if (leader == null && q.peek() != null)
+                // 取到了元素，自己也不是leader了就去唤醒别人
+                available.signal();
+            lock.unlock();
+        }
+    }
+```
+
+**注意一个细节：上面的代码正常情况只有leader才能获取到元素，这样避免了大家都在竞争同一延迟时间的元素。但如果offer了更新的元素，加入元素后会唤醒线程，如下面代码所示，这里没有指定唤醒leader，而是随意唤醒一个线程，此时上面的take代码中的 `for (;;) `中会保证，无论是不是leader获取到，随便唤醒一个线程就能拿到最新的元素因为有这个判断逻辑：`if (delay <= 0L)  return q.poll();`，这样队列就是有序的，然后后续的leader仍然按之前的定时来唤醒获取元素，不影响已有的情况。**
+
+```java
+public boolean offer(E e) {
+        final ReentrantLock lock = this.lock;
+        lock.lock();
+        try {
+            q.offer(e);
+            // 立马判断新加入的是不是最新的，如果比之前还有新，则需要唤醒线程
+            if (q.peek() == e) {
+                leader = null;
+                available.signal();
+            }
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+```
+
+
+
+### CopyOnWriteArrayList
+
+`CopyOnWriteArrayList` 的核心数据结构也是一 个数组在，读操作上`CopyOnWriteArrayList` 和 `ArrayList` 的逻辑基本是一样的。差别在写操作上面
+
+```java
+    /**
+     * Appends the specified element to the end of this list.
+     *
+     * @param e element to be appended to this list
+     * @return {@code true} (as specified by {@link Collection#add})
+     */
+    public boolean add(E e) {
+        synchronized (lock) {
+            Object[] es = getArray();
+            int len = es.length;
+            es = Arrays.copyOf(es, len + 1);
+            es[len] = e;
+            setArray(es);
+            return true;
+        }
+    }
+```
+
+这里每次写操作都会复制整个数组，因此写操作的时间复杂度为 O(n)。对于大数组，这个开销会变得非常明显，尤其是在频繁写操作的场景下。
+
+> `CopyOnWriteArraySet` 是用 Array 实现的一个 Set，保证所有元素都不重复。其内部是封装的一个`CopyOnWriteArrayList`，每次`add` 操作的时间复杂度在最坏情况下接近 O(n)，因为其要去for循环每个元素来判断是否相同。
+
+
+
+### ConcurrentHashMap
+
+#### 数据结构
+
+`ConcurrentHashMap` 使用一个数组作为哈希表的基础结构。数组的每个元素是一个桶(bucket)，桶内部使用链表或红黑树来存储冲突的元素。初始时，桶使用链表来存储元素，当链表的长度超过一定阈值时，链表会转换为红黑树，以优化查找操作。
+
+> 桶用于处理哈希冲突，即当hashcode相同的元素都会被放入同一个bucket中，刚开始就是链表，当链表长度达到阈值（通常是 8）时，会将链表转换为红黑树。这减少了查找操作的时间复杂度，从 O(n) 降到 O(log n)。反之，当红黑树中的 元素个数小于某个阈值时，再转换为链表。
+>
+> 如下图：如果头节点是Node类型，则尾随它的就是一个普通的链表;如果 头节点是TreeNode类型，它的后面就是一颗红黑树，TreeNode是Node 的子类。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-13.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-13.png" alt="image" style="zoom:36%;" />)
+
+这样当同一个桶中元素过多时可以加快查询速度，同时在处理并发时也减小加锁的粒度，并非整个`ConcurrentHashMap`，而是对每个头节点分别加锁，**即并发度就是桶的数量，也就是Node数组的长度，初始长度为16**，
+
+
+
+#### hash值的处理
+
+`HashMap` 和 `ConcurrentHashMap` 处理哈希值的方式不同，都很有意思。
+
+`HashMap` 的哈希函数：
+
+**先将已有的hashcode做此高位位运算，目的就是为了减少hash冲突；hash冲突存在的原因在于，hashmap使用，`tab[i = (n - 1) & hash]) `来计算桶的位置，因为在hashmap中桶的长度n都是2的幂，所以 `(n - 1) & hash==hash%n`，当n为2的幂时，n-1就是除首位外都是1的二进制，而做&与运算就能等到除首位外后面n-1长度对应的数值也就是其桶的位置。回到刚才的问题，如果不用高位来参与hash，则永远只有hash值的低`lgn`位参与桶的计算，这样不就是使得很容易出现大量的对象hash值都在同一个位置而出现热点桶的问题，导致hashmap的性能大大下降。**
+
+```java
+static final int hash(Object key) {
+        int h;
+        return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+    }
+```
+
+```java
+// 如下是putVal部分代码，可以看到p = tab[i = (n - 1) & hash]) == null
+ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+                   boolean evict) {
+        Node<K,V>[] tab; Node<K,V> p; int n, i;
+        if ((tab = table) == null || (n = tab.length) == 0)
+            n = (tab = resize()).length;
+        if ((p = tab[i = (n - 1) & hash]) == null)
+```
+
+而`ConcurrentHashMap`的hash函数有不同，单独还做了非0的处理，正常hash值是不会出现负数的，这也就是hashmap中没有处理负值，而`ConcurrentHashMap`在处理并发时会自己赋值-1和-2来协调并发判断，所以要这样再做个处理
+
+```java
+ HASH_BITS = 0x7fffffff;就是第一位是0后面都是1
+static final int spread(int h) {
+        return (h ^ (h >>> 16)) & HASH_BITS;
+    }
+```
+
+
+
+#### 构造函数和初始化
+
+如果没有传构造函数，则在`putVal`等操作时都会做判断：`tab == null || (n = tab.length) == 0`，然后去调用`private final Node<K,V>[] initTable() `方法初始化，而如果传入了构造参数，最终都会调用如下方法：
+
+```java
+// 这里jdk8之后，concurrencyLevel 仍然存在，但它主要是作为一种历史遗留的配置参数，影响初始容量的估算，并不直接影响实际的并发性。
+public ConcurrentHashMap(int initialCapacity,
+                             float loadFactor, int concurrencyLevel) {
+        if (!(loadFactor > 0.0f) || initialCapacity < 0 || concurrencyLevel <= 0)
+            throw new IllegalArgumentException();
+        if (initialCapacity < concurrencyLevel)   // Use at least as many bins
+            initialCapacity = concurrencyLevel;   // as estimated threads
+        long size = (long)(1.0 + (long)initialCapacity / loadFactor);
+        int cap = (size >= (long)MAXIMUM_CAPACITY) ?
+            MAXIMUM_CAPACITY : tableSizeFor((int)size);
+        this.sizeCtl = cap;
+    }
+```
+
+这里就是在估计桶数量的初始大小，size先计算一个范围`(long)(1.0 + (long)initialCapacity / loadFactor)`，然后再用`tableSizeFor`方法计算出实际的大小，因为桶的数量必须是2的幂，`tableSizeFor` 方法来确保计算出一个适合哈希表大小且是 `n` 的 `2` 的幂的值。下面是细节解析：
+
+```java
+static final int tableSizeFor(int cap) {
+    // 位运算有点复杂，就是在计算出 cap - 1 的二进制表示中前导零的数量。这个值可以用来确定 cap - 1 需要多少位来表示。这样-1 >>> 就能得到其2的幂(-1的二进制就是首位为1后面都是0)
+    int n = -1 >>> Integer.numberOfLeadingZeros(cap - 1);
+    return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;
+}
+```
+
+> 再说一下上面的细节：Integer.numberOfLeadingZeros(cap - 1)和`return (n < 0) ? 1 : (n >= MAXIMUM_CAPACITY) ? MAXIMUM_CAPACITY : n + 1;`中的步骤：
+>
+> 1. **`cap - 1`**：减少1可以防止 `cap` 本身是 `2` 的幂次时出现误差。例如，`cap = 16` 时，我们希望结果仍然是 `16` 而不是 `32`。这样减去 `1` 后可以让后续的位移操作正确。
+> 2. **`Integer.numberOfLeadingZeros(cap - 1)`**：计算 `cap - 1` 的前导零的数量。
+> 3. **`-1 >>> Integer.numberOfLeadingZeros(cap - 1)`**：将 `-1` 右移相应的位数，这个操作结果实际上会形成一个形如 `000...0111...111` 这样的一串二进制数。
+>    - 比如，当 `cap = 10` 时，`cap - 1` 是 `9`，二进制表示为 `1001`，前导零的数量是 `28`（假设整数是 32 位）。经过右移后，得到的二进制数可能是 `000...0111`，而这个数的十进制值是 `7`。
+> 4. **`n + 1`**：加 `1` 是因为 `n` 的值代表了 `cap` 的 `2` 的幂次的前一个值。`n` 自身表示的是 `cap` 的减去 `1` 后的计算结果，因此要加 `1`，使得结果正好是 `2` 的幂次。
+
+
+
+然后构造函数中只计算了数组的初始大小，并没有对数组进 行初始化。当多个线程都往里面放入元素的时候，再进行初始化。这就存在一个问题:多个线程重复初始化。下面就是初始化的源码：
+
+```java
+    /**
+     * Initializes table, using the size recorded in sizeCtl.
+     */
+    private final Node<K,V>[] initTable() {
+        Node<K,V>[] tab; int sc;
+        while ((tab = table) == null || tab.length == 0) {
+            // 这里就是通过比较sizeCtl<0来控制并发的，并且上一层还有一个while来一起控制初始化并发
+
+            if ((sc = sizeCtl) < 0)
+                Thread.yield(); // lost initialization race; just spin
+            // 这里将sizeCtl原子操作U.compareAndSetInt(this, SIZECTL, sc, -1)设为-1
+            else if (U.compareAndSetInt(this, SIZECTL, sc, -1)) {
+                try {
+                    if ((tab = table) == null || tab.length == 0) {
+                        int n = (sc > 0) ? sc : DEFAULT_CAPACITY;
+                        @SuppressWarnings("unchecked")
+                        Node<K,V>[] nt = (Node<K,V>[])new Node<?,?>[n];
+                        table = tab = nt;
+                        sc = n - (n >>> 2);
+                    }
+                } finally {
+                    sizeCtl = sc;
+                }
+                break;
+            }
+        }
+        return tab;
+    }
+```
+
+>  sizeCtl就是用于控制并发扩容和初始化的参数：
+>
+> - -1 表示正在进行初始化操作或扩容操作。当其他线程会意识到有线程正在进行初始化或扩容，因此会等待该操作完成。
+> - 0：表示表结构还没有初始化，即 还未分配桶数组（`table`），此时需要初始化
+> - \>0：`sizeCtl` 表示创建 `table` 时的目标大小。然后当 `table` 已经被初始化后，`sizeCtl` 变为 `0.75` 乘以当前数组大小（`capacity`）。这实际上是扩容的阈值，表示当元素数量达到这个值时，应该进行扩容。
+
+#### put
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-13.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-14.png" alt="image" style="zoom:42%;" />)
+
+`ConcurrentHashMap` 最外层套了一个`for (Node<K,V>[] tab = table;;)`，来辅助处理并发，然后循环内部的逻辑和 `HashMap` 的 `putVal` 方法在大致目的上是相似的。然后下面是几个if分支：
+
+1. 第一个分支：initTable初始化整个node[]数组
+
+2. 第二个分支：initTable了之后外层循环又会进入，初始化对应的Node节点
+
+3. 第三个分支：`else if ((fh = f.hash) == MOVED)` `MOVED`=-1，说明正在迁移数组，然后调用`helpTransfer`方法帮助其迁移，就是将数组中的一个个Node节点复制到新的数组中，这里会判断如果元素已经在被复制了就复制下一个，核心就是多个线程一起完成迁移。
+
+4. 第四个分支：上面这个判断就是`onlyIfAbsent`的情况下，并且是hash不是在迁移中并且equals条件也符合就直接返回，不插入
+
+5. 第五个分支：就是核心，将当前数字的头锁住，这就是`ConcurrentHashMap` 并发思路，每个锁都只锁住元素的头节点，这样map中每个桶都是独立的锁。然后上图中进入`synchronized`后又做了一个`if (tabAt(tab, i) == f)`的double check避免链表转红黑树节点被修改了。然后判断是否是红黑节点还是普通节点，即`fh>=0`，红黑节点在初始化时hashcode会赋值为`TREEBIN   = -2`即fh=-2。然后就是不同节点的插入逻辑，插入完了，会判断`binCount >= TREEIFY_THRESHOLD`其中TREEIFY_THRESHOLD=8，这就会进入扩容逻辑。
+
+
+
+#### 扩容
+
+扩容就是`treeifyBin`、`tryPresize`（hashmap中是`resize`）和`transfer `等涉及的几个方法，核心方法是`transfer(Node<K,V>[] tab, Node<K,V>[] nextTab) `方法，扩容的实现是最复杂的。推荐看一个[参考](https://juejin.cn/post/7170215523634905124)。
+
+但有一些细节：
+
+- 参数MIN_TREEIFY_CAPACITY=64，这个控制着当数组的长度没有超过64的时候，数组的每个节点里都是链表，只会扩容，不会转换成红黑树。只有当数组长度大于或等于64时，才考虑把链表转换 成红黑树。
+
+`ConcurrentHashMap`源码实战太多，有点复杂，后面再补充  ... Todo
+
+
+
+### ConcurrentSkipListMap
+
+在juc包中提供的key有序的HashMap就是`ConcurrentSkipListMap`，是基于`SkipList(跳查表)`来实现的。
+
+为什么有序的hashmap不是用红黑树的数据结构而是使用跳表，原因Doug Lea是说在"目前计算机领域还未找到一种高效的、作用在树上的、无锁的、增加和删除节点的办法。"
+
+#### 核心问题
+
+因为现在没有一个在树上的无锁的、增加和删除节点的办法，所以要实现并发有序的map集合，需要使用别的数据结构，而因为之前的并发结构都是队列或者栈，而无锁队列、栈，都是只在队头、队尾进行插入和退出操作，而map则需要在中间任何位置插入，而CAS在队列或者栈的队头或队尾操作，这样CAS通常不会有问题。如果在链表的中间进行插入或删除操作，按照通常的CAS做法，就会出现问题!原因如下:
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-13.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-19.png" alt="image" style="zoom:50%;" />)
+
+当并发删除和插入时，如果两个操作：插入节点20和删除节点10，因为节点20排序会在节点10后面节点10的next连接重新指向20，而删除节点10，则会让10的前驱节点指向10的之前的后续节点30；此时插入节点20，就会使得删除操作覆盖了插入操作。而关键是CAS操作没有办法同时保证两个操作的原子性。
+
+解决办法就是，删除时不是直接移动指针，而是在要删除的节点中新增后续的`marker`节点，然后在后续的插入中再删除节点，同时查询都跳过标记节点。比较节点也是一个`Node`只是其key和val都是null，而正常的节点key和val都不能为空，否则会抛出空指针异常。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-18.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-18.png" alt="image" style="zoom:42%;" />)
+
+
+
+#### 为什么使用跳表
+
+因为需要在中间插入，而且保证顺序同时要保证并发安全，所以采用的链表，而此时因为没有hash操作，查找和插入时都是从头遍历节点，此时需要一种数据结构来加快查询。所以采用的跳表，所有的查询都从head这个整个跳表的头节点开始，然后向右和向下去遍历，而跳表本身的多层结构就是来加快查询的。
+
+
+
+#### 数据结构
+
+使用了两个对象`Node`和`Index`来维护跳表的结构，`Node`是基础的数据节点，维护一个next指针，所有的数据都是通过此指针来串联起来，然后`Index`的down和right指针维护了跳表的基本结构
+
+```java
+static final class Node<K,V> {
+        final K key; // currently, never detached
+        V val;
+        Node<K,V> next;
+        Node(K key, V value, Node<K,V> next) {
+            this.key = key;
+            this.val = value;
+            this.next = next;
+        }
+    }
+
+    /**
+     * Index nodes represent the levels of the skip list.
+     */
+    static final class Index<K,V> {
+        final Node<K,V> node;  // currently, never detached
+        final Index<K,V> down;
+        Index<K,V> right;
+        Index(Node<K,V> node, Index<K,V> down, Index<K,V> right) {
+            this.node = node;
+            this.down = down;
+            this.right = right;
+        }
+    }
+```
+
+
+
+#### 实现细节
+
+**put方法**
+
+put方法会调用核心的`doput`方法，其中下面的就是再处理被删除的标记节点，通过判空来识别标记节点，正常节点key和val都不会为空。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-15.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-15.png" alt="image" style="zoom:42%;" />)
+
+> 在跳表中的查询、删除、清除节点和任何调整节点的操作都加入了内存屏障操作；比如上面的`VarHandle.acquireFence();`确保在调用 `acquireFence()` 之后的所有读操作能看到其他线程已经完成并发布的写操作。
+
+
+
+**remove**
+
+删除方法也可以看到，先通过`findPredecessor`来找到前驱几点，然后在调用`unlinkNode`来新增删除`marker`。注意这里实际上时没有删除的，删除是在后续的读取、和插入中再删除的
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-16.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-16.png" alt="image" style="zoom:45%;" />)
+
+
+
+get方法也会处理标记节点
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-20.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-20.png" alt="image" style="zoom:42%;" />)
+
+增加`marker`节点操作，就是在后续节点增加key和val的空节点。
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-17.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-17.png" alt="image" style="zoom:42%;" />)
+
+
+
+。。。好了，上面的并发容器只是一部分，我觉得这几个有代表性，就去读了一下源码，顺便做了记录。
+
+
+
+
+

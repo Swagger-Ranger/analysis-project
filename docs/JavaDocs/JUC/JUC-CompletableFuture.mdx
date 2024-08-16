@@ -1,0 +1,583 @@
+---
+title: CompletableFuture
+sidebar_position: 8
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+从JDK8开始，在`Concurrent`包中提供了一个强大的异步编程工具`CompletableFuture`。在JDK8之前，异步编程可以通过线程池和`Future`来实现，但功能还不够强大。`CompletableFuture`使Java的异步编程能力向前迈进了一大步。
+
+
+
+## 基本用法
+
+### 核心API
+
+`CompletableFuture`就是通过实现`Future`接口和`CompletionStage`接口来提供丰富的异步组能能力，其中`Future` 提供任务的基础异步操作，通过 `CompletionStage` 支持多种异步操作的组合和链式调用。
+
+**`Future` 接口方法**
+
+| 方法签名                                        | 描述                                       |
+| ----------------------------------------------- | ------------------------------------------ |
+| `V get()`                                       | 阻塞直到任务完成并返回结果。               |
+| `V get(long timeout, TimeUnit unit)`            | 带超时的阻塞方法，等待任务完成并返回结果。 |
+| `boolean cancel(boolean mayInterruptIfRunning)` | 取消任务。如果任务正在运行，可以选择中断。 |
+| `boolean isDone()`                              | 检查任务是否完成。                         |
+| `boolean isCancelled()`                         | 检查任务是否被取消。                       |
+
+**`CompletionStage` 接口方法**
+
+| 方法签名                                                     | 描述                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `CompletionStage<U>` thenApply `(Function<? super T, ? extends U> fn)` | 在当前任务完成后，使用 `Function` 处理结果并返回新的 `CompletionStage`。 |
+| `CompletionStage<Void>`  thenAccept `(Consumer<? super T> action)` | 在当前任务完成后，使用 `Consumer` 处理结果，不返回新的 `CompletionStage`。 |
+| `CompletionStage<U>` thenCompose `(Function<? super T, ? extends CompletionStage<U>> fn)` | 在当前任务完成后，使用 `Function` 返回一个新的 `CompletionStage`。 |
+| `CompletionStage<T> ` exceptionally `(Function<Throwable, ? extends T> fn)` | 如果任务出现异常，使用 `Function` 处理异常。                 |
+| `CompletionStage<U>` handle `(BiFunction<? super T, Throwable, ? extends U> fn)` | 无论成功还是失败，使用 `BiFunction` 处理结果或异常。         |
+| `static CompletableFuture<Void>`  allOf `(CompletableFuture<?>... cfs)` | 当所有提供的 `CompletableFuture` 完成时，该 `CompletableFuture` 才会完成。 |
+| `static CompletableFuture<Object>` anyOf `(CompletableFuture<?>... cfs)` | 当任意一个提供的 `CompletableFuture` 完成时，该 `CompletableFuture` 才会完成。 |
+
+上面api只是一部分，但可以对所有的`CompletableFuture`方法做一个分类：
+
+**提交任务：`runAsync`与`supplyAsync`**
+
+- ```java
+    <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier) // 有返回值
+  ```
+
+- ```java
+   CompletableFuture<Void> runAsync(Runnable runnable) // 没有返回值
+  ```
+
+**链式的任务链接：`thenRun`，`thenAccept`，`thenApply`**
+
+- ```java
+   CompletableFuture<Void> thenRun(Runnable action) // 无参数、无返回值
+  ```
+
+- ```java
+    CompletableFuture<Void> thenAccept(Consumer<? super T> action) // 有参数、无返回值
+  ```
+
+- ```java
+    public <U> CompletableFuture<U> thenApply(
+        Function<? super T,? extends U> fn)  //有参数、有返回值
+  ```
+
+**组合两个`CompletableFuture`： `thenCompose`和`thenCombine`**
+
+- ` thenCombine` 将两个`CompletableFuture`的结果组合在一起，这一组合过程是同步的，没有依赖关系。
+- `thenCompose` 的主要功能是将一个 `CompletableFuture` 的结果作为输入，来启动生成一个新的 `CompletableFuture`
+
+**组合任意个`CompletableFuture`：`allOf`和`anyOf`**
+
+- ```java
+    public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs) //所有的完成则完成，没有返回值，所有一般后面会跟一个回调函数.whenComplete
+  ```
+
+- ```java
+    public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs) // 任意一个完成就完成
+  ```
+
+**并且如果方法后缀带`Async`都是异步方法，否则都是同步方法**
+
+
+
+### 实战用法
+
+下面有实际的例子(jdk21)：
+
+```xml
+      <!-- JUnit 5 API -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-api</artifactId>
+        <version>5.7.1</version>
+        <scope>test</scope>
+      </dependency>
+      <!-- JUnit 5 Engine -->
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>5.7.1</version>
+        <scope>test</scope>
+      </dependency>
+```
+
+
+
+```java
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.*;
+
+import static java.lang.Character.isUpperCase;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * @author liufei
+ **/
+public class CompletableFutureTest {
+
+    @Test
+    @DisplayName("创建一个完成的CompletableFuture")
+    void completedFutureExample() {
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message");
+        assertTrue(cf.isDone());
+        // getNow(T valueIfAbsent) 就是((r = result) == null) ? valueIfAbsent : (T) reportJoin(r);
+        assertEquals("message", cf.getNow(null));
+    }
+
+
+    @Test
+    @DisplayName("运行一个简单的异步阶段")
+    void runAsyncExample() {
+        // CompletableFuture<Void> runAsync(Runnable runnable)
+        CompletableFuture<Void> cf = CompletableFuture.runAsync(() -> {
+            // 执行任务的线程是由 ForkJoinPool.commonPool() 提供的。ForkJoinPool中创建的线程ForkJoinWorkerThread都是守护线程
+            System.out.println(Thread.currentThread().getName());
+            assertTrue(Thread.currentThread().isDaemon());
+            randomSleep();
+        });
+        assertFalse(cf.isDone());
+        sleepEnough();
+        assertTrue(cf.isDone());
+    }
+
+    @Test
+    @DisplayName("运行一个简单的带返回结果的异步阶段")
+    void supplyAsyncExample() {
+        // runAsync没有返回值，supplyAsync有返回值
+        CompletableFuture<String> cf = CompletableFuture.supplyAsync(() -> {
+            // 执行任务的线程是由 ForkJoinPool.commonPool() 提供的。ForkJoinPool中创建的线程ForkJoinWorkerThread都是守护线程
+            System.out.println(Thread.currentThread().getName());
+            assertTrue(Thread.currentThread().isDaemon());
+            randomSleep();
+            return "done";
+        });
+        assertFalse(cf.isDone());
+        sleepEnough();
+        assertTrue(cf.isDone());
+        System.out.println(cf.getNow(null));
+    }
+
+    @Test
+    @DisplayName("在前一个阶段上应用函数")
+    void thenApplyExample() {
+        // thenApply等待完成结果，getNow会阻塞
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message").thenApply(s -> {
+            assertFalse(Thread.currentThread().isDaemon());
+            return s.toUpperCase();
+        });
+        assertEquals("MESSAGE", cf.getNow(null));
+    }
+
+    @Test
+    @DisplayName("在前一个阶段上异步应用函数")
+    void thenApplyAsyncExample() {
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message").thenApplyAsync(s -> {
+            assertTrue(Thread.currentThread().isDaemon());
+            randomSleep();
+            return s.toUpperCase();
+        });
+        assertNull(cf.getNow(null));
+        // join 方法是一个阻塞操作，会阻塞当前线程，等待join的线程完成返回
+        assertEquals("MESSAGE", cf.join());
+    }
+
+
+    @Test
+    @DisplayName("使用定制的Executor在前一个阶段上异步应用函数")
+    void thenApplyAsyncWithExecutorExample() {
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message").thenApplyAsync(s -> {
+            assertTrue(Thread.currentThread().getName().startsWith("custom-executor-"));
+            assertFalse(Thread.currentThread().isDaemon());
+            randomSleep();
+            return s.toUpperCase();
+        }, executor);
+
+        assertNull(cf.getNow(null));
+        assertEquals("MESSAGE", cf.join());
+    }
+
+    @Test
+    @DisplayName("消费前一阶段的结果")
+    void thenAcceptExample() {
+        StringBuilder result = new StringBuilder();
+        // thenAccept是当前线程中同步执行
+        CompletableFuture.completedFuture("thenAccept message").thenAccept(result::append);
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    @Test
+    @DisplayName("异步地消费前一阶段的结果")
+    void thenAcceptAsyncExample() {
+        StringBuilder result = new StringBuilder();
+        // thenAcceptAsync: 在异步线程中执行回调，可以提供自定义线程池。
+        CompletableFuture<Void> cf = CompletableFuture.completedFuture("thenAcceptAsync message")
+                .thenAcceptAsync(result::append);
+        cf.join();
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    @Test
+    @DisplayName("完成计算异常")
+    void completeExceptionallyExample() {
+        String MSG = "message upon cancel";
+        String MSG1 = "completed exceptionally";
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message").thenApplyAsync(String::toUpperCase,
+                CompletableFuture.delayedExecutor(1, TimeUnit.SECONDS));
+        CompletableFuture<String> exceptionHandler = cf.handle((s, th) -> (th != null) ? MSG : "");
+        /*
+         * cf.completeExceptionally(new RuntimeException(MSG1))，调用：
+         * 返回true则表示CompletableFuture还为完成，设置成功，后续的调用都会抛出异常；
+         * 返回false则表示已经完成，不影响调用结果的正常返回。比如 加一个TimeUnit.SECONDS.sleep(2);睡眠，此时cf已经完成，cf.completeExceptionally就会返回false
+         */
+        cf.completeExceptionally(new RuntimeException(MSG1));
+        assertTrue(cf.isCompletedExceptionally(), "Was not completed exceptionally");
+        try {
+            cf.join();
+            fail("Should have thrown an exception");
+        } catch (CompletionException ex) { // just for testing
+            assertEquals(MSG1, ex.getCause().getMessage());
+        }
+
+        assertEquals(MSG, exceptionHandler.join());
+    }
+
+    @Test
+    @DisplayName("取消计算")
+    void cancelExample() {
+        CompletableFuture<String> cf = CompletableFuture.completedFuture("message").thenApplyAsync(String::toUpperCase,
+                CompletableFuture.delayedExecutor(1, TimeUnit.SECONDS));
+
+        // exceptionally就是当CompletableFuture出现异常时使用exceptionally定义的异常来返回
+        CompletableFuture<String> cf2 = cf.exceptionally(throwable -> "canceled message");
+
+        // cancel没有使用中断操作，而是等价于completeExceptionally(new CancellationException()
+        assertTrue(cf.cancel(true), "Was not canceled");
+
+        // isCompletedExceptionally() 方法用于检查是否因异常或取消而完成。这里期待返回 true，表示cf因取消而异常完成。
+        assertTrue(cf.isCompletedExceptionally(), "Was not completed exceptionally");
+        assertEquals("canceled message", cf2.join());
+    }
+
+    @Test
+    @DisplayName("在两个完成的阶段其中之一上应用函数")
+    void applyToEitherExample() {
+        String original = "Message";
+        CompletableFuture<String> cf1 =
+                CompletableFuture.completedFuture(original).thenApplyAsync(this::delayedUpperCase);
+
+        // applyToEither 方法。applyToEither 用于处理两个 CompletableFuture 中最先完成的那个，并将结果应用于提供的函数
+        CompletableFuture<String> cf2 = cf1.applyToEither(
+                CompletableFuture.completedFuture(original).thenApplyAsync(this::delayedLowerCase),
+                s -> s + " from applyToEither");
+        assertTrue(cf2.join().endsWith(" from applyToEither"));
+    }
+
+    @Test
+    @DisplayName("在两个完成的阶段其中之一上调用消费函数")
+    void acceptEitherExample() {
+        String original = "Message";
+        StringBuilder result = new StringBuilder();
+        CompletableFuture<Void> cf = CompletableFuture.completedFuture(original)
+                .thenApplyAsync(this::delayedUpperCase)
+                // 和上一个的差异时，调用Function还是调用的 Consumer；Function有返回，Consumer没有返回
+                .acceptEither(
+                        CompletableFuture.completedFuture(original).thenApplyAsync(this::delayedLowerCase),
+                        s -> result.append(s).append("acceptEither"));
+        cf.join();
+
+        assertTrue(result.toString().endsWith("acceptEither"), "Result was empty");
+    }
+
+
+    @Test
+    @DisplayName("在两个阶段都执行完后运行一个")
+    void runAfterBothExample() {
+        String original = "Message";
+        StringBuilder result = new StringBuilder();
+        CompletableFuture.completedFuture(original)
+                .thenApply(String::toUpperCase)
+                .runAfterBoth(
+                        CompletableFuture.completedFuture(original).thenApply(String::toLowerCase),
+                        // 在两个都完成之后，运行下面的函数
+                        () -> result.append("done"));
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    @Test
+    @DisplayName("使用BiConsumer处理两个阶段的结果")
+    void thenAcceptBothExample() {
+        String original = "Message";
+        StringBuilder result = new StringBuilder();
+        CompletableFuture.completedFuture(original)
+                .thenApply(String::toUpperCase)
+                .thenAcceptBoth(
+                        CompletableFuture.completedFuture(original).thenApply(String::toLowerCase),
+                        (s1, s2) -> result.append(s1).append(s2));
+        assertEquals("MESSAGEmessage", result.toString());
+    }
+
+    @Test
+    @DisplayName("使用BiFunction处理两个阶段的结果")
+    void thenCombineExample() {
+        String original = "Message";
+        CompletableFuture<String> cf =
+                CompletableFuture.completedFuture(original)
+                        .thenApply(this::delayedUpperCase)
+                        // 这里thenCombine是同步的，需要等待两个都完成再执行
+                        .thenCombine(CompletableFuture.completedFuture(original).thenApply(this::delayedLowerCase),
+                                (s1, s2) -> s1 + s2);
+        assertEquals("MESSAGEmessage", cf.getNow(null));
+    }
+
+    @Test
+    @DisplayName("异步使用BiFunction处理两个阶段的结果")
+    void thenCombineAsyncExample() {
+        String original = "Message";
+        CompletableFuture<String> cf = CompletableFuture.completedFuture(original)
+                .thenApplyAsync(this::delayedUpperCase)
+                // thenCombine 只是将两个CompletableFuture的结果组合在一起，这一组合过程是同步的。
+                .thenCombine(CompletableFuture.completedFuture(original).thenApplyAsync(this::delayedLowerCase),
+                        (s1, s2) -> s1 + s2);
+        assertNull(cf.getNow(null));
+        // 所以这里要join才能拿到结果
+        assertEquals("MESSAGEmessage", cf.join());
+    }
+
+    @Test
+    @DisplayName("组合CompletableFuture")
+    void thenComposeExample() {
+        String original = "Message";
+        CompletableFuture<String> cf =
+                CompletableFuture.completedFuture(original)
+                        .thenApply(this::delayedUpperCase)
+                        // 与thenCombine的工作方式不同。thenCompose 更适合处理依赖关系的链式异步操作。
+                        // thenCombine是组合两个独立的 CompletableFuture，并将它们的结果通过组合函数生成一个新的结果。
+
+                        // thenCompose 的主要功能是将一个 CompletableFuture 的结果作为输入，来启动生成一个新的 CompletableFuture。
+                        // 换句话说，它允许你在一个 CompletableFuture 完成后，基于该结果启动另一个异步操作，并返回这个新的 CompletableFuture。
+                        .thenCompose(
+                                upper -> CompletableFuture.completedFuture(original)
+                                        .thenApply(this::delayedLowerCase)
+                                        .thenApply(s -> upper + s));
+        assertEquals("MESSAGEmessage", cf.join());
+    }
+
+    @Test
+    @DisplayName("当几个阶段中的一个完成，创建一个完成的阶段")
+    void anyOfExample() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures =
+                messages.stream()
+                        .map(msg -> CompletableFuture.completedFuture(msg).thenApply(this::delayedUpperCase))
+                        .toList();
+
+        // 任何一个完成，就返回第一个完成的，并生成一个新的CompletableFuture
+        CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+                .whenComplete((res, th) -> {
+                    if (th == null) {
+                        assertTrue(isAllUpperCase((String) res));
+                        result.append(res);
+                    }
+                });
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    @Test
+    @DisplayName("当所有的阶段都完成后创建一个阶段")
+    void allOfExample() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures =
+                messages.stream()
+                        .map(msg -> CompletableFuture.completedFuture(msg).thenApply(this::delayedUpperCase))
+                        .toList();
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                .whenComplete((v, th) -> {
+                    futures.forEach(cf -> assertTrue(isAllUpperCase(cf.getNow(null))));
+                    result.append("done");
+                });
+        System.out.println(result);
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    @Test
+    @DisplayName("当所有的阶段都完成后异步地创建一个阶段")
+    void allOfAsyncExample() {
+        StringBuilder result = new StringBuilder();
+        List<String> messages = Arrays.asList("a", "b", "c");
+        List<CompletableFuture<String>> futures =
+                messages.stream()
+                        .map(msg -> CompletableFuture.completedFuture(msg).thenApplyAsync(this::delayedUpperCase))
+                        .toList();
+        CompletableFuture<Void> allOf =
+                CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                        .whenComplete((v, th) -> {
+                            futures.forEach(cf -> assertTrue(isAllUpperCase(cf.getNow(null))));
+                            result.append("done");
+                        });
+        allOf.join();
+        System.out.println(result);
+        assertFalse(result.isEmpty(), "Result was empty");
+    }
+
+    private boolean isAllUpperCase(String str) {
+        return str.equals(str.toUpperCase());
+    }
+
+    private String delayedLowerCase(String s) {
+        sleepEnough(1);
+        if (s == null) {
+            return null;
+        }
+        return s.toLowerCase();
+    }
+
+    private String delayedUpperCase(String s) {
+        sleepEnough(1);
+        if (s == null) {
+            return null;
+        }
+        return s.toUpperCase();
+    }
+
+
+    //异步方法能够提供一个Executor来异步地执行CompletableFuture
+    ExecutorService executor = Executors.newFixedThreadPool(3, new ThreadFactory() {
+        int count = 1;
+
+        @Override
+        public Thread newThread(Runnable runnable) {
+            return new Thread(runnable, "custom-executor-" + count++);
+        }
+    });
+
+    private void sleepEnough() {
+        sleepEnough(3);
+    }
+
+    private void sleepEnough(int elapse) {
+        try {
+            TimeUnit.SECONDS.sleep(elapse);
+        } catch (InterruptedException e) {
+            //... 不做操作，直接退出
+        }
+    }
+
+    private void randomSleep() {
+        try {
+            Thread.sleep((long) (Math.random() * 1000));
+        } catch (InterruptedException e) {
+            //... 不做操作，直接退出
+        }
+    }
+}
+```
+
+## 内部原理
+
+```java
+public static CompletableFuture<Void> runAsync(Runnable runnable) {
+        return asyncRunStage(ASYNC_POOL, runnable);
+    }
+
+    private static final boolean USE_COMMON_POOL =
+        (ForkJoinPool.getCommonPoolParallelism() > 1);
+    /**
+     * Default executor -- ForkJoinPool.commonPool() unless it cannot
+     * support parallelism.
+     * ASYNC_POOL就是决定是否使用 ForkJoinPool.commonPool()还是新开一个线程，这里取决于底层硬件是否
+     * 支持并发，getCommonPoolParallelism方法中依赖于底层判断，没有对外提供明确的逻辑
+     */
+    private static final Executor ASYNC_POOL = USE_COMMON_POOL ?
+        ForkJoinPool.commonPool() : new ThreadPerTaskExecutor();
+```
+
+`CompletableFuture`的执行都依赖于`ForkJoinPool`。而`ForkJoinPool`接受的任务是`ForkJoinTask` 类型，而我们向`CompletableFuture` 提 交 的 任 务 是 `Runnable/Supplier/Consumer/Function` 。 因此，肯定需要一个适配机制，把这四种类型的任务转换成`ForkJoinTask`，然后提交给`ForkJoinPool`，从下面的源码就可以看到：
+
+```java
+static CompletableFuture<Void> asyncRunStage(Executor e, Runnable f) {
+        if (f == null) throw new NullPointerException();
+        CompletableFuture<Void> d = new CompletableFuture<Void>();
+        e.execute(new AsyncRun(d, f));
+        return d;
+    }
+
+// 可以看到每个任务的提交最后都是交给了ForkJoinTask封装的对象
+static final class AsyncRun extends ForkJoinTask<Void>
+        implements Runnable, AsynchronousCompletionTask {
+        CompletableFuture<Void> dep; Runnable fn;
+        AsyncRun(CompletableFuture<Void> dep, Runnable fn) {
+            this.dep = dep; this.fn = fn;
+        }
+
+        public final Void getRawResult() { return null; }
+        public final void setRawResult(Void v) {}
+        public final boolean exec() { run(); return false; }
+
+        public void run() {
+            CompletableFuture<Void> d; Runnable f;
+            if ((d = dep) != null && (f = fn) != null) {
+                dep = null; fn = null;
+                if (d.result == null) {
+                    try {
+                        f.run();
+                        d.completeNull();
+                    } catch (Throwable ex) {
+                        d.completeThrowable(ex);
+                    }
+                }
+                d.postComplete();
+            }
+        }
+    }
+
+
+static final class AsyncSupply<T> extends ForkJoinTask<Void>
+        implements Runnable, AsynchronousCompletionTask {
+  ...
+
+abstract static class Completion extends ForkJoinTask<Void>
+        implements Runnable, AsynchronousCompletionTask {
+        volatile Completion next;
+  ...
+```
+
+所有的任务类型都转化为了`ForkJoinTask `，即`Runnable`/`Supplier`/`Consumer`/`Function`到`ForkJoinTask`的转换问题
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-24.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-24.png" alt="image" style="zoom:45%;" />)
+
+内部`ForkJoinTask`任务子类：`AsyncRun`,`Completion`等对象的继承关系图如下：
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-25.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/juc/juc-25.png" alt="image" style="zoom:39%;" />)
+
+
+
+整个`CompletableFuture`的执行链路和逻辑，挺长的，后面再写
+
+...todo
+
+
+
+
+
+
+
+
+
+
