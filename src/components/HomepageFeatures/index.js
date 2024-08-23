@@ -27,7 +27,7 @@ const FeatureList = [
       Svg: require('@site/static/img/coffeescript-color.svg').default,
     description: (
       <>
-          code和devops章节就是要实际的写编码需要的知识(这里就是Java)，和项目实际运行和维护的知识，blog章节就单纯是个人的一下感受和文章
+          Dev and Ops it即实现并维护它，对应code和devops章节，即实际的编码需要的知识(这里就是Java)，和项目实际运行和维护的知识，最后blog章节就单纯是个人一些感受
       </>
     ),
   },

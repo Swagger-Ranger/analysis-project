@@ -106,7 +106,7 @@ const config = {
             type: 'docSidebar',
             sidebarId: 'middlewareSidebar',
             position: 'left',
-            label: 'Middleware',
+            label: 'Middlewares',
           },{
             type: 'docSidebar',
             sidebarId: 'jdkSidebar',

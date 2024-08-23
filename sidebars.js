@@ -39,7 +39,11 @@ const sidebars = {
             items: [
                 'AnalysisProject/一个更好的系统设计/超越流式遍历', // 指向 'tutorial-advanced/perform-setup.md'
                 'AnalysisProject/一个更好的系统设计/系统构成', // 指向 'tutorial-advanced/use-hooks.md'
-                'AnalysisProject/一个更好的系统设计/核心组件', // 指向 'tutorial-advanced/use-hooks.md'
+                // 'AnalysisProject/一个更好的系统设计/核心组件', // 指向 'tutorial-advanced/use-hooks.md'
+                'AnalysisProject/一个更好的系统设计/数据接入', // 指向 'tutorial-advanced/use-hooks.md'
+                'AnalysisProject/一个更好的系统设计/分析模块', // 指向 'tutorial-advanced/use-hooks.md'
+                'AnalysisProject/一个更好的系统设计/执行引擎', // 指向 'tutorial-advanced/use-hooks.md'
+                'AnalysisProject/一个更好的系统设计/输出模块', // 指向 'tutorial-advanced/use-hooks.md'
             ],
         },
         {
