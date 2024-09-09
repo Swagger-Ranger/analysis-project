@@ -1,0 +1,656 @@
+---
+title: JVM数据分析
+sidebar_position: 3
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+### 分析堆内存数据
+
+使用`VisualVM`诊断工具分析jvm内存溢出
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jvm/jvm-5.png" alt="image" style="zoom:32%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jvm/jvm-5.png" alt="image" style={{ maxWidth: '82%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+上图是一个`VisualVM`打开`dump`文件后选择对象视图的样子，一遍分析潜在的内存泄漏就通过此分析。
+
+对应的四列含义如下：
+
+- **Name**：对象的类名，识别对象类型。
+- **Count**：对象实例的数量，判断是否有过多实例。
+- **Size**：所有实例占用的总内存，评估内存消耗。
+- **Retained**：删除对象可以释放的内存量，识别内存泄漏的根源。-- 这个是个关键指标，就是此对象导致不能被回收的对象有多少
+
+> Retained Size 的计算：
+  >
+  > 通过分析对象图（object graph）并确定在删除某个对象后哪些对象将不可达（即成为垃圾），那此对象本身加上其删除之后的那些不可达对象所占用的空间大小就是Retained Size。
+  >
+  > 如果一个对象被多个活跃对象引用，那么它的大小不会被计入任何一个对象的 Retained Size，只有当对象被删除后不可访问的情况下才会被计算为 Retained Size。VisualVM 内存分析工具使用这个概念来帮助分析哪些对象可能导致内存泄漏：如果某个对象的 **Retained Size** 很大，但 **Size** 很小，说明这个对象的引用链很长且重要，有可能导致内存泄漏。
+
+*上面的`Class Filter`可以过滤出想要看的类。*
+
+然后因为同一种对象在不同的位置的size和retiained都是在VisualVM合并展示的，所以有必要看是哪些对象引用了这个类型的对象。上图中下方的`References`就是看具体哪些地方在引用这些对象，其展示的`reference`字符的含义如下：
+
+比如`java.util.concurrent.ConcurrentHashMap$Node#479 1 (0%)`
+
+- **`java.util.concurrent.ConcurrentHashMap$Node`**：对象的类名，表示这个对象是 `ConcurrentHashMap` 内部的一个静态类 `Node` 的实例。*（  `ConcurrentHashMap` 的实现中，`Node` 是一个静态内部类，通常用于表示一个链表节点，包含键值对和指向下一个节点的指针。）*
+- **`#479`**：对象的哈希码（`hash code`）的十进制形式表示，由 `Object` 类的 `hashCode()` 方法生成。在 VisualVM 中，哈希码用于唯一标识内存中某个对象的实例。
+- **`1`**：对象的实例数量，表示当前对象的实例数量是 `1`，即在这种情况下，`1` 表示在内存中只有一个该类型的对象实例被引用到。
+- **`(0%)`**：对象占用的内存比例，`(0%)` 表示这个对象的实例所占用的内存非常少，相对于所有内存中对象的占比为 `0%`。
+
+
+内存泄漏的特点：当size本身不大而占用量Retained却很大时，往往就是内存泄漏的常见现象。
+
+#### 实战示例
+
+运行如下代码：
+
+```java
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author liufei
+ * 测试threadLocal内存泄漏
+ * 01:固定6个线程，每个线程持有一个变量
+ * 按理来说会有 6 * 5 = 30M内存无法回收，其余的在set方法中覆盖了。
+ */
+public class ThreadLocalOutOfMemoryTest {
+    static class LocalVariable {
+        //总共有5M
+        private byte[] locla = new byte[1024 * 1024 * 5];
+    }
+
+    // (1)创建了一个核心线程数和最大线程数为 6 的线程池，这个保证了线程池里面随时都有 6 个线程在运行
+    final static ThreadPoolExecutor poolExecutor =
+            new ThreadPoolExecutor(6, 6, 1, TimeUnit.MINUTES, new LinkedBlockingQueue<>());
+    // (2)创建了一个 ThreadLocal 的变量，泛型参数为 LocalVariable，LocalVariable 内部是一个 Long 数组
+    static       ThreadLocal<LocalVariable> localVariable = new ThreadLocal<>();
+
+    public static void main(String[] args) throws InterruptedException {
+        // (3)向线程池里面放入 50 个任务
+        for (int i = 0; i < 50; ++i) {
+            poolExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // (4) 往threadLocal变量设置值
+                    LocalVariable localVariable = new LocalVariable();
+                    // 会覆盖
+                    ThreadLocalOutOfMemoryTest.localVariable.set(localVariable);
+                    // (5) 手动清理ThreadLocal
+                    System.out.println("thread name end：" + Thread.currentThread().getName() + ", value:" + ThreadLocalOutOfMemoryTest.localVariable.get());
+                    // ThreadLocalOutOfMemoryTest.localVariable.remove();
+
+                }
+            });
+
+            Thread.sleep(1000);
+        }
+
+        // (6)是否让key失效，都不影响。只要持有的线程存在，都无法回收。
+        //ThreadLocalOutOfMemoryTest.localVariable = null;
+        System.out.println("pool execute over");
+    }
+}
+```
+
+然后heap dump可以看到，如下结果
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jvm/jvm-6.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jvm/jvm-6.png" alt="image" style={{ maxWidth: '82%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+`java.lang.ThreadLocal$ThreadLocalMap 9 (0%) 216 B (0%) 31,472,000 B (86.6%)`，一个`ThreadLocalMap`本身占用的空间size很小，但是却占据极高的`retained`，这就是内存溢出的征兆。*这里`retained`超过100%，是因为前4个的线程相关的对象是包含引用的，而且上面的`byte[]`数组本身就是占用内存的对象，因为其相互一层层包含，所以其`retained`占比加起来超过了100%*。
+
+**也可以切换视图，查看以实例为统计的分布**
+
+下图里的`aggregation`里的package：按包汇总、classes：按类汇总和instances：按实例汇总
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jvm/jvm-8.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jvm/jvm-8.png" alt="image" style={{ maxWidth: '82%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+在按示例的汇总里，并且在上一层中的`summary`中也可以看到一下数据统计，`Dominator by Retained Size` 就是哪些类引用占用了大量的空间。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/jvm/jvm-7.png" alt="image" style="zoom:32%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/jvm/jvm-7.png" alt="image" style={{ maxWidth: '82%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+
+### 分析metaspace数据
+
+JVM的MetaSpace存储类的元信息，而且是在堆外存储，在JDK8之后，永久代被彻底地移出了JVM，取而代之的是元空间MetaSpace，把类的元数据放到本地化的堆内存native heap中，这块区域就叫Metaspace，所以使用上面的转储文件是不能分析加载的类的信息的。
+
+**metaspace需要关注是因为其也会引发metaspace oom而导致应用假死或退出[metaspace oom](#metaspace oom)**。
+
+metaspace数据包含以下内容：
+
+1. **类元数据（Class Metadata）**
+    - 类信息：包括类的名称、访问修饰符、父类、接口、字段、方法等。
+    - 方法信息：方法的签名、方法体（编译后的字节码），包括方法的参数和返回值类型等。
+    - 字段信息：类字段的名称、类型、修饰符等。
+2. **方法区信息（Method Area Metadata）**
+    - 常量池：类常量池存储了类字节码中用到的所有常量，包括字符串字面量、类和方法引用等。
+    - 运行时常量池：在方法区中，存储了每个类的运行时常量池，用于支持方法调用和常量引用。
+3. **类加载器信息（ClassLoader Metadata）**
+    - 类加载器实例：包括每个类加载器的信息，跟踪每个加载器加载的类及其相关资源。
+    - 类加载器的双亲委派模型信息**：描述类加载器的层次结构和委派关系。
+4. **JVM 内部数据结构**
+    - Reflection 数据：用于支持 Java 反射 API 的数据结构，包括反射获取的类、方法、字段信息等。
+    - 类数据结构：类的内部表示，包括类的各种数据结构和状态信息。
+5. **动态生成的类**：通过 JDK 动态代理或 CGLIB 生成的动态代理类。这些代理类的字节码和元数据也存储在 Metaspace 中。
+6. **其他元数据**：比如注解信息，用于支持 Java 注解的元数据，包括注解的定义和其应用位置。
+
+
+
+#### 分析类加载的数据
+
+1. jstat -class \<pid\>，这个方法可以看到加载类的空间占用
+    比如：
+    ```sh
+    jstat -class 91776
+    Loaded  Bytes  Unloaded  Bytes     Time
+       452  1135.2        0     0.0       0.00
+   ```
+    - **Loaded**: 已加载的类的数量。
+    - **Bytes**: 已加载类的字节数。
+    - **Unloaded**: 已卸载的类的数量。
+    - **Time**: 类加载或卸载操作所用的时间。
+    - **Compiled**: 已编译的方法数。
+
+2. arthas memory
+    arthas工具中的`memory`命令查看 JVM 内存信息。其中可以看到metaspace的占用统计
+    ```sh
+    $ memory
+    Memory                           used      total      max        usage
+    heap                             32M       256M       4096M      0.79%
+    g1_eden_space                    11M       68M        -1         16.18%
+    g1_old_gen                       17M       184M       4096M      0.43%
+    g1_survivor_space                4M        4M         -1         100.00%
+    nonheap                          35M       39M        -1         89.55%
+    codeheap_'non-nmethods'          1M        2M         5M         20.53%
+    metaspace                        26M       27M        -1         96.88%
+    codeheap_'profiled_nmethods'     4M        4M         117M       3.57%
+    compressed_class_space           2M        3M         1024M      0.29%
+    codeheap_'non-profiled_nmethods' 685K      2496K      120032K    0.57%
+    mapped                           0K        0K         -          0.00%
+    direct                           48M       48M        -          100.00%
+    ```
+
+3. arthas classloader
+    arthas `classloader` 命令可以将 JVM 中所有的 classloader 的信息统计出来，这样可以看到每个加载器加载的类，特别是能看道所有的加载类。
+
+    ```sh
+    $ classloader
+     name                                       numberOfInstances  loadedCountTotal
+     com.taobao.arthas.agent.ArthasClassloader  1                  2115
+     BootstrapClassLoader                       1                  1861
+     sun.reflect.DelegatingClassLoader          5                  5
+     sun.misc.Launcher$AppClassLoader           1                  4
+     sun.misc.Launcher$ExtClassLoader           1                  1
+    Affect(row-cnt:5) cost in 3 ms.
+   ```
+    `-l `可以看到统计数据中classloader的父加载器，`-t` 参数能看到classloader的父子层级关系
+    **`classloader -a`，能查看所有加载的类，但内容会非常的多，注意输出的位置**
+    ```sh
+    [arthas@58950]$ classloader -a
+     hash:null, BootstrapClassLoader
+     Ljdk.internal.vm.FillerArray;
+     [B
+     [C
+     [D
+     [F
+     [I
+     [J
+     [Lcom.sun.org.apache.xerces.internal.impl.XMLScanner$NameType;
+     [Lcom.sun.org.apache.xerces.internal.util.Status;
+     [Ljava.io.File$PathStatus;
+     [Ljava.lang.Class;
+     [Ljava.lang.ClassLoader;
+     [Ljava.lang.ClassValue$Entry;
+     [Ljava.lang.OutOfMemoryError;
+     [Ljava.lang.ProcessImpl$LaunchMechanism;
+     。。。
+    ```
+    在 `classloader -a` 输出中，类名中包含标识（如 `Proxy`、`$Proxy`、`EnhancerByCGLIB` 等）的类就是代理生成的类。以及带`$ `符号的类，其表示内部类、匿名类或某些特殊的编译时生成的类。特别是当metaspace oom往往就是代理类生成了类导致的metaspace空间飙升。
+    你可以使用 classloader -l 命令列出每个类加载器加载的具体类，结合类名的模式来判断是否是代理类。
+    上面看到加载的类后，可以使用`classloader -u`可以看到不同类加载器加载了哪些包，
+   ```sh
+   [arthas@60213]$ classloader -u
+    jdk.internal.loader.ClassLoaders$AppClassLoader@4e0e2f2a, hash:4e0e2f2a
+    Used URLs:
+    jrt:/jdk.jshell
+    file:/Users/liufei/devtools/apache-maven-3.9.8/repo/cglib/cglib/3.3.0/cglib-3.3.0.jar
+    Unused URLs:
+    file:/Users/liufei/devtools/apache-maven-3.9.8/repo/com/alibaba/fastjson/2.0.52/fastjson-2.0.52.jar
+
+    com.taobao.arthas.agent.ArthasClassloader@6f57b693, hash:6f57b693
+    Used URLs:
+    file:/Users/liufei/devtools/arthas-packaging-3.7.2-bin/arthas-core.jar
+    Unused URLs:
+
+    jdk.internal.loader.ClassLoaders$PlatformClassLoader@11aa3480, hash:11aa3480
+    Used URLs:
+    jrt:/jdk.crypto.cryptoki
+    jrt:/java.xml.crypto
+    Unused URLs:
+   ```
+    然后使用`classloader -c <加载器hashcode>`来查看具体加载器加载的包和类文件。
+   ```sh
+   [arthas@60213]$ classloader -c 4e0e2f2a
+   file:/Users/liufei/code/Junit5-Test/target/classes/
+   file:/Users/liufei/devtools/apache-maven-3.9.8/repo/com/bpodgursky/jbool_expressions/1.23/jbool_expressions-1.23.jar
+   file:/Applications/IntelliJ%20IDEA.app/Contents/lib/idea_rt.jar
+   file:/Users/liufei/Library/Caches/JetBrains/IntelliJIdea2024.1/captureAgent/debugger-agent.jar
+   file:/Users/liufei/devtools/arthas-packaging-3.7.2-bin/arthas-agent.jar
+   。。。
+   Affect(row-cnt:34) cost in 1 ms.
+   ```
+
+4. 注意大量的字符串使用 intern() 方法会导致方法区（Metaspace）内存占用增加，和其他一些常量池中的数据
+    这样通过metaspace的数据统计和具体加载器和加载类以及分析常量数据，结合代码，大致就能定位metaspace oom的问题是哪里引起的。
+
+
+#### Metaspace OOM
+
+Metaspace OOM会导致应用程序假死或者进程退出
+
+1. 应用程序假死（Hang）：
+    当 Metaspace 耗尽内存并触发 OutOfMemoryError: Metaspace 错误时，应用程序中的所有尝试加载新类或生成新类的操作都会失败。这些失败可能会导致程序中一些线程卡住，因为这些线程可能在等待某些资源（例如类加载器锁）而无法继续。随着越来越多的线程出现类似的阻塞，应用程序可能会逐渐进入假死状态，即使它并没有完全停止。
+
+2. 进程退出（Crash）：
+    在大多数情况下，**当 JVM 抛出 OutOfMemoryError: Metaspace 异常时，它会尝试继续运行**，但如果此异常被传播到一个关键的地方（例如类加载器的初始化代码或其他关键组件中），那么 JVM 可能会因为无法继续正常操作而崩溃（Crash）。在这种情况下，Java 进程会直接退出。
+
+    **典型的触发场景包括：**
+    - 动态类生成过多（如使用动态代理、大量反射等）。
+    - 大量使用第三方库，导致类加载过多。
+    - 使用自定义类加载器频繁加载和卸载类，而卸载的类没有及时被回收。
+    - 应用中的内存泄漏，特别是类加载器的内存泄漏，这可能会导致卸载的类无法被垃圾回收器清理。
+
+    **如何处理 Metaspace OOM**
+    1. 调整 Metaspace 大小： `-XX:MetaspaceSize`和 `-XX:MaxMetaspaceSize` 来调整 Metaspace 的初始和最大大小。确保最大大小足够大以容纳应用的需求。
+    2. 减少类加载：尽量减少不必要的类加载，优化应用代码和依赖库的使用，减少不必要的类或接口的创建。
+    3. 使用类缓存：在动态生成类的场景下（例如动态代理等），可以考虑对生成的类进行缓存，避免重复生成相同的类。
+    4. 避免类加载器泄漏：尽量避免类加载器泄漏，特别是在 Web 应用服务器环境下（如 Tomcat、Jetty 等），要确保类加载器和类之间的引用能正确清理。
+
+
+
+
+
+### 分析gc日志
+
+分析jvm 的gc情况，不是先看gc日志，而是看gc的数量和分布：`young gc`、`old gc`、`full gc`分布是怎么样的，各发生了多少次，一般都有监控工具，可以直观看到。gc日志是更近一步的排查手段。
+
+
+以下是执行的代码
+
+```java
+package org.liufei.junit5.test.gc;
+
+import java.util.Random;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
+
+/**
+ * 演示GC日志生成与解读，参考：https://juejin.cn/post/7029130033268555807
+ * jdk21 jvm参数：
+ * -Xmx512m -Xms512m  -Xlog:gc*,gc+heap=debug,gc+ref=debug:file=gc.log:tags,uptime,time,level:filecount=5,filesize=10M
+ * gc+heap=debug：指定了与 gc 和 heap 相关的日志消息，并将它们的级别设置为 debug。这意味着不仅会记录基本的 GC 信息，还会记录与堆内存管理（heap memory management）相关的详细调试信息
+ * gc+ref=debug： 指定了与 gc 和 ref（引用处理）相关的日志消息，并将其级别设置为 debug。这会包括诸如弱引用、软引用、虚引用和终结器（finalizer）处理等细节信息。
+ * file=gc.log： 指定将日志输出到文件 gc.log。
+ * tags,uptime,time,level：
+ *  	tags: 日志条目的标签（如 gc、heap 等）。
+ *  	uptime: JVM 启动以来的时间（相对时间）。
+ *  	time: 绝对时间戳，表示日志条目产生的具体时间。
+ *  	level: 日志级别（如 info、debug、warning 等）。
+ * filecount=5： 指定最多保留 5 个日志文件。启用日志轮转（rolling）。当日志文件数量超过这个值时，最旧的文件将被删除。
+ * filesize=10M：指定每个日志文件的最大大小为 10 MB。当一个日志文件达到 10 MB 时，会开始写入下一个日志文件。
+ *
+ * @author liufei
+ **/
+public class GCLogAnalysis {
+    private static Random random = new Random();
+    public static void main(String[] args) {
+        // 当前毫秒时间戳
+        long startMillis = System.currentTimeMillis();
+        // 持续运行毫秒数; 可根据需要进行修改
+        long timeoutMillis = TimeUnit.SECONDS.toMillis(1000);
+        // 结束时间戳
+        long endMillis = startMillis + timeoutMillis;
+        LongAdder counter = new LongAdder();
+        System.out.println("正在执行...");
+        // 缓存一部分对象; 进入老年代
+        int cacheSize = 2000;
+        Object[] cachedGarbage = new Object[cacheSize];
+        // 在此时间范围内,持续循环
+        while (System.currentTimeMillis() < endMillis) {
+            // 生成垃圾对象
+            Object garbage = generateGarbage(100*1024);
+            counter.increment();
+            int randomIndex = random.nextInt(2 * cacheSize);
+            if (randomIndex < cacheSize) {
+                cachedGarbage[randomIndex] = garbage;
+            }
+        }
+        System.out.println("执行结束!共生成对象次数:" + counter.longValue());
+    }
+
+    // 生成对象
+    private static Object generateGarbage(int max) {
+        int randomSize = random.nextInt(max);
+        int type = randomSize % 4;
+        Object result;
+        switch (type) {
+            case 0:
+                result = new int[randomSize];
+                break;
+            case 1:
+                result = new byte[randomSize];
+                break;
+            case 2:
+                result = new double[randomSize];
+                break;
+            default:
+                StringBuilder builder = new StringBuilder();
+                String randomString = "randomString-Anything";
+                while (builder.length() < randomSize) {
+                    builder.append(randomString);
+                    builder.append(max);
+                    builder.append(randomSize);
+                }
+                result = builder.toString();
+                break;
+        }
+        return result;
+    }
+}
+```
+
+
+
+因为gc日志依赖于使用的gc收集器，其gc过程实现不同，所以不同的gc器会有不同的日志，下面展示两种：适用于小内存jvm的SerialGC，和适用于大内存jvm的G1GC
+
+以下是一个完整的gc周期，日志输出：
+
+#### -XX:+UseSerialGC
+
+SerialGC小型jvm用的多，但gc停顿时间长
+
+```sh
+2024-08-30T18:15:17.773+0800][106.851s][info ][gc,start       ] GC(6578) Pause Full (Allocation Failure)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578) Heap before GC invocations=5983 (full 5974):
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)  def new generation   total 157248K, used 157246K [0x00000007e0000000, 0x00000007eaaa0000, 0x00000007eaaa0000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)   eden space 139776K, 100% used [0x00000007e0000000, 0x00000007e8880000, 0x00000007e8880000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)   from space 17472K,  99% used [0x00000007e9990000, 0x00000007eaa9f9c8, 0x00000007eaaa0000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)   to   space 17472K,   0% used [0x00000007e8880000, 0x00000007e8880000, 0x00000007e9990000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)  tenured generation   total 349568K, used 349567K [0x00000007eaaa0000, 0x0000000800000000, 0x0000000800000000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)    the space 349568K,  99% used [0x00000007eaaa0000, 0x00000007ffffffb0, 0x0000000800000000, 0x0000000800000000)
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)  Metaspace       used 503K, committed 704K, reserved 1114112K
+[2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578)   class space    used 28K, committed 128K, reserved 1048576K
+[2024-08-30T18:15:17.774+0800][106.851s][info ][gc,phases,start] GC(6578) Phase 1: Mark live objects
+[2024-08-30T18:15:17.775+0800][106.852s][debug][gc,ref         ] GC(6578) Skipped SoftWeakFinalRefsPhase of Reference Processing: no references
+[2024-08-30T18:15:17.775+0800][106.852s][debug][gc,ref         ] GC(6578) Skipped KeepAliveFinalRefsPhase of Reference Processing: no references
+[2024-08-30T18:15:17.775+0800][106.852s][debug][gc,ref         ] GC(6578) Skipped PhantomRefsPhase of Reference Processing: no references
+[2024-08-30T18:15:17.775+0800][106.853s][info ][gc,phases      ] GC(6578) Phase 1: Mark live objects 1.084ms
+[2024-08-30T18:15:17.775+0800][106.853s][info ][gc,phases,start] GC(6578) Phase 2: Compute new object addresses
+[2024-08-30T18:15:17.775+0800][106.853s][info ][gc,phases      ] GC(6578) Phase 2: Compute new object addresses 0.592ms
+[2024-08-30T18:15:17.775+0800][106.853s][info ][gc,phases,start] GC(6578) Phase 3: Adjust pointers
+[2024-08-30T18:15:17.776+0800][106.854s][info ][gc,phases      ] GC(6578) Phase 3: Adjust pointers 0.688ms
+[2024-08-30T18:15:17.776+0800][106.854s][info ][gc,phases,start] GC(6578) Phase 4: Move objects
+[2024-08-30T18:15:17.785+0800][106.863s][info ][gc,phases      ] GC(6578) Phase 4: Move objects 9.317ms
+[2024-08-30T18:15:17.786+0800][106.864s][info ][gc,heap        ] GC(6578) DefNew: 157246K(157248K)->13868K(157248K) Eden: 139776K(139776K)->13868K(139776K) From: 17470K(17472K)->0K(17472K)
+[2024-08-30T18:15:17.786+0800][106.864s][info ][gc,heap        ] GC(6578) Tenured: 349567K(349568K)->349386K(349568K)
+[2024-08-30T18:15:17.786+0800][106.864s][info ][gc,metaspace   ] GC(6578) Metaspace: 503K(704K)->503K(704K) NonClass: 474K(576K)->474K(576K) Class: 28K(128K)->28K(128K)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578) Heap after GC invocations=5984 (full 5975):
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)  def new generation   total 157248K, used 13868K [0x00000007e0000000, 0x00000007eaaa0000, 0x00000007eaaa0000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)   eden space 139776K,   9% used [0x00000007e0000000, 0x00000007e0d8b1e8, 0x00000007e8880000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)   from space 17472K,   0% used [0x00000007e9990000, 0x00000007e9990000, 0x00000007eaaa0000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)   to   space 17472K,   0% used [0x00000007e8880000, 0x00000007e8880000, 0x00000007e9990000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)  tenured generation   total 349568K, used 349386K [0x00000007eaaa0000, 0x0000000800000000, 0x0000000800000000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)    the space 349568K,  99% used [0x00000007eaaa0000, 0x00000007fffd2b38, 0x00000007fffd2c00, 0x0000000800000000)
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)  Metaspace       used 503K, committed 704K, reserved 1114112K
+[2024-08-30T18:15:17.786+0800][106.864s][debug][gc,heap        ] GC(6578)   class space    used 28K, committed 128K, reserved 1048576K
+[2024-08-30T18:15:17.786+0800][106.864s][info ][gc             ] GC(6578) Pause Full (Allocation Failure) 494M->354M(494M) 12.226ms
+[2024-08-30T18:15:17.786+0800][106.864s][info ][gc,cpu         ] GC(6578) User=0.01s Sys=0.00s Real=0.01s
+[2024-08-30T18:15:17.792+0800][106.870s][info ][gc,start       ] GC(6579) Pause Full (Allocation Failure)
+```
+
+**GC 日志解析**
+
+1. **GC 启动信息**
+
+    ```scss
+    [2024-08-30T18:15:17.773+0800][106.851s][info ][gc,start       ] GC(6578) Pause Full (Allocation Failure)
+       ```
+
+    - **时间戳**: `2024-08-30T18:15:17.773+0800`
+    - **相对时间**: `106.851s`（JVM 启动后的时间）
+    - **日志级别**: `info`
+    - **GC ID**: `GC(6578)`--6578就是gc的序号，单调递增，相同的GC ID就是同一个GC周期的日志
+    - **GC 类型**: `Pause Full`（完整的暂停式垃圾回收）
+    - **原因**: `Allocation Failure`（由于内存分配失败触发的 GC）
+
+2. **GC 前堆内存状态**
+
+    ```scss
+    [2024-08-30T18:15:17.774+0800][106.851s][debug][gc,heap        ] GC(6578) Heap before GC invocations=5983 (full 5974):
+    ```
+
+    - **堆内存状态**: `5983`（堆内存的总大小）以及 `full 5974`（完全的堆内存使用情况）
+    - **详细信息**:
+    - **年轻代（New Generation）**:
+    *年轻代分为 Eden 区域和两个 Survivor 区域（From 和 To），这样是因为gc使用复制收集（Copying Collection）策略，减少标记和清除的复杂性。方便移动对象，并且每次垃圾回收只需要关注 Eden 区域的对象，并将幸存的对象从 Eden 区域复制到 From 区域，简化了回收过程。*
+
+    ```scss
+    GC(6578)  def new generation   total 157248K, used 157246K
+    ```
+    总大小 `157248K`，已使用 `157246K`（几乎满了）
+
+    - **年轻代的 Eden 区域**:
+    *Eden 是年轻代中的一个区域，主要用于分配新创建的对象。*
+
+    ```scss
+    GC(6578)   eden space 139776K, 100% used
+    ```
+
+    总大小 `139776K`，已使用`100%`
+
+    - **年轻代的 From 区域**:
+
+    *From 区域（也称为 Survivor 区域之一）是年轻代中的一个区域，用于存储从 Eden 区域晋升的幸存对象，当 Eden 区域的垃圾回收发生时，Eden 中的幸存对象会被复制到 From 区域。From 区域的存在使得年轻代能够处理那些幸存了多次垃圾回收的对象，并将它们保留在年轻代中，直到它们晋升到老年代。*
+
+    ```scss
+    GC(6578)   from space 17472K,  99% used
+    ```
+    总大小 `17472K`，已使用 `99%`
+
+    - **年轻代的 To 区域**:
+    *To 区域（也称为 Survivor 区域之二）是年轻代中的另一个区域，与 From 区域配对使用。To 区域用于在垃圾回收过程中接收从 From 区域中的对象。每次垃圾回收时，From 和 To 区域会互换角色。To 区域的存在使得对象可以在 From 和 To 区域之间来回移动，直到它们被晋升到老年代。*
+
+    ```scss
+    GC(6578)   to   space 17472K,   0% used
+    ```
+    总大小`17472K`，已使用 `0%`（空闲）
+
+    - **老年代（Tenured Generation）**:
+
+    ```scss
+    GC(6578)  tenured generation   total 349568K, used 349567K
+    ```
+    总大小`349568K`，已使用`349567K`（几乎满了）
+
+    - **元空间（Metaspace）**:
+    ```Tenured
+    GC(6578)  Metaspace       used 503K, committed 704K, reserved 1114112K
+    ```
+
+    - **已使用**: `503K` -- *这个值是 JVM 已经使用来存储类和其他元数据的实际内存量。*
+    - **已提交**: `704K` --*这个值表示 JVM 可以随时使用的内存量。这部分内存已经从操作系统获得，但可能还未全部使用。committed 用了避免频繁的去申请内存，如果还有救直接使用的内存，通常大于或等于 used。*
+    - **已保留**: `1114112K` -- *表示 JVM 为 Metaspace 保留的最大内存量是 1114112 KB（即约 1 GB）。这个值表示 JVM 为未来使用而向操作系统申请的内存范围，实际上可能并未全部分配或使用。reserved 值限制了 Metaspace 可以扩展到的最大大小。*
+
+3. **GC 各阶段时间**
+
+    ```scss
+    [2024-08-30T18:15:17.774+0800][106.851s][info ][gc,phases,start] GC(6578) Phase 1: Mark live objects
+    ```
+
+    - **阶段**:
+    - **Phase 1: Mark live objects**（标记存活对象）
+    - **Phase 2: Compute new object addresses**（计算新对象地址）
+    - **Phase 3: Adjust pointers**（调整指针）
+    - **Phase 4: Move objects**（移动对象）
+    - **阶段完成时间**:
+        - `Phase 1: 1.084ms`
+        - `Phase 2: 0.592ms`
+        - `Phase 3: 0.688ms`
+        - `Phase 4: 9.317ms`
+
+4. **GC 后堆内存状态**
+    ```scss
+    [2024-08-30T18:15:17.786+0800][106.864s][info ][gc,heap        ] GC(6578) DefNew: 157246K(157248K)->13868K(157248K) Eden: 139776K(139776K)->13868K(139776K) From: 17470K(17472K)->0K(17472K)
+    [2024-08-30T18:15:17.786+0800][106.864s][info ][gc,heap        ] GC(6578) Tenured: 349567K(349568K)->349386K(349568K)
+    [2024-08-30T18:15:17.786+0800][106.864s][info ][gc,metaspace   ] GC(6578) Metaspace: 503K(704K)->503K(704K) NonClass: 474K(576K)->474K(576K) Class: 28K(128K)->28K(128K)
+    ```
+    - **年轻代（New Generation）**:
+    之前: `157246K`（总大小） -> `13868K`（已使用），Eden 区域 `139776K` -> `13868K`，From 区域 `17470K` -> `0K`，To 区域`0K`（未使用）
+    - **老年代（Tenured Generation）**:
+    之前`349567K`（已使用） -> `349386K`
+    - **元空间（Metaspace）**:
+    之前 `503K`（已使用） -> `503K`，NonClass`474K` -> `474K`，Class`28K` -> `28K`
+
+5. **GC 完成信息**
+    ```scss
+    [2024-08-30T18:15:17.786+0800][106.864s][info ][gc             ] GC(6578) Pause Full (Allocation Failure) 494M->354M(494M) 12.226ms
+    ```
+    - **GC 类型**: `Pause Full (Allocation Failure)`
+    - **堆内存变化**: `494M` -> `354M`（GC 之前和之后的堆内存使用量）
+    - **GC 耗时**: `12.226ms`
+
+6. **GC CPU 时间**
+    ```scss
+    [2024-08-30T18:15:17.786+0800][106.864s][info ][gc,cpu         ] GC(6578) User=0.01s Sys=0.00s Real=0.01s
+    ```
+    用户时间: `0.01s`，系统时间: `0.00s`，实际时间: `0.01s`
+
+
+#### -XX:+UseG1GC
+
+```sh
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,start       ] GC(22681) Pause Young (Normal) (G1 Evacuation Pause)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681) Heap before GC invocations=20873 (full 1980):
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  garbage-first heap   total 524288K, used 489425K [0x00000007e0000000, 0x0000000800000000)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   region size 1024K, 1 young (1024K), 0 survivors (0K)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  Metaspace       used 491K, committed 704K, reserved 1114112K
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   class space    used 25K, committed 128K, reserved 1048576K
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,task        ] GC(22681) Using 8 workers of 8 for evacuation
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,ref         ] GC(22681) Skipped SoftWeakFinalRefsPhase of Reference Processing: no references
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,ref         ] GC(22681) Skipped KeepAliveFinalRefsPhase of Reference Processing: no references
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,ref         ] GC(22681) Skipped PhantomRefsPhase of Reference Processing: no references
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Pre Evacuate Collection Set: 0.1ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Merge Heap Roots: 0.0ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Evacuate Collection Set: 0.1ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Post Evacuate Collection Set: 0.2ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Other: 0.0ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Eden regions: 1->0(0)
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Survivor regions: 0->0(0)
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Old regions: 352->353
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Humongous regions: 159->159
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,metaspace   ] GC(22681) Metaspace: 491K(704K)->491K(704K) NonClass: 466K(576K)->466K(576K) Class: 25K(128K)->25K(128K)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681) Heap after GC invocations=20874 (full 1980):
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  garbage-first heap   total 524288K, used 490173K [0x00000007e0000000, 0x0000000800000000)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   region size 1024K, 0 young (0K), 0 survivors (0K)
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  Metaspace       used 491K, committed 704K, reserved 1114112K
+[2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   class space    used 25K, committed 128K, reserved 1048576K
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc             ] GC(22681) Pause Young (Normal) (G1 Evacuation Pause) (Evacuation Failure) 478M->478M(512M) 0.537ms
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,cpu         ] GC(22681) User=0.00s Sys=0.00s Real=0.00s
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,ergo        ] Attempting full compaction
+[2024-08-30T19:17:13.979+0800][34.531s][info ][gc,start       ] GC(22682) Pause Full (G1 Compaction Pause)
+```
+
+这个 GC 周期中 G1 垃圾收集器进行的年轻代 GC（回收 Eden 区域），并且由于回收操作失败，年轻代的使用量没有减少。之后，系统尝试进行全堆压缩操作以优化内存使用。下面是细节解释：
+
+1. GC 事件启动
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,start       ] GC(22681) Pause Young (Normal) (G1 Evacuation Pause)
+    ```
+    **GC(22681)**: 这是当前的 GC 事件的 ID。
+    **Pause Young (Normal) (G1 Evacuation Pause)**: 这是 GC 的类型和原因。在 G1 GC 中，“Pause Young” 表示这是一个年轻代垃圾收集，而“G1 Evacuation Pause”表示这是一个用于回收年轻代的暂停事件，进行的是 G1 GC 的回收操作。
+
+2. GC 前的堆内存状态
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681) Heap before GC invocations=20873 (full 1980):
+    [2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  garbage-first heap   total 524288K, used 489425K [0x00000007e0000000, 0x0000000800000000]
+    [2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   region size 1024K, 1 young (1024K), 0 survivors (0K)
+    [2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)  Metaspace       used 491K, committed 704K, reserved 1114112K
+    [2024-08-30T19:17:13.979+0800][34.531s][debug][gc,heap        ] GC(22681)   class space    used 25K, committed 128K, reserved 1048576K
+    ```
+    - **Heap before GC**: GC 之前的堆内存状态。
+    - **garbage-first heap**: 使用的垃圾优先 (G1) 堆的总大小为 524,288K (512MB)，已使用 489,425K。
+    - **region size 1024K**: 堆的区域大小是 1MB。
+    - **1 young (1024K), 0 survivors (0K)**: 年轻代中有 1 个区域（总计 1MB），没有幸存者区。
+    - **Metaspace**: 元空间的状态。已使用 491K，已提交 704K，保留 1,114,112K。
+
+3. GC 任务
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,task        ] GC(22681) Using 8 workers of 8 for evacuation
+    ```
+    **Using 8 workers of 8 for evacuation**: 在此次 GC 事件中，G1 GC 使用了 8 个工作线程进行垃圾回收。
+
+4. GC 阶段
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Pre Evacuate Collection Set: 0.1ms
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Merge Heap Roots: 0.0ms
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Evacuate Collection Set: 0.1ms
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Post Evacuate Collection Set: 0.2ms
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,phases      ] GC(22681)   Other: 0.0ms
+    ```
+    - **Pre Evacuate Collection Set**: GC 前的集合准备阶段，耗时 0.1ms。
+    - **Merge Heap Roots**: 合并堆根阶段，耗时 0.0ms。
+    - **Evacuate Collection Set**: 实际的区域回收阶段，耗时 0.1ms。
+    - **Post Evacuate Collection Set**: 回收后的清理阶段，耗时 0.2ms。
+    - **Other**: 其他时间，耗时 0.0ms。
+
+5. GC 后的堆内存状态
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Eden regions: 1->0(0)
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Survivor regions: 0->0(0)
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Old regions: 352->353
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,heap        ] GC(22681) Humongous regions: 159->159
+    ```
+    - **Eden regions**: 年轻代中的 Eden 区域从 1 个减少到 0 个。
+    - **Survivor regions**: 年轻代中的幸存者区域从 0 个减少到 0 个。
+    - **Old regions**: 年老代中的区域从 352 个增加到 353 个。
+    - **Humongous regions**: 大对象区域 (Humongous regions) 从 159 个保持不变。
+
+6. GC 后的 Metaspace 状态
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,metaspace   ] GC(22681) Metaspace: 491K(704K)->491K(704K) NonClass: 466K(576K)->466K(576K) Class: 25K(128K)->25K(128K)
+    ```
+    **Metaspace**: GC 后元空间的使用情况。元空间总共使用 491K，提交 704K，保留 1,114,112K。类空间的使用情况也列出，其中类空间的使用量从 25K 不变。
+
+7. GC 总体信息
+    ```scss
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc             ] GC(22681) Pause Young (Normal) (G1 Evacuation Pause) (Evacuation Failure) 478M->478M(512M) 0.537ms
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,cpu         ] GC(22681) User=0.00s Sys=0.00s Real=0.00s
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,ergo        ] Attempting full compaction
+    [2024-08-30T19:17:13.979+0800][34.531s][info ][gc,start       ] GC(22682) Pause Full (G1 Compaction Pause)
+    ```
+
+    - **Pause Young (Normal)**: 年轻代 GC 类型，G1 Evacuation Pause。
+    - **(Evacuation Failure)**: 表示回收操作失败。
+    - **478M->478M(512M)**: GC 前后堆的使用情况，分别是 478MB，堆的总大小为 512MB。由于此次 GC 的回收失败，堆的使用量没有减少。
+    - **0.537ms**: GC 操作的持续时间。
+    - **GC(22681) User=0.00s Sys=0.00s Real=0.00s**: GC 操作的 CPU 使用时间和实际时间。
+    - **Attempting full compaction**: 尝试进行完全压缩。
+    - **Pause Full (G1 Compaction Pause)**: 全停顿类型的 GC，G1 完全压缩暂停。
+
+
+
+

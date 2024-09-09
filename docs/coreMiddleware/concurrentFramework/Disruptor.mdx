@@ -1,0 +1,2240 @@
+---
+title: Disruptor
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+Disruptor - Concurrent Programming Framework
+
+> At LMAX we have built an order matching engine, real-time risk management, and a highly available in-memory transaction processing system all on this pattern to great success. Each of these systems has set new performance standards that, as far as we can tell, are unsurpass.
+>
+> 在LMAX，我们构建了一个订单匹配引擎、实时风险管理和一个高可用的内存事务处理系统，所有这些都基于这种模式取得了巨大的成功。 这些系统中的每一个都树立了新的性能指标，据我们所知，这些指标是无与伦比的。
+>
+> ​            -----Disruptor论文：《Disruptor:High performance alternative to bounded queues for exchanging data between concurrent threads》 (**强烈建议读一下这篇论文**)
+
+订单匹配引擎、实时风险管理特点感觉和`Analysis Project`要做的事情有相当高的相似度。
+
+
+
+## 背景和核心思想
+
+### 为什么需要Disruptor
+
+如果是常规的每个线程都是各自一条链路处理下来，必然有中间很多等待而未将cpu性能充分释放；而通过加入Disruptor，将逻辑拆分成不同阶段的Pipeline，进而可以均衡线程的分配，比如耗时长的多加线程来处理，所有的线程都被分配来始终处于密集执行的状态，这样就能让cpu计算能力充分释放，提升整个系统的效率。具体原因如下：
+
+> 1. **消除不必要的等待**：在传统的处理模式中，每个线程通常都是顺序地完成所有任务步骤。在这种情况下，某些线程可能会因为等待资源或锁而处于空闲状态，浪费了 CPU 资源。而 Disruptor 通过让不同的线程专注于不同的阶段或不同的任务，可以消除这种不必要的等待。
+> 2. **减少竞争充分利用 CPU**：由于 Disruptor 的设计目标之一是减少线程间的锁竞争和上下文切换，所以它能更高效地利用 CPU。将任务分成多个阶段之后，可以根据每个阶段的复杂度和执行时间分配适量的线程资源。例如，某些耗时较长的任务阶段可以分配更多的线程，确保这些任务得到更好的处理。
+> 3. **提高系统吞吐量**：Disruptor 采用环形缓冲区（Ring Buffer）和无锁算法来实现数据的高效传递，减少了锁和等待的开销，这就使得在高并发场景下，系统的吞吐量能够得到显著提升。
+> 4. **数据的有序处理和缓存命中优化**：Disruptor 的数据结构设计Ring Buffer使得数据在内存中是线性存储的，这种方式更有利于 CPU 缓存的命中，从而减少了缓存失效的情况发生，提高了处理性能。
+> 5. **根据不同的处理阶段动态调整线程**：Disruptor 可以根据不同阶段的任务负载动态调整线程的分配。例如，如果某个阶段的任务需要更多的计算资源，而其他阶段的任务较轻，则可以动态地调整线程，使得资源能够更好地服务于当前的计算密集型任务。
+
+同时基于已有阻塞队列的线程间数据传递方案其队列的头尾存在竞争，也需要一种更高效的线程并发协作方案。
+
+*上面提到的术语下面会解释。*
+
+
+
+### 并发面临的复杂性
+
+> *这一章来自论文中的内容，属于是对其的个人理解*
+
+在任何并发环境中，最昂贵的操作是争用的写访问。 要使多个线程写入同一资源，需要复杂且昂贵的协调。 通常，这是通过采用某种锁定策略来实现的。并且现有的一些同步策略存在一些弊端导致不能充分利用现代CPU的特性
+
+#### 锁的成本
+
+锁提供互斥并确保变化的可见性以有序的方式发生。 锁非常昂贵，因为在争用时需要仲裁。 这种仲裁是通过**上下文切换到操作系统内核**来实现的，该内核将挂起等待锁的线程直到锁被释放。 在这种上下文切换期间，除了将控制权交给操作系统以便在控制权期间执行其他的系统任务外，执行上下文还可能**丢失先前缓存的数据和指令**，这可能对现代处理器产生严重的性能影响。 可以使用快速用户模式锁，但这只有在没有争用时才能真正受益。
+
+同时**一旦引入锁来提供互斥，即使锁尚未被争用，成本也会显着增加**。 当两个或更多线程开始争用时，成本再次增加数 个数量级。
+
+*下面是Disruptor论文给的争用成本比较（Comparative costs of contention）：*
+
+| 方法                     | 时间（毫秒） |
+| ------------------------ | ------------ |
+| 单个线程                 | 300          |
+| 带锁的单个线程           | 10,000       |
+| 带锁的两个线程           | 224,000      |
+| 带CAS的单个线程          | 5,700        |
+| 带CAS的两个线程          | 30,000       |
+| 带有volatile写的单个线程 | 4,700        |
+
+
+
+#### CAS的成本
+
+在更新内存时，可以使用一种比使用锁更高效的替代方法，特别是当更新的目标是单个字时。 这些替代方法基于现代处理器中实现的原子或交互式指令，这些通常被称为CAS（比较和交换）操作。
+
+CAS操作是一种特殊的机器码指令，允许以原子操作的方式将内存中的一个字设置为条件设置。 对于 “增加计数器实验”，每个线程都可以在一个循环中旋转读取计数器，然后尝试将其原子设置为新的递增值。 旧值和新值作为参数提供给此指令。 如果在执行操作时，计数器的值与提供的预期值匹配，则将计数器更新为新值。 另一方面，如果值与预期值不符，则CAS操作将失败。 然后，尝试执行更改的线程将重新尝试，从该值重新读取计数器并递增，直到更改成功为止。
+
+**这种CAS方法比锁更高效，因为它不需要上下文切换到内核进行仲裁。 然而，CAS操作并非没有代价。 处理器必须锁定其指令流水线以确保原子性，并使用内存屏障使更改对其他线程可见。 **
+
+如果程序的临界区比简单的计数器增加更复杂，可能需要使用多个CAS操作来协调争用的复杂状态机。 使用锁来开发并发程序很困难；**使用CAS操作和内存屏障来开发无锁算法则更加复杂，而且很难证明它们是正确的。**
+
+>**理想的算法应该是只有一个线程拥有对单个资源的所有写操作，其他线程读取结果。 在多处理器环境中读取结果需要使用内存屏障，以使更改对其他处理器上运行的线程可见。这也是Disruptor的做法**
+
+#### CPU缓存
+
+现代CPU的速度比内存系统快得多。 为了弥合这种差距，CPU使用复杂的缓存系统，这些系统实际上是没有链接的快速硬件哈希表。 这些缓存通过消息传递协议与其他处理器缓存系统保持一致。**缓存一致性是由缓存一致性协议MESI来保证的，其是由硬件层面来实现的，MESI协议的状态信息存储在每个处理器核心的缓存控制器中。缓存控制器是一个硬件模块，负责管理该核心的缓存行（cache line）及其状态。缓存行是缓存中存储数据的最小单位。每个缓存行都有一个与之关联的状态位（state bits），这些状态位记录了当前缓存行的数据的状态（M、E、S、I之一），当一个处理器核心对某个内存地址的数据进行读取或写入时，会触发缓存控制器进行相应的状态转换和操作，状态的转化如下：**。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/disruptor/dis-0.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/disruptor/dis-0.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+> 当线程获取缓存时，读取其缓存状态有不同的操作
+>
+> **读取操作（Read）**：
+>
+> - 如果缓存行状态是 **M** 或 **E**，处理器可以直接从缓存中读取数据，不需要与其他缓存进行通信。
+> - 如果缓存行状态是 **S**，处理器也可以直接读取数据。
+> - 如果缓存行状态是 **I**（无效），则需要从其他缓存或主内存中获取最新数据。此时，缓存控制器会发送请求（称为**Bus Read**）到共享总线（bus）或互连网络，其他处理器会响应并提供数据。
+>
+> **写入操作（Write）**：
+>
+> - 如果缓存行状态是 **M**，处理器可以直接修改数据，不需要与其他缓存进行通信。
+> - 如果缓存行状态是 **E**，处理器可以直接修改数据，并将状态改为 **M**。
+>
+> - 如果缓存行状态是 **S**，处理器需要将该行状态改为 **M**，并通知其他处理器将其缓存中对应的缓存行状态改为 **I**（称为**Invalidate**操作）。
+>
+> - 如果缓存行状态是 **I**，处理器必须先从主内存或其他缓存中加载最新数据，然后才能进行修改，状态最终变为 **M**。
+
+
+
+#### 缓存行
+
+现代处理器中缓存的使用方式对于成功的高性能操作非常重要。 这样的处理器在缓存中处理数据和指令时非常高效，但是当发生缓存未命中时，效率相对较低。
+
+硬件不是以字节bytes或字words为单位操作内存。 为了提高效率，缓存被组织成通常为32-256字节的缓存行，最常见的缓存行大小为64字节。 这是缓存一致性协议操作的粒度级别。
+
+这意味着如果两个变量位于同一缓存行，并且它们由不同的线程写入，则它们会出现与单个变量相同的写争用问题。 这是一个被称为“**伪共享**”的概念。 为了实现高性能，重要的是确保独立但同时被写入的变量不共享同一缓存行，以减少争用。
+当以可预测的方式访问内存时，CPU能够通过预测下一个可能被访问的内存并将其预取到缓存中来隐藏访问主内存的延迟成本。 **只有在处理器能够检测到访问模式（例如以可预测的“步幅”遍历内存）时，这种方法才有效。 当遍历数组的内容时，步幅是可预测的，因此内存将以缓存行的形式预取，最大限度地提高访问效率。 步幅通常必须小于2048字节，才能被处理器注意到*。 然而，*像链表和树这样的数据结构往往具有在内存中分布广泛且没有可预测访问步幅的节点。 内存中缺乏一致的模式限制了系统预取缓存行的能力，导致主内存访问效率下降超过2个数量级**
+
+
+
+#### 内存屏障
+
+上面讲了缓存，但现代处理器为了性能原因执行指令的乱序执行和内存与执行单元之间的乱序加载和存储。 处理器只需要保证程序逻辑产生相同的结果，不管执行顺序如何。 对于单线程程序来说，这不是一个问题。 然而，当线程共享状态时，所有内存更改必须按照所需的顺序出现，以确保数据交换成功。 **这就是内存屏障的作用， 使用软件的方式通过在编译时插入编译器指令或处理器指令告诉CPU在特定点需要将数据写回共享缓存或者主内存，并防止某些重排序，这些软件内存屏障是处理器本身使用的硬件屏障的补充。**
+
+内存屏障和MESI协议一起确保了内存访问的正确性：
+
+- **MESI协议**确保了同一时间，所有核心对共享内存的访问具有一致性。
+
+- **内存屏障**则确保了单个线程在访问内存时的操作顺序（防止编译器和处理器重排序），并在特点节点将缓存写回共享缓存或主存。
+
+#### 队列的问题
+
+队列通常使用链表或数组作为元素的底层存储。 如果允许无界内存队列，则可能存在当生产者超过消费者时无限增长，直到耗尽内存，导致灾难性故障。为了避免这种灾难性结果，队列通常被限制在一定的大小（有界）。 **保持队列有界要求它要么是基于数组的，要么要主动跟踪大小，进而队列实现往往在头部、尾部和大小变量上存在写入争用。**
+
+在使用时，由于消费者和生产者之间的速度差异，队列通常要么接近满，要么接近空。 它们很少在平衡的中间地带运行，即生产和消费的速度相匹配。 这种总是满或总是空的倾向导致高水平的争用和/或昂贵的缓存一致性。
+
+存在竞争时使用不同的并发对象（如锁或CAS变量）将头部和尾部机制分开，还可能因为占用相同的缓存行而将导致缓存伪共享使得性能下降（Java中新增了`@Contended`来缓存填充以避免这个问题）。
+
+在Java中，使用队列还存在另一个问题，即它们是垃圾的重要来源。 首先，需要分配对象并将其放入队列中。 其次，如果是基于链表的，还需要分配对象来表示列表的节点。 当不再引用时，需要回收支持队列实现的所有这些分配的对象，即频繁的gc而增加系统消耗。
+
+
+
+#### 管道和图的问题
+
+对于许多问题，将几个处理阶段连接成管道是有意义的。 这样的管道通常具有并行路径，组织成类似图的拓扑结构。 每个阶段之间的连接通常通过队列实现，每个阶段都有自己的线程。但这种方法是有成本的-- 在每个阶段，我们都需要承担入队和出队工作单元的成本。 当路径必须分叉时，目标数量会增加这 个成本，并且在此类分叉之后重新连接时会产生不可避免的争用成本。
+
+
+
+### Disruptor的解决思路
+
+#### 核心设计
+
+在试图解决上述问题时，通过严格分离我们认为在队列中混合的关注点，出现了一种设计。 这种方法**确保任何数据只能由一个线程拥有写访问权限，从而消除了写争用。 这个设计被称为“Disruptor”。** 它之所以被命名为“Disruptor ”，是因为它在处理依赖关系图的元素上与Java 7中引入的支持Fork-Join的“Phasers”概念有相似之处。
+
+`disruptor`旨在解决上述并发面临的复杂性中的所有问题，以最大限度地提高内存分配的效率，并以对现代硬件进行最佳优化的方式进行操作。**`disruptor`机制的核心是一个预分配的有界数据结构，即环形缓冲区。 数据通过一个或多个生产者添加到环形缓冲区，并由一个或多个消费者进行处理。**
+
+#### 内存分配
+
+环形缓冲区的所有内存在启动时都进行了预分配。环形缓冲区可以存储指向条目的指针数组，这些条目通常不是传递的数据本身，而是用于容纳数据的容器 。这种条目的预分配消除了支持垃圾回收的语言中的问题，因为条目将被重新使用并在Disruptor实例的生命周期内一直存在。 这些条目的内存在同一时间分配，并且很可能在主内存中连续布局，从而支持缓存跨度。
+
+在像Java这样的托管运行时环境中开发低延迟系统时，垃圾收集可能会成为一个问题。分配的内存越多，垃圾收集器 的负担就越大。 当对象的生命周期非常短暂或者几乎永久存在时，垃圾收集器的工作效果最好。环形缓冲区中的条目预 分配意味着在垃圾收集器看来它是永久存在的，因此对垃圾收集器来说几乎没有负担。
+
+> 在高负载的队列系统下，可能会出现积压，这会导致处理速率降低，并且导致分配的对象存活时间超过应有的时间，从而 被分代垃圾收集器提升到年轻代之外。 这有两个影响:首先，对象必须在代之间进行复制，这会导致延迟抖动; 其次，这些对象必须从旧代中进行收集，这通常是一种更昂贵的操作，并增加了当碎片化的内存空间需要压缩时出现“停止 世界”暂停的可能性。 在大内存堆中，这可能导致每GB的暂停时间长达几秒钟。
+
+
+
+#### 关注点分离
+
+传统的队列`queues`实现都将以下面的几个关注点混淆在了一起：
+
+1. Storage of items being exchanged：存储正在被being exchanged的items(--就是出队入队的数据)
+2. Coordination of producers claiming the next sequence for exchange：生产者协调声明下一个要交换的序列
+3. Coordination of consumers being notified that a new item is available：消费者协调被通知新项目可用
+
+- **存储item**
+
+在使用自带垃圾回收的编程语言时，过多的内存分配可能会成为问题。 因此，正如我们所描述的，基于链表的队列不是一个好的方法，因为其在入队时会不断的创建新的对象然后在消费完之后对象又需要被回收。 如果可以预先分配用于处理阶段之间数据交换的整个存储空间，就可以将垃圾回收最小化。 此外，如果可以以统一的块执行此分配，则对该数据的遍历将以非常友好的方式进行，以适应现代处理器所采用的缓 存策略。
+
+满足此要求的数据结构是一个预填充了所有插槽的数组。 在创建环形缓冲区时，Disruptor利用抽象工厂模式预先分配条目。 当一个条目被声明时，生产者可以将其数据复制到预先分配的结构中。在大多数处理器上，计算序列号的余数有很高的成本，这决定了环中的槽位。 通过将环的大小设置为2的幂，可以大大降低这个成本。 可以使用大小减一的位掩码来高效地执行余数运算(--*这个做法JDK中HashMap等取模的运算也是这样设计的*)。
+
+> Disruptor 的核心数据结构是一个 **Ring Buffer**，它是一个固定大小的环形数组，生产者和消费者都在这个数组上进行操作。环形数组的特性意味着一旦分配了固定大小的数组内存，就不会再发生内存分配操作，这避免了内存分配的开销和 GC（Garbage Collection）带来的抖动。
+
+- **生产者插入数据**
+
+有界队列在队列的头部和尾部会遇到争用的问题， 环形缓冲区数据结构不受这种争用和并发原语即synchronize同步的影响，因为这些问题已经被拆分成了生产者和消费者屏障，通过这些屏障必须访问环形缓冲区。 这些屏障的逻辑如下：
+
+在Disruptor的大多数常见用法中，通常只有一个生产者。 典型的生产者包括文件读取器或网络监听器。 在只有一个生产者的情况下，序列/条目分配没有争用。
+
+> 在更不寻常的用法中，如果有多个生产者，它们将竞争来争取环形缓冲区中的下一个条目。 可以通过对该槽位的序列号进 行简单的CAS操作来管理对下一个可用条目的争用。
+
+一旦生产者将相关数据复制到所声明的条目中，它可以通过提交序列将其公开给消费者。 这可以通过简单的忙等待(`busy spin`)而无需使用CAS来完成，直到其他生产者在自己的提交中达到该序列为止。 然后，该生产者可以推进光标，表示下一个可用的条目供消费。 生产者可以通过将消费者的序列作为简单的读操作来避免环形缓冲区的包装。在写入环形缓冲区之前，他们可以追踪消费者的序列。
+
+- **消费者获取数据**
+
+消费者在读取条目之前会等待环形缓冲区中的序列可用。 在等待时可以采用各种策略：
+
+- 如果CPU资源很宝贵，他们可以在锁内等待条件变量的信号。该信号由生产者发出。 *显然，这是一个争用点，只有在CPU资源比延迟或吞吐量更重要时才使用。*
+
+- 消费者还可以循环检查光标，该光标表示环形缓冲区中当前可用的序列。 通过在CPU资源与延迟之间 进行权衡，可以选择使用或不使用线程让步来完成此操作。
+
+> 如果不使用锁和条件变量，这种方法的扩展性非常好，因为我们已经消除了生产者和消费者之间的争用依赖。 无锁多生产者-多消费者队列确实存在，但它们需要对头部、尾部和大小计数器进行多个CAS操作。 Disruptor不会遭受这种CAS争用（Disruptor为什么没有这种CAS争用：*1.通过序列`sequence`管理简化生产者和消费者的操作，并使其原子化，2.使用内存屏障和缓存行填充来减少伪共享和争用，3.批量预分配空间和批量消费策略减少 CAS 操作的频率和争用。*）。
+
+- **排序**
+**排序是Disruptor中管理并发的核心概念**。每个生产者和消费者都按照严格的排序概念与环形缓冲区进行交互。 当在环形缓冲区中声明一个条目时，生产者会按顺序声明下一个插槽。 在只有一个生产者的情况下，下一个可用插槽的序列可以是一个简单的计数器，而在有多个生产者的情况下，可以使用CAS操作更新的原子计数器。 一旦声明了序列值`sequence`，该环形缓冲区中的条目现在可以由声明的生产者进行写入。 当生产者完成更新条目后，它可以通过更新表示消费者可用的最新条目的单独计数器来提交更改。 环形缓冲区的游标可以由生产者使用内存屏障进行自旋读写，而无需进行CAS操作， 如下所示。
+
+```java
+long expectedSequence = claimedSequence – 1;
+while (cursor != expectedSequence){
+// busy spin
+}
+cursor = claimedSequence;
+  ```
+
+
+
+消费者通过使用内存屏障来读取游标来等待给定序列可用。 一旦游标被更新，内存屏障确保环形缓冲区中条目的更改对等 待游标前进的消费者可见。
+
+消费者每个都包含自己的序列，他们在处理环形缓冲区中的条目时更新该序列。 这些消费者序列允许生产者跟踪消 费者，以防止环形缓冲区的包装。 消费者序列还允许消费者以有序的方式协调对同一条目的工作。
+
+在只有一个生产者的情况下，无论消费者图的复杂性如何，都不需要锁定或CAS操作。 整个并发协调可以仅通过对 讨论的序列进行内存屏障来实现。
+
+- **批处理移动游标**
+当消费者在环形缓冲区中等待前进的游标序列时，会出现一种与队列不可能的有趣机会。 如果消费者发现环形缓冲区的 游标自上次以来已经前进了多个步骤。检查它是否能够在不涉及并发机制的情况下处理该序列。 这导致滞后的消费者在生产者突然加速时迅速恢复步伐，从而平衡系统。这种批处理方式既增加了吞吐量，又减少了和平滑了延迟。 根据我们的观察，这种效果导致延迟的时间几乎保持恒 定，不受负载的影响，直到内存子系统饱和，然后根据Little定律（**系统中物体的平均数量等于物体离开系统的平均速率和物体在系统中平均停留时间的乘积**）呈线性增长。 这与我们观察到的队列负载增加时延迟的“ J”曲线效应非常不同。
+
+- **依赖拓扑**
+
+如果使用常规队列，因为队列表示生产者和消费者之间简单的一步流水线依赖关系，而 如果消费者形成链式或图状的依赖结构，则需要在图的每个阶段之间使用队列，这会在依赖阶段的拓扑图中多次产生固定的队列成本。 在设计LMAX金融交易所时，我们的分析显示，采用基于队列的方法会导致队列成本占据处理交易的总执行成本的主导地位。
+
+由于生产者和消费者的关注点在Disruptor模式中是分离的，因此可以**在核心中仅使用一个环形缓冲区来表示消费者之 间的复杂依赖关系图**，*（我感觉这里是最难理解的，就是如何用一个队列来处理复杂依赖的生产者和消费者）*。 这样可以大大降低执行的固定成本，从而提高吞吐量，同时降低延迟。
+
+一个单独的环形缓冲区可以用来存储具有复杂结构的条目，表示整个工作流程在一个连贯的地方。 在设计这样的结构时必须注意，以便独立消费者写入的状态不会导致缓存行的伪共享。
+
+
+
+## Disruptor的设计实现
+
+[LMAX Disruptor源码](https://github.com/LMAX-Exchange/disruptor)
+
+下面的源码都基于最新稳定版的4.0.0
+
+```xml
+<!-- https://mvnrepository.com/artifact/com.lmax/disruptor -->
+<dependency>
+    <groupId>com.lmax</groupId>
+    <artifactId>disruptor</artifactId>
+    <version>4.0.0</version>
+</dependency>
+```
+
+**并且下面的代码在我的github fork 分支中可以看到代码--[disruptor源码解析](https://github.com/Swagger-Ranger/disruptor.git)，`notes-liufei`分支就是解析的代码。**
+
+> 我感觉Kafka 和 Disruptor 两者有共同之处，其都用于高性能的数据处理，在某种程度上可以把 Kafka 看作是一个用无界的文件顺序写入代替环形数组的 Disruptor，只是这两者在设计目标、实现方式和应用场景上的有显著差别。Kafka 更侧重于分布式系统中的持久化和高吞吐量，而 Disruptor 则侧重于单机系统中的低延迟、高性能事件处理。
+
+
+
+- **RingBuffer**: RingBuffer是Disruptor的核心数据结构，理解它非常关键。它是一个预先分配的、用于存储数据的环形缓冲区。生产者往里面写数据，消费者从中读取数据。源码路径: com.lmax.disruptor.RingBuffer
+- **Sequence**: Sequence类用于追踪生产者和消费者的位置。每个生产者和消费者都会有一个Sequence实例，用于标识它们当前处理的位置。源码路径: com.lmax.disruptor.Sequence
+- **Sequencer**: 这是一个接口，Disruptor有两种实现方式（SingleProducerSequencer和MultiProducerSequencer），用于管理生产者如何在RingBuffer上申请空间。源码路径: com.lmax.disruptor.SingleProducerSequencer 和 com.lmax.disruptor.MultiProducerSequencer
+- **EventProcessor**: 这是消费者的核心接口，负责消费事件并处理逻辑。常见的实现类有BatchEventProcessor。
+- **WaitStrategy**: 这是一个接口，定义消费者等待数据的策略。Disruptor提供了多种策略（如BusySpinWaitStrategy，BlockingWaitStrategy等），它们直接影响系统的性能和延迟。源码路径: com.lmax.disruptor.WaitStrategy以及它的子类。
+- **SequenceBarrier**：协调消费者对 RingBuffer 中数据的读取顺序，确保所有消费者按照正确的顺序读取和处理事件（消息）。具体来说：
+- 跟踪哪些数据是可用的：SequenceBarrier 通过跟踪一个或多个序列（Sequence）的进度，来判断哪些数据是消费者可以安全读取的。
+- 协调消费者之间的顺序：在多消费者的情况下，SequenceBarrier 可以确保消费者按照特定的顺序读取数据，防止读取到不一致或未完全处理的数据。
+- 阻塞消费者直到数据可用：当消费者试图读取超出当前可用范围的数据时，SequenceBarrier 会阻塞消费者，直到数据变为可用。这种机制防止了数据的不完整读取。
+
+
+
+### 核心存储结构
+
+Disruptor的存储结构是一个循环数组，在其`RingBuffer`类中实现。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/disruptor/ConversantDisruptorLogo.png" alt="image" style="zoom:88%;" />)
+
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/disruptor/ConversantDisruptorLogo.png" alt="image" style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+#### RingBuffer
+
+`RingBuffer`的数组是由`RingBufferFields`类来提供的，负责数据的实际存储，并通过 elementAt 方法来访问数据。然后`RingBuffer`的其他功能则是依赖于 `Sequencer` 接口及其实现类，`Sequencer` 负责生成和管理序列号，并通过 CAS 操作和内存屏障来实现高效的并发控制，而`RingBuffer `提供了基础的 API用于访问。
+
+`RingBuffer` 负责的数据管理逻辑具体涉及两个方面：
+
+1. **数据存储和访问**：
+
+`RingBuffer` 本质上是一个预分配的循环数组（环形缓冲区），用于存储事件对象（Event）。具体由由`RingBufferFields`类来实现。`RingBuffer `提供了基础的 API，用于访问和操作内部的数据结构。
+
+2. **序列管理和并发控制**：
+
+实际的并发控制和序列管理则主要由 `Sequencer` 接口及其实现类来负责。
+
+```java
+public final class RingBuffer<E> extends RingBufferFields<E> implements Cursored, EventSequencer<E>, EventSink<E>
+{
+  ...
+}
+
+/**
+ * RingBufferFields 类是 Disruptor 框架中的一个核心类，它主要用于管理和存储环形缓冲区（Ring Buffer）中的数据项。
+ * @param <E>
+ */
+abstract class RingBufferFields<E> extends RingBufferPad
+{
+    /**
+     * BUFFER_PAD：这是一个静态常量，值为32。
+     * 用来防止伪共享，通过在数组的开头和结尾添加额外的填充，确保 RingBuffer 中的有效数据项与这些填充项之间有一定的距离，减少伪共享的可能性。
+     */
+    private static final int BUFFER_PAD = 32;
+
+    private final long indexMask;
+    private final E[] entries;
+    protected final int bufferSize;
+    protected final Sequencer sequencer;
+
+    /**
+     * 调用的地方就是 RingBuffer#RingBuffer方法
+     * @see RingBuffer#RingBuffer(EventFactory, Sequencer)
+     */
+    @SuppressWarnings("unchecked")
+    RingBufferFields(
+        final EventFactory<E> eventFactory,
+        final Sequencer sequencer)
+    {
+        this.sequencer = sequencer;
+        this.bufferSize = sequencer.getBufferSize();
+
+        if (bufferSize < 1)
+        {
+            throw new IllegalArgumentException("bufferSize must not be less than 1");
+        }
+        // bitCount 方法的主要用途是在处理二进制数据时，计算一个整数中的 1 的数量，这里就是在校验必须是2的n次方
+        if (Integer.bitCount(bufferSize) != 1)
+        {
+            throw new IllegalArgumentException("bufferSize must be a power of 2");
+        }
+
+        // indexMask就是有效数位全是1的整数
+        this.indexMask = bufferSize - 1;
+        /*
+         * 数组的大小为 bufferSize + 2 * BUFFER_PAD，但实际计算位置仍然是sequence & indexMask位运算计算位置。
+         * 但通过添加两个pad使得，首尾也就是插入和获取位置始终相差一个pad 32个位置距离，但需要插入两个pad分别在首尾这样是为了防止数组越界
+         *
+         * BUFFER_PAD 确保了实际的数据存储区域不会紧贴数组的开头或结尾，而是留出了一定的缓冲空间。这样，当多个生产者或消费者线程访问 RingBuffer 时，
+         * 他们对数据的访问始终会与填充区域隔离，避免了对相邻缓存行的竞争，从而减少了伪共享。
+         */
+        this.entries = (E[]) new Object[bufferSize + 2 * BUFFER_PAD];
+        fill(eventFactory);
+    }
+
+    // 预先填充数组，这个数组内容会一直存在，数据元素不会触发gc
+    private void fill(final EventFactory<E> eventFactory)
+    {
+        for (int i = 0; i < bufferSize; i++)
+        {
+            // 这里每一个实际填充的位置都是移动了 BUFFER_PAD长度的
+            entries[BUFFER_PAD + i] = eventFactory.newInstance();
+        }
+    }
+
+    protected final E elementAt(final long sequence)
+    {
+        // 获取元素位置也要加上pad
+        return entries[BUFFER_PAD + (int) (sequence & indexMask)];
+    }
+}
+```
+#### 数组的寻址
+
+因为在计算机中取模运算是比较重的计算，所以循环数组的在获取地址时使用的方法是将数组大小-`bufferSize`要求是2的幂，
+
+```java
+// bitCount 方法的主要用途是在处理二进制数据时，计算一个整数中的 1 的数量，这里就是在校验必须是2的n次方
+if (Integer.bitCount(bufferSize) != 1)
+{
+    throw new IllegalArgumentException("bufferSize must be a power of 2");
+}
+```
+
+然后再通过一个掩码(`indexMask` = `bufferSize`-1)，来和作`seqeunce`与运算即可得到位置。
+
+```java
+private int calculateIndex(final long sequence)
+{
+    return ((int) sequence) & indexMask;
+}
+```
+
+这里还有一个细节，实际上`ringbuffer`在存储时，数组前后还加了空白位置，以避免数组首尾数组节点产生伪共享的可能，所以实际存储数组的寻址还要位移一个pad填充距离，相对于直接位运算的结果，如下：
+
+```java
+// 实际的存储数组大小
+this.entries = (E[]) new Object[bufferSize + 2 * BUFFER_PAD];
+
+// RingBufferFields中的实际ringbuffer存储位置定位
+protected final E elementAt(final long sequence)
+{
+    // 获取元素位置也要加上pad
+    return entries[BUFFER_PAD + (int) (sequence & indexMask)];
+}
+```
+
+#### 并发协调
+- **消费者不追上生产者**
+
+然后在处理读写并发控制时，`Disruptor`的设计更加简洁，只有一个`Sequence`类型的游标`cursor`；只需要比较大小，即每个消费者读的序列`seqeunce`必须小于游标`cursor`。这里连做位运算的开销都省去了，而`Seqeunce`类本身是保证可见性、指令屏障和修改原子性的，所以不需要做任何复杂操作，只需要比较读序列和游标即可控制消费不追上生产者。
+
+- **生产者不追上消费者**
+
+生产者不追上消费者的逻辑是通过计算一个位置，如下：
+
+```java
+long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
+  ```
+
+然后`wrapPoint <= cachedGatingSequence`就能保证生产者不追上消费者，而且为什么`=`也可以，是因为`INITIAL_CURSOR_VALUE = -1L`，`Sequence`是从-1开始的。
+
+这个逻辑在生产者实现类中申请槽位的`next`方法和判断方法是否有可以空间的`hasAvailableCapacity`方法都是这个逻辑。
+
+- **消费者不追上消费者**
+
+这个问题不存在，4.0.0之后版本去掉了`workpool`，每个消费者都是独立的`Sequence`。
+
+- **生产者不追上生产者**
+
+但这里存在一个新的问题，就是多生产者的写入，上面是可以保证生产者和消费者的安全的，消费者读也是每个消费者有自己的序列，不存在并发争用的问题；但多生产者写入不是，多生产者存在写覆盖的问题，虽然可以各自申请序列推进游标cursor，但存在数组循环问题，即sequece一直单调递增，一直增到把位置给绕回到数组未读取的位置，此时就会发生新的写入覆盖未读取的写入。
+
+**多生产者数据覆盖问题，`Disruptor`设计也很简单，通过增加一个和`bufferSize`一样大小的数组来标记修改符号即可，这个标记符号也通过一个位运算得到，也就是说解决版本仍然是通过一个位运算来校验数据，仍然不通过加锁或者复杂的同步就解决了。**
+
+具体的解决办法见--[多生产者数据覆盖](#多生产者)
+
+
+
+### 核心协调对象
+
+#### Sequence
+
+Sequence是一个具体的类，用于管理一个单独的长整型序列号，其value是被作了缓存填充以避免伪共享，如下代码中的`LhsPadding` -`Value`-`RhsPadding`，最后`Sequence extends RhsPadding`。
+
+> Sequence的核心推进接口Sequencer 实现内部往往就会持有一个或多个 Sequence 实例来表示不同生产者或消费者的位置。
+
+Sequence 对象本质上是一个指示器，其中具体的在`RingBuffer`中对应的就是`cursor`，标明当前操作的进度位置，并且可以表示消费序列（消费进度）也可以表示生产序列（生产进度）。
+
+```java
+package com.lmax.disruptor;
+
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+
+class LhsPadding
+{
+    protected byte
+        p10, p11, p12, p13, p14, p15, p16, p17,
+        p20, p21, p22, p23, p24, p25, p26, p27,
+        p30, p31, p32, p33, p34, p35, p36, p37,
+        p40, p41, p42, p43, p44, p45, p46, p47,
+        p50, p51, p52, p53, p54, p55, p56, p57,
+        p60, p61, p62, p63, p64, p65, p66, p67,
+        p70, p71, p72, p73, p74, p75, p76, p77;
+}
+
+class Value extends LhsPadding
+{
+    protected long value;
+}
+
+class RhsPadding extends Value
+{
+    protected byte
+        p90, p91, p92, p93, p94, p95, p96, p97,
+        p100, p101, p102, p103, p104, p105, p106, p107,
+        p110, p111, p112, p113, p114, p115, p116, p117,
+        p120, p121, p122, p123, p124, p125, p126, p127,
+        p130, p131, p132, p133, p134, p135, p136, p137,
+        p140, p141, p142, p143, p144, p145, p146, p147,
+        p150, p151, p152, p153, p154, p155, p156, p157;
+}
+
+/**
+ * Concurrent sequence class used for tracking the progress of
+ * the ring buffer and event processors.  Support a number
+ * of concurrent operations including CAS and order writes.
+ *
+ * <p>Also attempts to be more efficient with regards to false
+ * sharing by adding padding around the volatile field.
+ *
+ * <p>
+ * Sequence的所有操作读增加了内存屏障
+ * Acquire Fence (VarHandle.acquireFence();)
+ * 	•确保在屏障之前的读取操作在屏障代码VarHandle.acquireFence()对应的代码行之前完成。
+ * 	•确保读取的数据不会被重新排序到屏障之后。
+ * Release Fence (VarHandle.releaseFence();)
+ * 	•确保在屏障之前的写入操作在屏障代码VarHandle.releaseFence()对应的代码行之前完成。
+ * 	•确保写入的数据不会被重新排序到屏障之后。
+ * Full Fence (VarHandle.fullFence();)
+ * 	完整的内存屏障，确保在此屏障之后的所有读写操作不会被重排到屏障之前。
+ */
+public class Sequence extends RhsPadding
+{
+    static final long INITIAL_VALUE = -1L;
+    private static final VarHandle VALUE_FIELD;
+
+    static
+    {
+        try
+        {
+            VALUE_FIELD = MethodHandles.lookup().in(Sequence.class)
+                    .findVarHandle(Sequence.class, "value", long.class);
+        }
+        catch (final Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Create a sequence initialised to -1.
+     */
+    public Sequence()
+    {
+        this(INITIAL_VALUE);
+    }
+
+    /**
+     * Create a sequence with a specified initial value.
+     *
+     * @param initialValue The initial value for this sequence.
+     */
+    public Sequence(final long initialValue)
+    {
+        VarHandle.releaseFence();
+        this.value = initialValue;
+    }
+
+    /**
+     * Perform a volatile read of this sequence's value.
+     *
+     * @return The current value of the sequence.
+     */
+    public long get()
+    {
+        long value = this.value;
+        /*
+         * 在读取值之后调用 acquireFence 内存屏障，它确保在它之前的所有读操作（读取数据）都不会被重排到它之后。
+         * 这意味着，acquireFence 确保了在它之前读取的值是最新的，并且不会被重新排序到屏障之后。
+         */
+        VarHandle.acquireFence();
+        return value;
+    }
+
+    /**
+     * Perform an ordered write of this sequence.  The intent is
+     * a Store/Store barrier between this write and any previous
+     * store.
+     *
+     * @param value The new value for the sequence.
+     */
+    public void set(final long value)
+    {
+        /*
+         * 它确保在它之前的所有写操作（写入数据）都不会被重排到它之后。
+         * 这意味着，releaseFence 确保了在它之前的写操作（this.value = value）在内存中是可见的，并且不会被重排到屏障之后。
+         */
+        VarHandle.releaseFence();
+        this.value = value;
+    }
+......
+
+}
+```
+
+
+
+#### Sequenced
+
+Sequenced是一个简单的接口，定义了一些与序列号（sequence number）操作相关的方法。Sequenced 本身不持有 Sequence 对象，但 Sequencer 作为它的一个扩展实现，持有 Sequence 并利用它来协调生产者与消费者的操作。
+
+*Sequenced的实现都是在Sequencer继承了Sequenced之后，作为Sequencer的实现来实现Sequenced的方法的。*
+
+```java
+package com.lmax.disruptor;
+
+/**
+ * Operations related to the sequencing of items in a {@link RingBuffer}.
+ * See the two child interfaces, {@link Sequencer} and {@link EventSequencer} for more details.
+ */
+public interface Sequenced
+{
+    /**
+     * The capacity of the data structure to hold entries.
+     *
+     * @return the size of the RingBuffer.
+     */
+    int getBufferSize();
+
+    /**
+     * Has the buffer got capacity to allocate another sequence.  This is a concurrent
+     * method so the response should only be taken as an indication of available capacity.
+     *
+     * @param requiredCapacity in the buffer
+     * @return true if the buffer has the capacity to allocate the next sequence otherwise false.
+     */
+    boolean hasAvailableCapacity(int requiredCapacity);
+
+    /**
+     * Get the remaining capacity for this sequencer.
+     *
+     * @return The number of slots remaining.
+     */
+    long remainingCapacity();
+
+    /**
+     * Claim the next event in sequence for publishing.
+     * 如果没有可用的，会阻塞
+     *
+     * @return the claimed sequence value
+     */
+    long next();
+
+    /**
+     * Claim the next n events in sequence for publishing.  This is for batch event producing.  Using batch producing
+     * requires a little care and some math.
+     * <p> 注意：返回的是sequence value，用法需要按下面的例子来使用
+     * <p> 和{@link Sequencer#claim(long) }的区别是：
+     * claim：直接手动设置某个序号的值将某个序号标记为已占用，不经过复杂的可用性检查，一般不会由用户直接调用，而是由 Disruptor 框架内部在特定的场景下调用
+     * next：才是用户调用的方法，为生产者分配下一个可用的序号，生产者调用该方法来获取 RingBuffer 中可用的槽位。
+     * <pre>
+     * int n = 10;
+     * long hi = sequencer.next(n);
+     * long lo = hi - (n - 1);
+     * for (long sequence = lo; sequence &lt;= hi; sequence++) {
+     *     // Do work.
+     * }
+     * sequencer.publish(lo, hi);
+     * </pre>
+     *
+     * @param n the number of sequences to claim
+     * @return the highest claimed sequence value
+     */
+    long next(int n);
+
+    /**
+     * Attempt to claim the next event in sequence for publishing.  Will return the
+     * number of the slot if there is at least <code>requiredCapacity</code> slots
+     * available.
+     * 如果没有可用的，会立刻抛异常不会阻塞，而且InsufficientCapacityException是一个受检异常
+     *
+     * @return the claimed sequence value
+     * @throws InsufficientCapacityException thrown if there is no space available in the ring buffer.
+     */
+    long tryNext() throws InsufficientCapacityException;
+
+    /**
+     * Attempt to claim the next n events in sequence for publishing.  Will return the
+     * highest numbered slot if there is at least <code>requiredCapacity</code> slots
+     * available.  Have a look at {@link Sequencer#next()} for a description on how to
+     * use this method.
+     *
+     * @param n the number of sequences to claim
+     * @return the claimed sequence value
+     * @throws InsufficientCapacityException thrown if there is no space available in the ring buffer.
+     */
+    long tryNext(int n) throws InsufficientCapacityException;
+
+    /**
+     * Publishes a sequence. Call when the event has been filled.
+     *
+     * @param sequence the sequence to be published.
+     */
+    void publish(long sequence);
+
+    /**
+     * Batch publish sequences.  Called when all of the events have been filled.
+     * 批量推进sequences，并且lo是最小的sequence，RingBuffer中的sequence必须是连续的，即两个sequence都是已发布的状态则中间的所有sequence都是已发布的状态
+     *
+     * @param lo first sequence number to publish
+     * @param hi last sequence number to publish
+     */
+    void publish(long lo, long hi);
+}
+```
+
+
+
+#### Sequencer
+
+Sequencer继承了`Sequenced`是 Disruptor 中的生产者协调者，负责生成并维护环形缓冲区中的序列号（sequence），确保生产者和消费者在并发环境下正确地读取和写入数据。Sequencer 还负责协调多个生产者和消费者之间的并发访问，使用了高效的算法来实现无锁（lock-free）或最小锁（low-lock）并发控制。
+
+```java
+/**
+ * Coordinates claiming sequences for access to a data structure while tracking dependent {@link Sequence}s
+ */
+public interface Sequencer extends Cursored, Sequenced
+{
+    /**
+     * Set to -1 as sequence starting point
+     */
+    long INITIAL_CURSOR_VALUE = -1L;
+
+    /**
+     * Claim a specific sequence.  Only used if initialising the ring buffer to
+     * a specific value.
+     * <p>claim(long sequence)的作用是将 RingBuffer 内部的游标（cursor）移动到指定的 sequence 位置。
+     * <p> claim 方法在 Disruptor 框架中通常不需要用户直接调用
+     * 这意味着：游标更新，游标会被直接设置到这个新的 sequence 值。
+     * <p>如果新游标位置在当前游标位置之后（即向前推进游标）：会覆盖掉 RingBuffer 从当前游标位置到新的游标位置之间的旧数据，任何尚未被消费者处理的数据都将被视为丢弃。
+     * <p>如果新游标位置在当前游标位置之前（即后前重置游标）：消费者会再次消费这个位置以及之后的数据。因此，数据可能会被重复消费，
+     *                                               在使用中很少直接手动将游标设置到一个更早的位置，除非明确知道这样做的后果，并且有严格的应用逻辑来处理数据的一致性。
+     * @param sequence The sequence to initialise too.
+     */
+    void claim(long sequence);
+
+    /**
+     * Confirms if a sequence is published and the event is available for use; non-blocking.
+     *
+     * @param sequence of the buffer to check
+     * @return true if the sequence is available for use, false if not
+     */
+    boolean isAvailable(long sequence);
+
+    /**
+     * Add the specified gating sequences to this instance of the Disruptor.  They will
+     * safely and atomically added to the list of gating sequences.
+     * <p>
+     * 向 Sequencer 实例添加一个或多个gating sequences（也称为“门控序列”），用来控制生产者的进度确保消费者能够跟上生产者的速度，防止生产者“跑得太快”，覆盖尚未处理完的数据。
+     * <p>
+     * 加入的Sequence就是对应消费者的消费序列，即gating sequences 中保存的是所有消费者的序列位置。
+     * 当生产者要写入新数据时，它会检查 gating sequences 的最小值，生产者需要确保它即将写入的位置不会超过任何一个 gating sequence。
+     * 如果生产者发现所有的消费者（gating sequences）都已经处理完当前的生产者所处位置，那么生产者就可以继续写入数据，
+     * 如果有任何一个消费者的 Sequence 小于生产者的写入位置，生产者会阻塞，等待消费者处理完毕，Disruptor 会阻塞生产者线程直到可以安全写入。
+     * <p>
+     * GatingSequence其实就是处理多消费者的手段，因为有多消费者所以才需要把每个需要确保消费完成的消费者序列加入监控，以避免生产者覆盖数据。
+     * <p>
+     * 如果有消费者可以不加入其Gating Sequence ，就是不保证其会消费所有消息，属于是消费到哪些就消费哪些，生产者不会考虑其消费情况一直填入数据即可
+     *
+     * @param gatingSequences The sequences to add.
+     */
+    void addGatingSequences(Sequence... gatingSequences);
+
+    /**
+     * Remove the specified sequence from this sequencer.
+     *
+     * @param sequence to be removed.
+     * @return <code>true</code> if this sequence was found, <code>false</code> otherwise.
+     */
+    boolean removeGatingSequence(Sequence sequence);
+
+    /**
+     * Create a new SequenceBarrier to be used by an EventProcessor to track which messages
+     * are available to be read from the ring buffer given a list of sequences to track.
+     * GatingSequence是协调消费者和生产者，而SequenceBarrier是协调多消费者消费
+     *
+     * @param sequencesToTrack All of the sequences that the newly constructed barrier will wait on.
+     * @return A sequence barrier that will track the specified sequences.
+     * @see SequenceBarrier
+     */
+    SequenceBarrier newBarrier(Sequence... sequencesToTrack);
+
+    /**
+     * Get the minimum sequence value from all of the gating sequences
+     * added to this ringBuffer.
+     *
+     * @return The minimum gating sequence or the cursor sequence if
+     * no sequences have been added.
+     * <P>生产者能安全的生产数据的位置
+     */
+    long getMinimumSequence();
+
+    /**
+     *
+     * <P>消费者能安全读取到的位置
+     *
+     * @param nextSequence      The sequence to start scanning from.
+     * @param availableSequence The sequence to scan to.
+     * @return The highest value that can be safely read, will be at least <code>nextSequence - 1</code>.
+     */
+    long getHighestPublishedSequence(long nextSequence, long availableSequence);
+
+    /**
+     * Creates an event poller from this sequencer
+     * 提供基于轮询的方式来处理事件
+     *
+     * @param provider from which events are drawn
+     * @param gatingSequences sequences to be gated on
+     * @param <T> the type of the event
+     * @return the event poller
+     */
+    <T> EventPoller<T> newPoller(DataProvider<T> provider, Sequence... gatingSequences);
+}
+```
+
+`AbstractSequencer`是Sequencer 核心实现抽象类，其最主要的两个实现`MultiProducerSequencer`和`SingleProducerSequencer`都继承自`AbstractSequencer`
+
+```java
+/**
+ * Base class for the various sequencer types (single/multi).  Provides
+ * common functionality like the management of gating sequences (add/remove) and
+ * ownership of the current cursor.
+ * <P>Sequencer 的核心实现类通常是继承自 AbstractSequencer，其提供了 Sequencer 的基本实现和一些共享的功能。</P>
+ */
+public abstract class AbstractSequencer implements Sequencer
+{
+    private static final AtomicReferenceFieldUpdater<AbstractSequencer, Sequence[]> SEQUENCE_UPDATER =
+        AtomicReferenceFieldUpdater.newUpdater(AbstractSequencer.class, Sequence[].class, "gatingSequences");
+
+    protected final int bufferSize;
+    protected final WaitStrategy waitStrategy;
+    /**
+     * cursor是AbstractSequencer的核心变量，在整个Disruptor框架中，cursor也是一个全局变量，用于跟踪 RingBuffer 中的当前写入位置（序列号）即RingBuffer中的写入指针，
+     * 表示RingBuffer的当前状态：即哪些数据是可用的，哪些数据已经发布并可供消费者读取。
+     * <p>
+     * 生产者和消费者通过 cursor 来间接进行同步和通信，生产者更新 cursor，消费者读取 cursor 来决定是否可以继续读取数据。
+     * 因此，不需要区分生产者和消费者的cursor，这简化了同步逻辑，减少锁的竞争。生产者和消费者通过 Sequence 类和 cursor 进行无锁的同步，这也是 Disruptor 高效的原因之一。
+     * <p>
+     * 具体的生产者和消费者操作：当生产者线程写入新的事件数据并调用publish方法时，cursor会被更新到最新的序列号，这意味着，cursor 始终表示最近发布的事件的位置（或序列号）。
+     * 而消费者通过 SequenceBarrier 或 Sequencer.getHighestPublishedSequence() 方法获取 cursor 的值来确定可以消费的数据的范围。
+     */
+    protected final Sequence cursor = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+    protected volatile Sequence[] gatingSequences = new Sequence[0];
+
+    /**
+     * Create with the specified buffer size and wait strategy.
+     *
+     * @param bufferSize   The total number of entries, must be a positive power of 2.
+     * @param waitStrategy The wait strategy used by this sequencer
+     */
+    public AbstractSequencer(final int bufferSize, final WaitStrategy waitStrategy)
+    {
+        if (bufferSize < 1)
+        {
+            throw new IllegalArgumentException("bufferSize must not be less than 1");
+        }
+        if (Integer.bitCount(bufferSize) != 1)
+        {
+            throw new IllegalArgumentException("bufferSize must be a power of 2");
+        }
+
+        this.bufferSize = bufferSize;
+        this.waitStrategy = waitStrategy;
+    }
+
+    /**
+     * @see Sequencer#getCursor()
+     */
+    @Override
+    public final long getCursor()
+    {
+        return cursor.get();
+    }
+
+    /**
+     * @see Sequencer#getBufferSize()
+     */
+    @Override
+    public final int getBufferSize()
+    {
+        return bufferSize;
+    }
+
+    /**
+     * @see Sequencer#addGatingSequences(Sequence...)
+     */
+    @Override
+    public final void addGatingSequences(final Sequence... gatingSequences)
+    {
+        SequenceGroups.addSequences(this, SEQUENCE_UPDATER, this, gatingSequences);
+    }
+
+    /**
+     * @see Sequencer#removeGatingSequence(Sequence)
+     */
+    @Override
+    public boolean removeGatingSequence(final Sequence sequence)
+    {
+        return SequenceGroups.removeSequence(this, SEQUENCE_UPDATER, sequence);
+    }
+
+    /**
+     * @see Sequencer#getMinimumSequence()
+     */
+    @Override
+    public long getMinimumSequence()
+    {
+        return Util.getMinimumSequence(gatingSequences, cursor.get());
+    }
+
+    /**
+     * @see Sequencer#newBarrier(Sequence...)
+     */
+    @Override
+    public SequenceBarrier newBarrier(final Sequence... sequencesToTrack)
+    {
+        // SequenceBarrier实现都是在 ProcessingSequenceBarrier 中将多个sequencesToTrack转化成FixedSequenceGroup来简化处理的，因为其实只需要关注最小的一个Sequence即可
+        return new ProcessingSequenceBarrier(this, waitStrategy, cursor, sequencesToTrack);
+    }
+
+    @Override
+    public <T> EventPoller<T> newPoller(final DataProvider<T> dataProvider, final Sequence... gatingSequences)
+    {
+        return EventPoller.newInstance(dataProvider, this, new Sequence(), cursor, gatingSequences);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "AbstractSequencer{" +
+            "waitStrategy=" + waitStrategy +
+            ", cursor=" + cursor +
+            ", gatingSequences=" + Arrays.toString(gatingSequences) +
+            '}';
+    }
+}
+```
+
+
+### 消费
+
+#### 消费逻辑处理 EventHandler
+
+`EventHandler`就是消费数据的消费逻辑实现接口，即用户要自定义的消费逻辑实现
+
+```java
+/**
+ * Callback interface to be implemented for processing events as they become available in the {@link RingBuffer}
+ * 消费数据的消费逻辑实现接口
+ *
+ * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ * @see BatchEventProcessor#setExceptionHandler(ExceptionHandler) if you want to handle exceptions propagated out of the handler.
+ */
+public interface EventHandler<T> extends EventHandlerBase<T>
+{
+
+    @Override
+    void onEvent(T event, long sequence, boolean endOfBatch) throws Exception;
+
+    /**
+     *  <p>在某些特殊情况下，允许 EventHandler（事件处理器）在处理完事件后，通过回调通知 BatchEventProcessor 其已经完成了事件的处理。
+     *  这通常用于那些处理过程中涉及到延迟或批处理操作的场景，比如写入 I/O 设备。
+     * @param sequenceCallback callback on which to notify the {@link BatchEventProcessor} that the sequence has progressed.
+     */
+    default void setSequenceCallback(Sequence sequenceCallback)
+    {
+    }
+}
+
+```
+
+
+
+#### 消费流程控制 EventProcessor
+
+上面的`EventHandler`才是实际的消费者需要自己实现，而`EventProcessor`则只是一个管理接口，不需要自己实现；`EventProcessor`的实现是提供对消费过程的管理，实际的事件处理是委托给 `EventHandler`处理的。
+
+> `EventProcessor`和`link EventHandler`是一对一的: EventProcessor 是事件处理的管理者，它将事件传递给 EventHandler 进行实际处理。
+
+`EventProcessor`主要负责控制流，其继承`Runnable`可以在独立的线程中运行，开始启动消费也是由`EventProcessor`来实现runable在线程中调用run方法运行的。
+
+```java
+public interface EventProcessor extends Runnable
+{
+    /**
+     * Get a reference to the {@link Sequence} being used by this {@link EventProcessor}.
+     *
+     * @return reference to the {@link Sequence} for this {@link EventProcessor}
+     */
+    Sequence getSequence();
+
+    /**
+     * Signal that this EventProcessor should stop when it has finished consuming at the next clean break.
+     * It will call {@link SequenceBarrier#alert()} to notify the thread to check status.
+     */
+    void halt();
+
+    /**
+     * @return whether this event processor is running or not
+     * Implementations should ideally return false only when the associated thread is idle.
+     */
+    boolean isRunning();
+}
+```
+
+**核心实现类是`BatchEventProcessor`，`BatchEventProcessor`也是整个`Disruptor`消费逻辑中执行流程的核心，自定义的所有策略都由此类来调用和协调，其最核心的方法就是`processEvents`。**
+
+```java
+/**
+ * Convenience class for handling the batching semantics of consuming entries from a {@link RingBuffer}
+ * and delegating the available events to an {@link EventHandler}.
+ *  EventProcessor 的核心实现类，控制整体Disruptor消费流程的核心类
+ *  EventProcessor和event Handler一对一，和sequence也是一对一，并且同一个RingBuffer里面是可以启动多个EventProcessor
+ *
+ * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ */
+public final class BatchEventProcessor<T>
+        implements EventProcessor
+{
+    private static final int IDLE = 0;
+    private static final int HALTED = IDLE + 1;
+    private static final int RUNNING = HALTED + 1;
+
+    private final AtomicInteger running = new AtomicInteger(IDLE);
+    private ExceptionHandler<? super T> exceptionHandler;
+    private final DataProvider<T> dataProvider;
+    private final SequenceBarrier sequenceBarrier;
+    private final EventHandlerBase<? super T> eventHandler;
+    private final int batchLimitOffset;
+    private final Sequence sequence = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+    private final RewindHandler rewindHandler;
+    private int retriesAttempted = 0;
+
+    BatchEventProcessor(
+            final DataProvider<T> dataProvider,
+            final SequenceBarrier sequenceBarrier,
+            final EventHandlerBase<? super T> eventHandler,
+            final int maxBatchSize,
+            final BatchRewindStrategy batchRewindStrategy
+    )
+    {
+        this.dataProvider = dataProvider;
+        this.sequenceBarrier = sequenceBarrier;
+        this.eventHandler = eventHandler;
+
+        if (maxBatchSize < 1)
+        {
+            throw new IllegalArgumentException("maxBatchSize must be greater than 0");
+        }
+        this.batchLimitOffset = maxBatchSize - 1;
+
+        this.rewindHandler = eventHandler instanceof RewindableEventHandler
+                ? new TryRewindHandler(batchRewindStrategy)
+                : new NoRewindHandler();
+    }
+
+    @Override
+    public Sequence getSequence()
+    {
+        return sequence;
+    }
+
+    @Override
+    public void halt()
+    {
+        running.set(HALTED);
+        sequenceBarrier.alert();
+    }
+
+    @Override
+    public boolean isRunning()
+    {
+        return running.get() != IDLE;
+    }
+
+    /**
+     * Set a new {@link ExceptionHandler} for handling exceptions propagated out of the {@link BatchEventProcessor}.
+     *
+     * @param exceptionHandler to replace the existing exceptionHandler.
+     */
+    public void setExceptionHandler(final ExceptionHandler<? super T> exceptionHandler)
+    {
+        if (null == exceptionHandler)
+        {
+            throw new NullPointerException();
+        }
+
+        this.exceptionHandler = exceptionHandler;
+    }
+
+    /**
+     * It is ok to have another thread rerun this method after a halt().
+     *
+     * @throws IllegalStateException if this object instance is already running in a thread
+     */
+    @Override
+    public void run()
+    {
+        int witnessValue = running.compareAndExchange(IDLE, RUNNING);
+        // compareAndExchange，返回的实际上就是原有的值，如果原有的值==expectedValue则设置成功，如果!=expectedValue则设置失败。
+        if (witnessValue == IDLE) // Successful CAS
+        {
+            sequenceBarrier.clearAlert();
+
+            notifyStart();
+            try
+            {
+                if (running.get() == RUNNING)
+                {
+                    processEvents();
+                }
+            }
+            finally
+            {
+                notifyShutdown();
+                running.set(IDLE);
+            }
+        }
+        else
+        {
+            if (witnessValue == RUNNING)
+            {
+                throw new IllegalStateException("Thread is already running");
+            }
+            else
+            {
+                earlyExit();
+            }
+        }
+    }
+
+    /**
+     *  BatchEventProcessor 处理事件的核心循环。不断地从 RingBuffer 中获取事件，并交给 EventHandler 处理，同时处理异常、重试机制和超时等情况。
+     *  消费者消费数据都是通过WaitStrategy和生产者协调，并且通过自己维护的Sequence来记录自己的位置，每个消费者都是独立的Sequence，而且是一对一的，
+     *  并在final long availableSequence = sequenceBarrier.waitFor(nextSequence);中不断的获取当前可用的和批处理数量限制之间的最小值来处理数据的。
+     *  <p>
+     *  在4.0的Disruptor中移除了WorkerPool，也就是没有多个消费者来共享一个Sequence。（disruptor 移除 WorkerPool我理解还是基于性能的考虑，
+     *  因为WorkerPool中多消费者共享一个Sequence必然要产生竞争存在同步消耗，而只有一个线程则不用同步sequence，
+     *  如果要多个线程提升并行度那可以在自己的eventHandler中使用ForkJoin之类的来处理也是一样的这样也可以并行消费而且还没有同步sequence消耗。）
+     *  <pre>{@code
+     *     class MyEventHandler implements EventHandler<MyEvent> {
+     *     private final ForkJoinPool forkJoinPool = new ForkJoinPool();
+     *
+     *     @Override
+     *     public void onEvent(MyEvent event, long sequence, boolean endOfBatch) {
+     *         // ForkJoinPool 用于并行处理事件
+     *         forkJoinPool.submit(() -> {
+     *             // 执行事件处理逻辑
+     *             System.out.println("Processing event: " + event.getData());
+     *         }).join();
+     *     }
+     * }
+     *  }
+     */
+    private void processEvents()
+    {
+        T event = null;
+        long nextSequence = sequence.get() + 1L;
+
+        while (true)
+        {
+            final long startOfBatchSequence = nextSequence;
+            try
+            {
+                try
+                {
+                    final long availableSequence = sequenceBarrier.waitFor(nextSequence);
+                    final long endOfBatchSequence = min(nextSequence + batchLimitOffset, availableSequence);
+
+                    if (nextSequence <= endOfBatchSequence)
+                    {
+                        eventHandler.onBatchStart(endOfBatchSequence - nextSequence + 1, availableSequence - nextSequence + 1);
+                    }
+
+                    while (nextSequence <= endOfBatchSequence)
+                    {
+                        event = dataProvider.get(nextSequence);
+                        // 这里数据已经通过event = dataProvider.get(nextSequence);取出来了，
+                        // 此时这个onEvent方法就是在执行消费逻辑，而sequence是告诉处理逻辑RingBuffer中的位置，endOfBatch是否是此批量的最后一个
+                        eventHandler.onEvent(event, nextSequence, nextSequence == endOfBatchSequence);
+                        nextSequence++;
+                    }
+
+                    retriesAttempted = 0;
+                    // 推进自己的 sequence
+                    sequence.set(endOfBatchSequence);
+                }
+                catch (final RewindableException e)
+                {
+                    // 这里就是 RewindableException异常的处理，将游标作回滚，是否回滚看构造器中传入的是否是 RewindableEventHandler
+                    nextSequence = rewindHandler.attemptRewindGetNextSequence(e, startOfBatchSequence);
+                }
+            }
+            catch (final TimeoutException e)
+            {
+                notifyTimeout(sequence.get());
+            }
+            catch (final AlertException ex)
+            {
+                if (running.get() != RUNNING)
+                {
+                    break;
+                }
+            }
+            catch (final Throwable ex)
+            {
+                handleEventException(ex, nextSequence, event);
+                sequence.set(nextSequence);
+                nextSequence++;
+            }
+        }
+    }
+
+    private void earlyExit()
+    {
+        notifyStart();
+        notifyShutdown();
+    }
+
+    private void notifyTimeout(final long availableSequence)
+    {
+        try
+        {
+            eventHandler.onTimeout(availableSequence);
+        }
+        catch (Throwable e)
+        {
+            handleEventException(e, availableSequence, null);
+        }
+    }
+
+    /**
+     * Notifies the EventHandler when this processor is starting up.
+     */
+    private void notifyStart()
+    {
+        try
+        {
+            eventHandler.onStart();
+        }
+        catch (final Throwable ex)
+        {
+            handleOnStartException(ex);
+        }
+    }
+
+    /**
+     * Notifies the EventHandler immediately prior to this processor shutting down.
+     */
+    private void notifyShutdown()
+    {
+        try
+        {
+            eventHandler.onShutdown();
+        }
+        catch (final Throwable ex)
+        {
+            handleOnShutdownException(ex);
+        }
+    }
+
+    /**
+     * Delegate to {@link ExceptionHandler#handleEventException(Throwable, long, Object)} on the delegate or
+     * the default {@link ExceptionHandler} if one has not been configured.
+     */
+    private void handleEventException(final Throwable ex, final long sequence, final T event)
+    {
+        getExceptionHandler().handleEventException(ex, sequence, event);
+    }
+
+    /**
+     * Delegate to {@link ExceptionHandler#handleOnStartException(Throwable)} on the delegate or
+     * the default {@link ExceptionHandler} if one has not been configured.
+     */
+    private void handleOnStartException(final Throwable ex)
+    {
+        getExceptionHandler().handleOnStartException(ex);
+    }
+
+    /**
+     * Delegate to {@link ExceptionHandler#handleOnShutdownException(Throwable)} on the delegate or
+     * the default {@link ExceptionHandler} if one has not been configured.
+     */
+    private void handleOnShutdownException(final Throwable ex)
+    {
+        getExceptionHandler().handleOnShutdownException(ex);
+    }
+
+    private ExceptionHandler<? super T> getExceptionHandler()
+    {
+        ExceptionHandler<? super T> handler = exceptionHandler;
+        return handler == null ? ExceptionHandlers.defaultHandler() : handler;
+    }
+
+    private class TryRewindHandler implements RewindHandler
+    {
+        private final BatchRewindStrategy batchRewindStrategy;
+
+        TryRewindHandler(final BatchRewindStrategy batchRewindStrategy)
+        {
+            this.batchRewindStrategy = batchRewindStrategy;
+        }
+
+        @Override
+        public long attemptRewindGetNextSequence(final RewindableException e, final long startOfBatchSequence) throws RewindableException
+        {
+            if (batchRewindStrategy.handleRewindException(e, ++retriesAttempted) == REWIND)
+            {
+                return startOfBatchSequence;
+            }
+            else
+            {
+                retriesAttempted = 0;
+                throw e;
+            }
+        }
+    }
+
+    private static class NoRewindHandler implements RewindHandler
+    {
+        @Override
+        public long attemptRewindGetNextSequence(final RewindableException e, final long startOfBatchSequence)
+        {
+            throw new UnsupportedOperationException("Rewindable Exception thrown from a non-rewindable event handler", e);
+        }
+    }
+}
+```
+
+
+
+#### 多消费者的协调
+
+可以有多个消费者，每个消费者维护自己的`Seqeunce`，并且消费者之间是可以相互依赖的。多消费的协调都是通过`SequenceBarrier`接口来处理的，并且消费依赖也是通过`com.lmax.disruptor.RingBuffer#newBarrier(final Sequence... sequencesToTrack)`方法创建并由`SequenceBarrier`维护依赖关系的。
+
+`SequenceBarrier`的核心实现就是`ProcessingSequenceBarrier`，其实现多消费依赖的关系也特别简单，就是委托给WaitStrategy的waitFor方法，因为无论是生产者跟不上消费者还是前面的消费者跟不上后面的消费者，本质都是需要处理等待策略的。
+
+```java
+/**
+ * {@link SequenceBarrier} handed out for gating {@link EventProcessor}s on a cursor sequence and optional dependent {@link EventProcessor}(s),
+ * using the given WaitStrategy.
+ * <p>
+ *  ProcessingSequenceBarrier实现了SequenceBarrier，而且SequenceBarrier的实现在Disruptor中还是仅有的实现类，主要提供两个功能：
+ *  1.维护消费者所需的序列状态，协调消费者和生产者之间的数据流动。2.检查中断和警报：实现 checkAlert() 方法，以允许系统在需要时进行安全的中断或重置操作。
+ * <p>
+ *  具体在实现SequenceBarrier功能时，核心功能是依赖WaitStrategy不同的实现类来处理的
+ */
+final class ProcessingSequenceBarrier implements SequenceBarrier
+{
+    private final WaitStrategy waitStrategy;
+    private final Sequence dependentSequence;
+    private volatile boolean alerted = false;
+    private final Sequence cursorSequence;
+    private final Sequencer sequencer;
+
+    ProcessingSequenceBarrier(
+        final Sequencer sequencer,
+        final WaitStrategy waitStrategy,
+        final Sequence cursorSequence,
+        final Sequence[] dependentSequences)
+    {
+        this.sequencer = sequencer;
+        this.waitStrategy = waitStrategy;
+        this.cursorSequence = cursorSequence;
+        if (0 == dependentSequences.length)
+        {
+            dependentSequence = cursorSequence;
+        }
+        else
+        {
+            /*
+             * 如果 dependentSequences（要依赖的序列）不为空，那么创建一个 FixedSequenceGroup 来包含这些 dependentSequences。
+             * 因为无论多少个 dependentSequences，都可以通过一个 FixedSequenceGroup 来统一处理和获取最小值。
+             */
+            dependentSequence = new FixedSequenceGroup(dependentSequences);
+        }
+    }
+
+    @Override
+    public long waitFor(final long sequence)
+        throws AlertException, InterruptedException, TimeoutException
+    {
+        checkAlert();
+
+        long availableSequence = waitStrategy.waitFor(sequence, cursorSequence, dependentSequence, this);
+
+        if (availableSequence < sequence)
+        {
+            return availableSequence;
+        }
+
+        return sequencer.getHighestPublishedSequence(sequence, availableSequence);
+    }
+
+    @Override
+    public long getCursor()
+    {
+        return dependentSequence.get();
+    }
+
+    @Override
+    public boolean isAlerted()
+    {
+        return alerted;
+    }
+
+    @Override
+    public void alert()
+    {
+        alerted = true;
+        waitStrategy.signalAllWhenBlocking();
+    }
+
+    @Override
+    public void clearAlert()
+    {
+        alerted = false;
+    }
+
+    @Override
+    public void checkAlert() throws AlertException
+    {
+        if (alerted)
+        {
+            throw AlertException.INSTANCE;
+        }
+    }
+}
+```
+
+
+
+#### 等待策略
+
+定义Disruptor 框架中的等待策略，两个方法类似于Java中的`wait`和`notifyAll`方法
+
+ - `BlockingWaitStrateg` 使用`synchronized`阻塞的方式来等待数据的到来。
+ - `LiteBlockingWaitStrategy` 我理解整体逻辑和`BlockingWaitStrategy`一致，但使用了一个`AtomicBoolean - signalNeeded`来避免`notifyAll`的惊群效应。
+ - `SleepingWaitStrategy` 在等待时使用线程休眠的方式来减少 CPU 的消耗。这种策略是性能和CPU资源之间的一个很好的折衷。
+ - `YieldingWaitStrategy` 通过先自旋，自旋`SPIN_TRIES`次后自旋然后`yield`。响应极快但如果繁忙时，等待更久的线程反倒会放弃CPU时间。
+ - `BusySpinWaitStrategy` 在等待期间全程`Thread.onSpinWait()`自旋，适用于低延迟且处理能力强的场景。
+ - `TimeoutBlockingWaitStrategy`  当阻塞时通过周期性的抛出`TimeoutException`来唤醒并继续执行，当吞吐量和低延迟不如CPU资源重要时使用这种策略。
+ - `LiteTimeoutBlockingWaitStrategy`，`TimeoutBlockingWaitStrategy`的变体，也是通过使用了一个`AtomicBoolean signalNeeded`来没有争用地唤醒
+ - `PhasedBackoffWaitStrategy` 分阶段等待策略，当吞吐量和低延迟不如CPU资源重要时，可以使用这种策略。先`Spins`，然后`yield`，最后再使用配置的等待策略
+
+```java
+public interface WaitStrategy
+{
+    /**
+     * Wait for the given sequence to be available.  It is possible for this method to return a value
+     * less than the sequence number supplied depending on the implementation of the WaitStrategy.  A common
+     * use for this is to signal a timeout.  Any EventProcessor that is using a WaitStrategy to get notifications
+     * about message becoming available should remember to handle this case.  The {@link BatchEventProcessor} explicitly
+     * handles this case and will signal a timeout if required.
+     *
+     * @param sequence          to be waited on.要等待的目标序列号，消费者会阻塞等待，直到这个序列号的数据可用
+     * @param cursor            the main sequence from ringbuffer. Wait/notify strategies will
+     *                          need this as it's the only sequence that is also notified upon update.，cursor 指示 Ring Buffer 中当前已被写入的最新数据序列号。
+     * @param dependentSequence on which to wait.这个一般就是多个Sequence的 FixedSequenceGroup
+     * @param barrier           the processor is waiting on. SequenceBarrier
+     * @return the sequence that is available which may be greater than the requested sequence.可以安全读取的最高序列号。它可能是比请求的序列号更大的值。
+     * @throws AlertException       if the status of the Disruptor has changed.
+     * @throws InterruptedException if the thread is interrupted.
+     * @throws TimeoutException if a timeout occurs before waiting completes (not used by some strategies)
+     */
+    long waitFor(long sequence, Sequence cursor, Sequence dependentSequence, SequenceBarrier barrier)
+        throws AlertException, InterruptedException, TimeoutException;
+
+    /**
+     * Implementations should signal the waiting {@link EventProcessor}s that the cursor has advanced.
+     * 当等待策略在阻塞状态时（即线程被阻塞），此方法会通知所有等待的 EventProcessor，使它们知道有新的数据可以处理。
+     */
+    void signalAllWhenBlocking();
+}
+
+```
+
+
+
+如果不配置等待策略，默认就是`BlockingWaitStrategy`，讲一下其中的实现逻辑，整体逻辑都是相似的只是在处理等待时会有区别：
+
+**所有的等待策略的整体逻辑都是：先判断生产者的游标即cursorSequence，然后判断依赖的SequenceBarrier**
+
+```java
+/**
+ * Blocking strategy that uses a lock and condition variable for {@link EventProcessor}s waiting on a barrier.
+ * <p> 使用synchronized阻塞式的等待机制实现等待，直到数据可用。
+ * <p> 优点:当系统负载较低时，能够有效地节省 CPU 资源，因为线程在等待时会被挂起，避免了繁重的自旋等待。
+ * <p> 缺点:可能导致较高的线程上下文切换开销，尤其是在高负载或高频率的情况下。
+ * <p> 适用场景:适合于对延迟不敏感且需要节省 CPU 资源的场景。
+ *
+ * <p>This strategy can be used when throughput and low-latency are not as important as CPU resource.
+ */
+public final class BlockingWaitStrategy implements WaitStrategy
+{
+    private final Object mutex = new Object();
+
+    @Override
+    public long waitFor(final long sequence, final Sequence cursorSequence, final Sequence dependentSequence, final SequenceBarrier barrier)
+        throws AlertException, InterruptedException
+    {
+        long availableSequence;
+        // 这里在Disruptor中sequence是会全局递增一直累加的，而且此处是只有生产者根不上消费者时才阻塞，否则就直接返回安全的sequence序号
+        if (cursorSequence.get() < sequence)
+        {
+            synchronized (mutex)
+            {
+                while (cursorSequence.get() < sequence)
+                {
+                    barrier.checkAlert();
+                    mutex.wait();
+                }
+            }
+        }
+
+        // 这里就是在处理消费者之间有依赖的情况
+        while ((availableSequence = dependentSequence.get()) < sequence)
+        {
+            barrier.checkAlert();
+            // Thread.onSpinWait() 是 Java 9 引入的一个方法，主要用于在自旋等待（spin-waiting）期间通知JVM线程正在进行忙等待。有助于JVM优化线程调度和处理器资源的分配。
+            Thread.onSpinWait();
+        }
+
+        return availableSequence;
+    }
+
+    @Override
+    public void signalAllWhenBlocking()
+    {
+        synchronized (mutex)
+        {
+            mutex.notifyAll();
+        }
+    }
+
+    @Override
+    public String toString()
+    {
+        return "BlockingWaitStrategy{" +
+            "mutex=" + mutex +
+            '}';
+    }
+}
+```
+
+
+
+#### workpool的移除和多线程消费的实现
+
+在4.0的`Disruptor`中移除了`WorkerPool`，也就是没有多个线程来共享一个`Sequence`。
+
+`disruptor` 移除 `WorkerPool`我理解还是基于性能的考虑， 因为`WorkerPool`中多消费者或者线程共享一个`Sequence`必然要产生竞争存在同步消耗，而只有一个线程则不用同步`sequence`， 如果要多个线程提升并行度那可以在自己的`eventHandler`中使用`ForkJoin`之类的来处理也是一样的这样也可以并行消费而且还没有同步`sequence`消耗。比如：
+
+```java
+class MyEventHandler implements EventHandler<MyEvent> {
+    private final ForkJoinPool forkJoinPool = new ForkJoinPool();
+    @Override
+    public void onEvent(MyEvent event, long sequence, boolean endOfBatch) {
+        // ForkJoinPool 用于并行处理事件
+        forkJoinPool.submit(() -> {
+            // 执行事件处理逻辑
+            System.out.println("Processing event: " + event.getData());
+        }).join();
+    }
+}
+```
+
+
+
+### 生产
+
+#### 数据节点和数据
+
+在`Disruptor`中，`ringbuffer`数组中的数据节点本身都是固定不变的也就是其会在整个应用的生命周期中一直存在，数据都是通过修改来产生的。
+
+> **这是因为jvm对象分配决定的，当一个对象处于要么很快被回收要么永远不会被回收的这两种情况时，jvm的gc表现是最好的。**
+
+每次的数据产生其实都是在修改`ringbuffer`数组中`Event`对象的数据。数组中的元素都是泛型，需要自己定义对象，然后实现`EventFactory`以定义如何生成数组中的`Event`对象。
+
+```java
+/**
+ * Called by the {@link RingBuffer} to pre-populate all the events to fill the RingBuffer.
+ * EventFactory：用于初始化 RingBuffer 中的事件对象，是创建事件对象的工厂方法，提供空的事件实例。
+ * EventTranslator：用于向事件对象中写入实际的业务数据，它负责将生产者的数据翻译并写入到 RingBuffer 的节点（事件对象）中。
+ *
+ * @see EventTranslator
+ * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ * 事件实现，在交换或并行协调事件期间存储用于共享的数据。
+ */
+public interface EventFactory<T>
+{
+    /**
+     * Implementations should instantiate an event object, with all memory already allocated where possible.
+     *
+     * @return T newly constructed event instance.
+     */
+    T newInstance();
+}
+```
+
+但是实际的消费数据是通过`EventTranslator`来处理的，
+
+```java
+/**
+ * Implementations translate (write) data representations into events claimed from the {@link RingBuffer}.
+ * 实现将数据表示转换(写)入RingBuffer中声明的event。
+ *
+ * <p>When publishing to the RingBuffer, provide an EventTranslator. The RingBuffer will select the next available
+ * event by sequence and provide it to the EventTranslator (which should update the event), before publishing
+ * the sequence update.
+ * 当发布到RingBuffer时，提供一个EventTranslator。在更新sequence之前，RingBuffer将下一个可用的sequence提供给EventTranslator(其会更新其中的event数据)。
+ *
+ * <p>
+ * EventFactory：用于初始化 RingBuffer 中的事件对象，是创建事件对象的工厂方法，提供空的事件实例。
+ * EventTranslator：用于向事件对象中写入实际的业务数据，它负责将生产者的数据翻译并写入到 RingBuffer 的节点（事件对象）中。
+ * 而EventTranslator则是在ringbuffer中发布数据使用的，因为发布对象中的publish方法只能传入EventTranslator
+ *
+ * @see EventFactory
+ * @param <T> event implementation storing the data for sharing during exchange or parallel coordination of an event.
+ *
+ */
+public interface EventTranslator<T>
+{
+    /**
+     * 将数据写入对应槽位的Event节点中
+     * Translate a data representation into fields set in given event
+     *
+     * @param event    into which the data should be translated.
+     * @param sequence that is assigned to event.
+     */
+    void translateTo(T event, long sequence);
+}
+```
+
+也就是在写入数据时，都是先获取`sequence`，在` translator.translateTo(T event, long sequence);`，最后`sequencer.publish(sequence);`。
+
+
+
+#### 单生产者
+
+单生产者相对比较简单，因为不需要协调写入时游标的并发安全。
+
+因为只需要维护一个游标，不存在争用，`SingleProducer`还加入了数据的缓存并对缓存作了优化
+
+```java
+abstract class SingleProducerSequencerPad extends AbstractSequencer
+{
+    protected byte
+        p10, p11, p12, p13, p14, p15, p16, p17,
+        p20, p21, p22, p23, p24, p25, p26, p27,
+        p30, p31, p32, p33, p34, p35, p36, p37,
+        p40, p41, p42, p43, p44, p45, p46, p47,
+        p50, p51, p52, p53, p54, p55, p56, p57,
+        p60, p61, p62, p63, p64, p65, p66, p67,
+        p70, p71, p72, p73, p74, p75, p76, p77;
+
+    SingleProducerSequencerPad(final int bufferSize, final WaitStrategy waitStrategy)
+    {
+        super(bufferSize, waitStrategy);
+    }
+}
+
+abstract class SingleProducerSequencerFields extends SingleProducerSequencerPad
+{
+    SingleProducerSequencerFields(final int bufferSize, final WaitStrategy waitStrategy)
+    {
+        super(bufferSize, waitStrategy);
+    }
+
+    /**
+     * Set to -1 as sequence starting point
+     * nextValue 和 cachedValue 是 SingleProducerSequencer 中非常核心的两个变量，涉及到生产者的位置追踪和消费者进度的缓存。为了避免伪共享，两个被填充在中间
+     */
+    // nextValue 表示当前生产者即将发布的下一个序号
+    long nextValue = Sequence.INITIAL_VALUE;
+    // 上次从消费者中获取的最小序号，用于优化性能，避免每次都查询所有消费者的进度。
+    long cachedValue = Sequence.INITIAL_VALUE;
+}
+
+/**
+ * Coordinator for claiming sequences for access to a data structure while tracking dependent {@link Sequence}s.
+ * Not safe for use from multiple threads as it does not implement any barriers.
+ *
+ * <p>* Note on {@link Sequencer#getCursor()}:  With this sequencer the cursor value is updated after the call
+ * to {@link Sequencer#publish(long)} is made.
+ */
+
+public final class SingleProducerSequencer extends SingleProducerSequencerFields
+{
+    protected byte
+        p10, p11, p12, p13, p14, p15, p16, p17,
+        p20, p21, p22, p23, p24, p25, p26, p27,
+        p30, p31, p32, p33, p34, p35, p36, p37,
+        p40, p41, p42, p43, p44, p45, p46, p47,
+        p50, p51, p52, p53, p54, p55, p56, p57,
+        p60, p61, p62, p63, p64, p65, p66, p67,
+        p70, p71, p72, p73, p74, p75, p76, p77;
+
+    /**
+     * Construct a Sequencer with the selected wait strategy and buffer size.
+     *
+     * @param bufferSize   the size of the buffer that this will sequence over.
+     * @param waitStrategy for those waiting on sequences.
+     */
+    public SingleProducerSequencer(final int bufferSize, final WaitStrategy waitStrategy)
+    {
+        super(bufferSize, waitStrategy);
+    }
+
+    /**
+     * @see Sequencer#hasAvailableCapacity(int)
+     */
+    @Override
+    public boolean hasAvailableCapacity(final int requiredCapacity)
+    {
+        return hasAvailableCapacity(requiredCapacity, false);
+    }
+
+    private boolean hasAvailableCapacity(final int requiredCapacity, final boolean doStore)
+    {
+
+        long nextValue = this.nextValue;
+        // wrapPoint 是一个计算值，用于判断是否有足够的容量，如果生产者发布requiredCapacity的事件，它的序号会“绕回”到 RingBuffer 的哪一位置。
+        long wrapPoint = (nextValue + requiredCapacity) - bufferSize;
+        // cachedGatingSequence 是上次从消费者中获取的最小序号
+        long cachedGatingSequence = this.cachedValue;
+
+        /*
+         * 这里的if逻辑满足则说明需要进一步检查是否有足够的可用空间
+         * 如果 wrapPoint 大于 cachedGatingSequence，说明生产者可能会覆盖尚未被消费者处理的事件，需要进一步验证是否有足够的容量
+         * 如果 cachedGatingSequence 大于 nextValue，说明消费者的进度快于生产者的位置。一般不可能，除非出问题，但也需要检查。
+         */
+        if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
+        {
+            //doStore就是是否要加入缓存屏障，在单线程的情况下nextValue始终是一致的，只有自己会修改，而调用setVolatile，是为了使用其方法中的内存屏障代码
+            if (doStore)
+            {
+                cursor.setVolatile(nextValue);  // StoreLoad fence
+            }
+
+            // 这里重新计算 minSequence的位置，并且更新缓存值
+            long minSequence = Util.getMinimumSequence(gatingSequences, nextValue);
+            this.cachedValue = minSequence;
+
+            // 如果 wrapPoint > minSequence 则才是false空间不足，否则都是外层的true即空间足够
+            if (wrapPoint > minSequence)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @see Sequencer#next()
+     */
+    @Override
+    public long next()
+    {
+        return next(1);
+    }
+
+    /**
+     * @see Sequencer#next(int)
+     */
+    @Override
+    public long next(final int n)
+    {
+        // 在生产环境中通常不启用断言。开启参数：java -ea
+        assert sameThread() : "Accessed by two threads - use ProducerType.MULTI!";
+
+        if (n < 1 || n > bufferSize)
+        {
+            throw new IllegalArgumentException("n must be > 0 and < bufferSize");
+        }
+
+        long nextValue = this.nextValue;
+
+        long nextSequence = nextValue + n;
+        long wrapPoint = nextSequence - bufferSize;
+        long cachedGatingSequence = this.cachedValue;
+
+        if (wrapPoint > cachedGatingSequence || cachedGatingSequence > nextValue)
+        {
+
+            // doStore就是是否要加入缓存屏障，在单线程的情况下nextValue始终是一致的，只有自己会修改，而调用setVolatile，是为了使用其方法中的内存屏障代码
+            cursor.setVolatile(nextValue);  // StoreLoad fence
+
+            long minSequence;
+            // 等待消费者消费，后继续获取下一个存储槽位
+            while (wrapPoint > (minSequence = Util.getMinimumSequence(gatingSequences, nextValue)))
+            {
+                LockSupport.parkNanos(1L); // TODO: Use waitStrategy to spin?
+            }
+
+            this.cachedValue = minSequence;
+        }
+
+        this.nextValue = nextSequence;
+
+        return nextSequence;
+    }
+
+    /**
+     * @see Sequencer#tryNext()
+     */
+    @Override
+    public long tryNext() throws InsufficientCapacityException
+    {
+        return tryNext(1);
+    }
+
+    /**
+     * @see Sequencer#tryNext(int)
+     */
+    @Override
+    public long tryNext(final int n) throws InsufficientCapacityException
+    {
+        if (n < 1)
+        {
+            throw new IllegalArgumentException("n must be > 0");
+        }
+
+        // 这里hasAvailableCapacity 参数doStore就是在实际推进sequence
+        if (!hasAvailableCapacity(n, true))
+        {
+            throw InsufficientCapacityException.INSTANCE;
+        }
+
+        long nextSequence = this.nextValue += n;
+
+        return nextSequence;
+    }
+
+    /**
+     * @see Sequencer#remainingCapacity()
+     */
+    @Override
+    public long remainingCapacity()
+    {
+        long nextValue = this.nextValue;
+
+        long consumed = Util.getMinimumSequence(gatingSequences, nextValue);
+        long produced = nextValue;
+        return getBufferSize() - (produced - consumed);
+    }
+
+    /**
+     * @see Sequencer#claim(long)
+     * @see MultiProducerSequencer#claim(long)
+     */
+    @Override
+    public void claim(final long sequence)
+    {
+        // 单生产者即单线程不需要加锁
+        this.nextValue = sequence;
+    }
+
+    /**
+     * @see Sequencer#publish(long)
+     */
+    @Override
+    public void publish(final long sequence)
+    {
+        cursor.set(sequence);
+        waitStrategy.signalAllWhenBlocking();
+    }
+
+    /**
+     * 单生产者直接推进到高位sequence，多生产者则需要一个一个推进
+     *
+     * @see Sequencer#publish(long, long)
+     * @see MultiProducerSequencer#publish(long)
+     */
+    @Override
+    public void publish(final long lo, final long hi)
+    {
+        publish(hi);
+    }
+
+    /**
+     * @see Sequencer#isAvailable(long)
+     */
+    @Override
+    public boolean isAvailable(final long sequence)
+    {
+        final long currentSequence = cursor.get();
+        return sequence <= currentSequence && sequence > currentSequence - bufferSize;
+    }
+
+    @Override
+    public long getHighestPublishedSequence(final long lowerBound, final long availableSequence)
+    {
+        return availableSequence;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "SingleProducerSequencer{" +
+                "bufferSize=" + bufferSize +
+                ", waitStrategy=" + waitStrategy +
+                ", cursor=" + cursor +
+                ", gatingSequences=" + Arrays.toString(gatingSequences) +
+                '}';
+    }
+
+    private boolean sameThread()
+    {
+        return ProducerThreadAssertion.isSameThreadProducingTo(this);
+    }
+
+    /**
+     * Only used when assertions are enabled.
+     */
+    private static class ProducerThreadAssertion
+    {
+        /**
+         * Tracks the threads publishing to {@code SingleProducerSequencer}s to identify if more than one
+         * thread accesses any {@code SingleProducerSequencer}.
+         * I.e. it helps developers detect early if they use the wrong
+         * {@link com.lmax.disruptor.dsl.ProducerType}.
+         */
+        private static final Map<SingleProducerSequencer, Thread> PRODUCERS = new HashMap<>();
+
+        public static boolean isSameThreadProducingTo(final SingleProducerSequencer singleProducerSequencer)
+        {
+            synchronized (PRODUCERS)
+            {
+                final Thread currentThread = Thread.currentThread();
+                if (!PRODUCERS.containsKey(singleProducerSequencer))
+                {
+                    PRODUCERS.put(singleProducerSequencer, currentThread);
+                }
+                return PRODUCERS.get(singleProducerSequencer).equals(currentThread);
+            }
+        }
+    }
+}
+
+```
+
+#### 多生产者
+
+**多生产者相对单生产者要复杂一点，但这也是`Disruptor`实现非常非常吊的地方**，消费者中每个`Sequence`是只有一个线程在访问的，而生产者是有多个的，会产生对Sequence的争用和数据覆盖的问题，但Disruptor依然可以不使用用锁或者别的同步策略就能实现并发安全。其本质还是通过缓存可见性和内存屏障来保证以及原子性操作，并通过额外的数据位运算来校验数据可用性，来达到高效的线程并发安全。
+
+> Disruptor之所以这样设计一个消费者一个Sequence和多个生产者一个Sequence，我理解：不需要通过多消费者来争用Sequence，要多线程提高并行效率可以自己多线程比如线程池或者forkjoin处理，并且消费者本身也是自己能控制的，而生产者往往是自己不能处控制的，常常要需要依赖外部数据源。
+
+具体的实现如下：
+
+**首先推进`sequence`都是一样的，不管哪个生产者要写入数据都是通过`next`或者`tryNext`去申请槽位移动游标，但难点在于多个生产者具体写数据时如何不相互覆盖，即写数据时确认对应的槽位是可以写的，这个问题在快速写入数据到数组以至于又绕回到相同的位置时就必然要遇到数据覆盖的问题。而单生产者不存在是因为有一个游标在控制**
+
+**`Disruptor`在处理这个问题时，通过维护一个和`bufferSize`同等大小的数组`availableBuffer`，来记录其元素是否可以被修改，并通过位计算来快速判断出要填写数据的位置和对应位置的数据是否可以修改**
+
+```Java
+private final int[] availableBuffer;
+// 计算RingBuffer索引的掩码值。构造其中赋值 bufferSize -1，bufferSize为2的幂，则bufferSize -1就是有效位全是1
+private final int indexMask;
+//  构造其中赋值indexShift = Util.log2(bufferSize) 就是在确认bufferSize的2的对数，比如bufferSize=1024，则indexShift=10
+private final int indexShift;
+```
+
+首先`sequence`是一个一直递增的数，而`indexShift`则是固定的就是`bufferSize`的2的幂，对`sequence`作无符号右移并截断为int，这样得到的数就是
+
+> `(int) (sequence >>> indexShift)` = sequence除以 bufferSize的值并减去取bufferSize模余数的值，按int截断的数值
+
+这个值可以看成绕着bufferSize转了多少次，因为位运算都是对2的幂运算，并且这个值确实会不断的增加，甚至会超过bufferSize，但是这不影响对槽位能否写入的判断，因为需要的只是一个判断能否写入，而对实际是什么值不关心。比如如下的例子：
+
+> 假设 RingBuffer 大小为 1024，因此 indexShift = 10。
+>
+> - 对于 sequence = 2047，其二进制表示是 00000000000000000000011111111111。 经过 >>> 10 的右移后，得到 00000000000000000000000000000001，availability flag 是 1。
+> - 对于 sequence = 3071，其二进制表示是 00000000000000000000101111111111。 经过 >>> 10 的右移后，得到 00000000000000000000000000000010，availability flag 是 2。
+
+所以获得对应 sequence位置中 availableBuffer的使用标记会一直改变，只需要重新计算sequence的标记然后对比已有的数据中的标记就知道是否可以用。
+
+具体的计算就在`MultiProducerSequencer`类的`calculateAvailabilityFlag`方法中，比较也在其`isAvailable`方法中。
+
+`MultiProducerSequencer`的源码如下：
+
+```java
+public final class MultiProducerSequencer extends AbstractSequencer
+{
+    //创建一个可以操作 int[] 数组元素的 VarHandle AVAILABLE_ARRAY 以高效安全地访问和修改下面 availableBuffer数组变量中的元素，而无需通过普通的同步手段
+    private static final VarHandle AVAILABLE_ARRAY = MethodHandles.arrayElementVarHandle(int[].class);
+
+    private final Sequence gatingSequenceCache = new Sequence(Sequencer.INITIAL_CURSOR_VALUE);
+
+    // availableBuffer tracks the state of each ringbuffer slot
+    // see below for more details on the approach
+    private final int[] availableBuffer;
+    // 计算RingBuffer索引的掩码值。构造其中赋值 bufferSize -1，bufferSize为2的幂，则bufferSize -1就是有效位全是1
+    private final int indexMask;
+    //  构造其中赋值indexShift = Util.log2(bufferSize) 就是在确认bufferSize的2的对数，比如bufferSize=1024，则indexShift=10
+    private final int indexShift;
+
+    /**
+     * Construct a Sequencer with the selected wait strategy and buffer size.
+     *
+     * @param bufferSize   the size of the buffer that this will sequence over.
+     * @param waitStrategy for those waiting on sequences.
+     */
+    public MultiProducerSequencer(final int bufferSize, final WaitStrategy waitStrategy)
+    {
+        super(bufferSize, waitStrategy);
+
+        // availableBuffer和 ringbuffer的bufferSize是一样的，用于追踪每个生产者在写入完成后，标记该槽位已经可供消费者读取
+        availableBuffer = new int[bufferSize];
+        Arrays.fill(availableBuffer, -1);
+
+        indexMask = bufferSize - 1;
+        indexShift = Util.log2(bufferSize);
+    }
+
+    /**
+     * @see Sequencer#hasAvailableCapacity(int)
+     */
+    @Override
+    public boolean hasAvailableCapacity(final int requiredCapacity)
+    {
+        return hasAvailableCapacity(gatingSequences, requiredCapacity, cursor.get());
+    }
+
+    private boolean hasAvailableCapacity(final Sequence[] gatingSequences, final int requiredCapacity, final long cursorValue)
+    {
+        long wrapPoint = (cursorValue + requiredCapacity) - bufferSize;
+        long cachedGatingSequence = gatingSequenceCache.get();
+
+        if (wrapPoint > cachedGatingSequence || cachedGatingSequence > cursorValue)
+        {
+            long minSequence = Util.getMinimumSequence(gatingSequences, cursorValue);
+            gatingSequenceCache.set(minSequence);
+
+            if (wrapPoint > minSequence)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * final 修饰符是让参数不可改变，我理解这里参数加final修饰符，主要是为了确保sequence不会被修改，并且虚拟机和编译器对final修饰的变量也有更好的优化，
+     * 还有就是传达了一个明确的编程意图：此参数不能被修改、以提示维护人员不要乱改sequence
+     *
+     * @see Sequencer#claim(long)
+     * @see SingleProducerSequencer#claim(long)
+     */
+    @Override
+    public void claim(final long sequence)
+    {
+        // cursor是个Sequence，其有内存屏障来维护一致性
+        cursor.set(sequence);
+    }
+
+    /**
+     * @see Sequencer#next()
+     */
+    @Override
+    public long next()
+    {
+        return next(1);
+    }
+
+    /**
+     * @see Sequencer#next(int)
+     */
+    @Override
+    public long next(final int n)
+    {
+        if (n < 1 || n > bufferSize)
+        {
+            throw new IllegalArgumentException("n must be > 0 and < bufferSize");
+        }
+
+        // cursor.getAndAdd(n);是原子性的
+        long current = cursor.getAndAdd(n);
+
+        long nextSequence = current + n;
+        long wrapPoint = nextSequence - bufferSize;
+        long cachedGatingSequence = gatingSequenceCache.get();
+
+        if (wrapPoint > cachedGatingSequence || cachedGatingSequence > current)
+        {
+            long gatingSequence;
+            while (wrapPoint > (gatingSequence = Util.getMinimumSequence(gatingSequences, current)))
+            {
+                LockSupport.parkNanos(1L); // TODO, should we spin based on the wait strategy?
+            }
+
+            gatingSequenceCache.set(gatingSequence);
+        }
+
+        return nextSequence;
+    }
+
+    /**
+     * @see Sequencer#tryNext()
+     */
+    @Override
+    public long tryNext() throws InsufficientCapacityException
+    {
+        return tryNext(1);
+    }
+
+    /**
+     * @see Sequencer#tryNext(int)
+     */
+    @Override
+    public long tryNext(final int n) throws InsufficientCapacityException
+    {
+        if (n < 1)
+        {
+            throw new IllegalArgumentException("n must be > 0");
+        }
+
+        long current;
+        long next;
+
+        do
+        {
+            current = cursor.get();
+            next = current + n;
+
+            if (!hasAvailableCapacity(gatingSequences, n, current))
+            {
+                throw InsufficientCapacityException.INSTANCE;
+            }
+        }
+        while (!cursor.compareAndSet(current, next));
+
+        return next;
+    }
+
+    /**
+     * @see Sequencer#remainingCapacity()
+     */
+    @Override
+    public long remainingCapacity()
+    {
+        long consumed = Util.getMinimumSequence(gatingSequences, cursor.get());
+        long produced = cursor.get();
+        return getBufferSize() - (produced - consumed);
+    }
+
+    /**
+     * @see Sequencer#publish(long)
+     */
+    @Override
+    public void publish(final long sequence)
+    {
+        setAvailable(sequence);
+        waitStrategy.signalAllWhenBlocking();
+    }
+
+    /**
+     * 单生产者直接推进到高位sequence
+     * 多生产者模式需要逐个确保availableBuffer中的每个序号被正确标记为已发布，并且可以避免并发问题。
+     * @see Sequencer#publish(long, long)
+     * @see SingleProducerSequencer#publish(long, long)
+     */
+    @Override
+    public void publish(final long lo, final long hi)
+    {
+        for (long l = lo; l <= hi; l++)
+        {
+            setAvailable(l);
+        }
+        waitStrategy.signalAllWhenBlocking();
+    }
+
+    /**
+     * The below methods work on the availableBuffer flag.
+     *
+     * <p>The prime reason is to avoid a shared sequence object between publisher threads.
+     * (Keeping single pointers tracking start and end would require coordination
+     * between the threads).
+     *
+     * <p>--  Firstly we have the constraint that the delta between the cursor and minimum
+     * gating sequence will never be larger than the buffer size (the code in
+     * next/tryNext in the Sequence takes care of that).
+     * -- Given that; take the sequence value and mask off the lower portion of the
+     * sequence as the index into the buffer (indexMask). (aka modulo operator)
+     * -- The upper portion of the sequence becomes the value to check for availability.
+     * ie: it tells us how many times around the ring buffer we've been (aka division)
+     * -- Because we can't wrap without the gating sequences moving forward (i.e. the
+     * minimum gating sequence is effectively our last available position in the
+     * buffer), when we have new data and successfully claimed a slot we can simply
+     * write over the top.
+     * <p>
+     * 这个方法的注释就在处理，当快速消费，sequence又绕回相同的数组位置时，如何保证生产者不覆盖数据
+     */
+    private void setAvailable(final long sequence)
+    {
+        setAvailableBufferValue(calculateIndex(sequence), calculateAvailabilityFlag(sequence));
+    }
+
+    private void setAvailableBufferValue(final int index, final int flag)
+    {
+        AVAILABLE_ARRAY.setRelease(availableBuffer, index, flag);
+    }
+
+    /**
+     * sequence是一个一直递增的数，而indexShift则是固定的就是bufferSize的2的幂，为什么比较两个就可以知道是否其可以使用：
+     * <p> 假设 RingBuffer 大小为 1024，因此 indexShift = 10。
+     * <p> 对于 sequence = 2047，其二进制表示是 00000000000000000000011111111111。
+     *     经过 >>> 10 的右移后，得到 00000000000000000000000000000001，availability flag 是 1。
+     * <p> 对于 sequence = 3071，其二进制表示是 00000000000000000000101111111111。
+     *     经过 >>> 10 的右移后，得到 00000000000000000000000000000010，availability flag 是 2。
+     * <p> 所以获得对应 sequence位置中 availableBuffer的使用标记会一直改变，只需要重新计算sequence的标记然后对比已有的数据中的标记就知道是否可以用
+     * @see Sequencer#isAvailable(long)
+     */
+    @Override
+    public boolean isAvailable(final long sequence)
+    {
+        int index = calculateIndex(sequence);
+        int flag = calculateAvailabilityFlag(sequence);
+        return (int) AVAILABLE_ARRAY.getAcquire(availableBuffer, index) == flag;
+    }
+
+    @Override
+    public long getHighestPublishedSequence(final long lowerBound, final long availableSequence)
+    {
+        for (long sequence = lowerBound; sequence <= availableSequence; sequence++)
+        {
+            if (!isAvailable(sequence))
+            {
+                return sequence - 1;
+            }
+        }
+        return availableSequence;
+    }
+
+    /**
+     * 返回sequence除以 bufferSize的值并减去取bufferSize模余数的值，再将值按int截断，这个值会不断的增加，甚至会超过bufferSize
+     * 但这不影响其处理 availableBuffer数组标记对应 RingBuffer 标记位置的可用性，因为isAvailable(final long sequence)中只需要比较前后两者而不是直接用其值
+     */
+    private int calculateAvailabilityFlag(final long sequence)
+    {
+        return (int) (sequence >>> indexShift);
+    }
+
+    private int calculateIndex(final long sequence)
+    {
+        return ((int) sequence) & indexMask;
+    }
+
+    @Override
+    public String toString()
+    {
+        return "MultiProducerSequencer{" +
+                "bufferSize=" + bufferSize +
+                ", waitStrategy=" + waitStrategy +
+                ", cursor=" + cursor +
+                ", gatingSequences=" + Arrays.toString(gatingSequences) +
+                '}';
+    }
+}
+
+```
+### what‘s more
+
+当然`Disruptor`提供了几乎所有常用场景的并发方案的可选项，这里就不讲了，可以读一下我fork的源码 --[disruptor源码解析](https://github.com/Swagger-Ranger/disruptor.git)，`notes-liufei`分支，核心源码我都做了注释。
+
+
+
+
+
+
+

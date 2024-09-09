@@ -10,8 +10,8 @@ import {themes as prismThemes} from 'prism-react-renderer';
 const config = {
   // 这三行是对首页的title配置
   title: 'Analysis Project',
-  tagline: '为什么叫 analysis project，此项目想要做的事情就是如何在大量的数据中快速识别出特定的内容或者对数据验证大量而且丰富的自定义逻辑，' +
-      '因为依赖于对数据内容的解析和数据关系的建模，这就是analysis的含义。主要是三部分内容：理解并设计系统、合适的工具和中间件、完成它需要的编程知识',
+  tagline: '为什么叫 analysis project，此项目想要做的事情就是如何在大量的数据中快速识别出特定的内容或者对大量数据验证丰富的自定义逻辑，' +
+      '因为这依赖于对数据内容的解析和数据关系的建模，这就是analysis的含义，它的特点就是高并发、高性能、高复杂度并追求低成本。主要是三部分内容：理解并设计系统、合适的工具和中间件、完成它需要的编程知识',
   favicon: 'img/apachecassandra-color.svg',// favicon网站标签图标
 
   // Set the production url of your site here https://github.com/Swagger-Ranger/analysis-project

@@ -5,4 +5,59 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
-核心组件
+### 数据接入特点
+
+在质检、风控这类Analysis Project着眼的场景中，其数据都有个特点，就是按时间序列发送，一般使用Kafka的情况则按分区有序的，但是数据存在更高一级的分类而且是交叉的，就比如会话消息，会话消息都是按照会话id为key来发送到Kafka分区中的，单个会话中的消息都是按时间有序的，但会话之间的消息却是交织的，即如下图所示：
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-2.png" alt="image" style="zoom:56%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/analysis-project/ana-2.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+这样始终是交织的数据接入意味着，只要有消息不断进来，始终都不存在一个安全的断点。不存在安全的断点使得版本发布始终有问题，因为任何时候的停机都会导致当前时间段的有某个分类的数据处理不连续或者不完整，进而分析错误而质检结果有误差，比如按分类来在时间窗口中聚合数据，或者一个更具体的场景：在连续的会话中监控客服的会话质量，如果出现投诉或者产品问题需要马上解决，如果此时中途停机而使得后续的内容没有获取到，按消息来验证逻辑就有问题。
+
+
+
+### 数据接入的安全停机
+
+为什么需要能随时安全停机：
+
+1. 主要是对应版本迭代非常有利，因为解决了发布的安全点问题，可以在任何时间发布应用系统，不会影响到数据一致性。并且如果有问题也能很好的处理的，因为后续新的topic可以自己重放。
+2. 对运维也更好，因为这样才能做到自动发布，特别是在k8s的云环境中
+3. 后续的业务逻辑处理，将会变得非常简单，因为维护了数据的有序和分块，更好聚合和分析。
+
+具体的解决办法：
+
+一个的解决办法就是维护一个时间窗口，将窗口内的接入数据都按分类维护在内存中，然后后续的数据按分类一起，并且维护几个数据标识来处理当重启之后的数据安全问题，后续去在启动时作检查重新执行那部分不完整的数据。这个方法对于数据对不是有序的也可以这么处理即在分类中再重新排序然后再处理。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-3.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/analysis-project/ana-3.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+> 这里我们默认使用`kafka`，Kafka按照消息key，其始终会发送到相同的分区。（**Kafka的消息有序性是个挺复杂的问题，这里不讨论，主要就讨论如何能够随时安全停机**）。
+>
+> Kafka stream有时间窗口的聚合功能
+>
+> ```java
+> KStream<String, String> stream = builder.stream("input-topic");
+>
+> // 根据会话 ID 进行分组
+> KGroupedStream<String, String> groupedBySession = stream.groupByKey();
+>
+> // 可以选择是否在窗口中进行聚合（比如按时间窗口）
+> groupedBySession.windowedBy(TimeWindows.of(Duration.ofMinutes(5)))
+>     .reduce((aggValue, newValue) -> aggValue + newValue)
+>     .toStream()
+>     .to("output-topic");
+> ```
+
+然后需要存储几个数据标识：`time-start-offset`最早的开始offset、`out-time`超时时间、`List(finish-keys)`已完成或超时的消息分类、`List(unfinish-keys)`未完成或超时的消息分类、`List(Map(key-分类最早开始offset))`每个分类的最早开始offset。这样，当重启之后就将消费重新定位到`time-start-offset`，然后继续按分类分组处理，以及处理的就不再处理，未处理完成的就重新处理。并且通过`List(Map(key-分类最早开始offset))`，在每次处理完一个分组之后就去判断当前未处理完成的分类中的key的最小的最早开始offset，判断是否要更新并推进`time-start-offset`。
+
+但需要注意：**时间窗口越长需要缓存的消息就越多，进而内存占用就越高**，一般时间窗口就是一般的分类长度比如按会话来分类消息则就是会话的一般时间长度+超时长度
+
+。。。数据接入还有很多内容，但太具体没有普遍性的内容这里就不说了，后面慢慢补充
+
+
+
+

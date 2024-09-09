@@ -1,0 +1,656 @@
+---
+title: JDK-泛型
+sidebar_position: 1
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+在Java中处理并且使用好泛型是使代码抽象、可扩展并且类型安全的关键。
+
+### 泛型用法
+
+基本泛型的用法我就不写了，直接看一下示例代码：
+
+```java
+// 泛型类
+public class Box<T> {
+ private T t;
+
+ public void set(T t) {
+ this.t = t;
+ }
+
+ public T get() {
+ return t;
+ }
+}
+```
+
+```java
+// 泛型接口
+public interface Container<T> {
+ void add(T item);
+ T get();
+}
+```
+
+```java
+// 泛型方法
+public class Util {
+ public static <T> void printArray(T[] array) {
+ for (T element : array) {
+ System.out.print(element + " ");
+ }
+ System.out.println();
+ }
+}
+```
+
+> 注意：泛型方法中要使用泛型的符号就必须在方法的定义中标记出来，否则会无法通过编译
+
+```java
+// 看一个比较复杂的例子，Java java.util.Collections 的源码，这里要在方法中使用泛型T来代表对象，则必须在方法定义中就标识出来，只是这里的<T>增加了更复杂的定义：<T extends Object & Comparable<? super T>> 就是 <T extends (Object & Comparable<? super T>)> 即继承Object和实现Comparable方法，而且对Comparable中的泛型也作了约束。
+public static <T extends Object & Comparable<? super T>> T min(Collection<? extends T> coll) {
+        Iterator<? extends T> i = coll.iterator();
+        T candidate = i.next();
+
+        while (i.hasNext()) {
+            T next = i.next();
+            if (next.compareTo(candidate) < 0)
+                candidate = next;
+        }
+        return candidate;
+    }
+
+//因为所有类型都默认继承自 Object，上面的源码泛型可以简化成
+public static <T extends Comparable<? super T>> T max(Collection<? extends T> coll) {
+    Iterator<? extends T> i = coll.iterator();
+    T candidate = i.next();
+
+    while (i.hasNext()) {
+        T next = i.next();
+        if (next.compareTo(candidate) > 0)
+            candidate = next;
+    }
+    return candidate;
+}
+```
+
+
+
+### 泛型的逆变与协变
+
+在讲泛型的通配符和更复杂的例子之前，有两个概念是需要理解的，就是：逆变与协变。泛型的逆变与协变是编程语言中的概念，用于描述类型之间的转换关系，特别是在使用泛型（generics）时如何处理子类型和超类型之间的关系。
+
+1. **协变（Covariance）**
+
+协变：如果类型 `A` 是类型 `B` 的子类型，那么泛型 `G<A>` 也是泛型 `G<B>` 的子类型。
+
+比如：
+
+```java
+class Animal {}
+class Dog extends Animal {}
+// Dog 是 Animal 的子类，因此 List<Dog> 可以赋值给 List<? extends Animal>，这里 List<? extends Animal> 就是协变
+List<? extends Animal> animals = new ArrayList<Dog>();
+   ```
+
+协变通常用于**生产者（Producer）**的场景，即当只从集合中读取元素时使用协变。
+
+对应到Java中就是 `extends` 上界
+
+2. **逆变（Contravariance）**
+
+逆变：如果类型 `A` 是类型 `B` 的子类型，那么泛型 `G<B>` 是泛型 `G<A>` 的子类型。
+
+比如：
+
+```java
+List<? super Dog> animals = new ArrayList<Animal>();
+// Dog 是 Animal 的子类，因此 List<Animal> 可以赋值给 List<? super Dog>。这里 List<? super Dog> 就是逆变的，因为你可以将一个 Animal 类型的列表赋值给 Dog 类型的逆变泛型。
+public void addDog(List<? super Dog> animals) {
+    animals.add(new Dog());
+}
+   ```
+
+逆变通常用于**消费者（Consumer）**的场景，即当往集合中写入元素时使用逆变。
+
+对应到Java中就是 `super` 下界
+
+3. **不变（Invariance）**
+
+不变：`G<A>` 既不是 `G<B>` 的子类型，也不是它的超类型。换句话说，即使 `A` 是 `B` 的子类型，也无法将 `G<A>` 赋值给 `G<B>`，反之亦然。
+
+比如：
+
+```java
+List<Dog> dogs = new ArrayList<>();
+List<Animal> animals = dogs; // 编译错误
+   ```
+
+
+
+### 泛型通配符和上下界
+
+**泛型通配符**（Wildcard）是用于在处理泛型时提供更灵活的类型操作的一种机制。通配符主要用于表示一种不确定的类型，并允许你编写更灵活的代码。通配符的使用能使方法和类能够处理各种泛型类型，而无需具体指定类型参数。
+
+1. **无界通配符 `<?>`**：表示任何类型。在不知道或不关心方法参数和返回值的具体类型时就可以使用无界通配符。
+
+2. **上界通配符 `<? extends T>`**
+
+`<? extends T>` 表示类型是 `T` 或 `T` 的子类。当你希望一个方法能够处理 `T` 类型及其子类型时。上界通配符提供了一个**“读”**的安全性。
+
+3. **下界通配符 `<? super T>`**
+
+`<? super T>` 表示类型是 `T` 或 `T` 的父类。当你希望一个方法能够向泛型对象中添加 `T` 类型的数据时。下界通配符提供了一个**“写”**的安全性。
+
+
+
+为什么要限制上下界：
+
+- **类型安全性**: 在泛型编程中，使用通配符的上下界可以确保类型安全。可以在不牺牲类型检查的前提下编写更通用、更灵活的代码。
+
+- **灵活性和代码重用**: 通过定义上下界，可以编写能够处理更广泛类型范围的方法或类，从而减少代码重复，提高代码重用性。
+
+- **避免类型擦除的局限**: Java 泛型的实现是通过类型擦除来完成的，这意味着在编译时泛型类型被擦除并替换为它们的边界类型。上下界使得编译器能够在类型擦除后仍然正确地进行类型检查和安全性保证。
+
+
+
+下面看不同场景下上下界的例子
+
+#### 方法参数的上下界
+
+```java
+package org.liufei.junit5.test.generic;
+
+/**
+ * @author liufei
+ **/
+public class Box<T> {
+    private T item;
+
+    public Box(T item) {
+        this.item = item;
+    }
+
+    public T getItem() {
+        return item;
+    }
+
+    public void setItem(T item) {
+        this.item = item;
+    }
+
+    // 具有上界通配符的泛型方法，限制类型为 Number 或其子类
+    public static void printNumberBox(Box<? extends Number> box) {
+        Number num = box.getItem(); // 因为是上界，所以我们可以安全地将其作为 Number 处理
+        System.out.println("Number: " + num);
+    }
+
+    // 具有下界通配符的泛型方法，限制类型为 Integer 或其父类
+    public static void addInteger(Box<? super Integer> box, Integer value) {
+        box.setItem(value); // 因为是下界，所以我们可以安全地传递 Integer 类型的对象
+        System.out.println("Added: " + value);
+    }
+
+    public static void main(String[] args) {
+        Box<Integer> intBox = new Box<>(10);
+
+        // 使用上界通配符
+        printNumberBox(intBox);
+        Box<Double> doubleBox = new Box<>(15.5);
+        printNumberBox(doubleBox);
+
+        // 使用下界通配符
+        addInteger(intBox, 20);
+        Box<Number> numberBox = new Box<>(25);
+        addInteger(numberBox, 30);
+    }
+
+}
+```
+
+
+
+#### 方法定义的上下界
+
+在方法定义中限制上下界能够使方法在保证类型安全的情况下，有更大的灵活性
+
+```java
+package org.liufei.junit5.test.generic;
+
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * @author liufei
+ **/
+public class GenericsExample {
+
+    // 泛型方法，T 的上界为 Number，这样使得方法有更大的灵活性
+    public static <T extends Number> void printAndSum(List<T> list) {
+        double sum = 0.0;
+        for (T element : list) {
+            System.out.println("Element: " + element);
+            sum += element.doubleValue();
+        }
+        System.out.println("Sum: " + sum);
+    }
+
+    // 泛型方法，方法定义是只有extends不能定义super，即<T super Number>无法通过编译
+    @SuppressWarnings({"unchecked" })
+    public static <T extends Number> void addIntegerToList(List<T> list) {
+        list.add((T) Integer.valueOf(10));  // 向列表中添加一个整数
+    }
+
+    // 如果要定义super只能在方法参数中定义
+    public static void addIntegerToList1(List<? super Number> list) {
+        list.add(Integer.valueOf(10));  // 向列表中添加一个整数
+    }
+
+    public static void main(String[] args) {
+        List<Integer> intList = List.of(1, 2, 3);
+        List<Double> doubleList = List.of(1.1, 2.2, 3.3);
+
+        // 调用具有上界的泛型方法，同时可以处理不同字类型的集合参数
+        printAndSum(intList);
+        printAndSum(doubleList);
+
+        // 调用具有下界的泛型方法
+        // 注意：此示例中使用下界的泛型方法并不常见，通常用于更复杂的场景
+        List<Number> numberList = new ArrayList<>();
+        addIntegerToList(numberList);  // 可以将整数添加到 Number 类型的列表中
+    }
+}
+```
+
+
+
+### 泛型擦除
+
+Java泛型其是伪泛型，类型实参的类型信息在编译的过程中会被擦除掉，而这个过程就是类型擦除，在编译后的字节码文件中，所有泛型类型都已经替换为对应的原生类型，并在相应的地方插入了强制转换。所以在运行时，所有泛型的类型信息对于JVM是不可见的（但泛型信息会保存在变量类型表中）。
+
+> **类型擦除是一个从泛型到非泛型的映射过程。这里将类型`T`的擦除写作`|T|`。并且类型擦除映射定义如下：**
+
+- **参数化类型`G<T1, ..., TN>`的擦除是`|G|`**
+- **嵌套类型`T.C`的擦除是`|T|.C`**
+- **数组类型`T[]`的擦除是`|T|[]`**
+- **类型变量的擦除是其最左边的边界**
+- **至于任何其它类型的擦除都是该类型的本身**
+
+类型擦除同样会将泛型方法映射成非泛型方法。
+
+
+
+##### 多泛型的泛型擦除
+
+如果涉及多泛型边界限制，比如`T extends A & B & C`，其类型实参约束为其必须同时是类型`A`、`B`、`C`的子类型。然后在实际编译之后，泛型擦除的结构结果如下：（具体的结果可以看编译之后的字节码来验证）
+
+- **类型形参将擦除到它被限制的第一个边界所代表的类型，即编译后只用第一个边界所代表的类型替换掉类型形参。**
+- **当代码涉及到除第一个边界之外其他边界所代表的类型时，编译器会为其对应的边界所代表的类型进行强制类型转换，并检查转型是否成功。**
+
+
+
+### 泛型约束和处理
+
+1. 没有原始类型：泛型仅适用于引用类型，不适用于原始类型。不能直接使用原始类型（例如“int”，“char”，“double”等）作为泛型中的类型参数。
+
+> 要将原始类型与泛型一起使用，需要使用其包装类（例如“Integer”，“Character”，“Double”等）。
+
+2. 类型参数无法实例化：不能直接在泛型类或方法中创建类型参数的实例。这是因为在类型擦除期间，类型参数会被替换为其边界（如果未指定边界，则替换为“对象”），并且确切的类型信息在运行时不可用
+
+```java
+public class GenericClass<T> {
+
+ // 使用new T()会报错
+    private T value;
+    public GenericClass(T value) {
+        this.value = value;
+    }
+}
+   ```
+
+[实例化泛型](#泛型的实例化)
+
+
+
+3. 不能有泛型静态变量：因为静态成员在类的所有实例之间共享，而不管类型参数如何，因此，它们不能与特定的类型参数相关联。
+
+>  但静态泛型方法可以有自己的泛型参数
+
+```java
+package org.liufei.junit5.test.generic;
+
+/**
+ * @author liufei
+ **/
+public class GenericClass<T> {
+
+    // 使用new T()会报错
+    private T value;
+
+    public GenericClass(T value) {
+        this.value = value;
+    }
+
+    public T getValue() {
+        return value;
+    }
+
+    // 泛型不能有静态变量，但静态方法可以有自己的泛型参数
+    public static <U> GenericClass<U> createGenericInstance(U value) {
+        return new GenericClass<>(value);
+    }
+
+    public static void main(String[] args) {
+        GenericClass<String> stringInstance = new GenericClass<>("Hello");
+        System.out.println(stringInstance.getValue()); // Output: Hello
+        GenericClass<Integer> integerInstance = GenericClass.createGenericInstance(123);
+        System.out.println(integerInstance.getValue()); // Output: 123
+    }
+}
+   ```
+
+4. 不能直接获取泛型的具体类型
+
+由于类型擦除机制，在运行时泛型的具体类型信息被擦除，通常无法直接获取泛型的具体类型。
+
+[获取泛型实际类型](#获取泛型实际类型)
+
+5. 泛型类型参数不能用于 instanceof 操作
+
+由于类型擦除，在运行时泛型类型的信息已经丢失，因此不能用 instanceof 来判断泛型类型。
+
+6. 泛型的继承不同于普通类的继承
+
+泛型类的继承关系不同于普通类，在涉及不同泛型参数时。例如，`List<String>` 不是 `List<Object>` 的子类，要表示泛型的继承必须使用通配符来限定。
+
+7. 由于类型擦除，在运行时泛型类型的信息已经丢失，因此不能用 instanceof 来判断泛型类型。
+
+8. 枚举不能是泛型类
+
+
+
+#### 获取泛型实际类型
+
+要获取泛型的可以有下面两种方式：
+
+- 通过反射获取具体类型
+
+```java
+package org.liufei.junit5.test.generic;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * @author liufei
+ **/
+public class GenericTest extends TestClass<String> implements TestInterface1<Integer>, TestInterface2<Long> {
+
+    private List<Integer> list;
+
+    private Map<Integer, String> map;
+
+    public List<Integer> aa() {
+        return null;
+    }
+
+    public void bb(List<Long> list) {
+
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        /*
+         * 基本是通过泛型 Class、Field、Method去调用对应的 java.lang.reflect.Field#getXXXGenericType方法获取泛型类型
+         *
+         * Class类的泛型方法
+         * Type getGenericSuperclass()：获取父类的Type
+         * 若父类有泛型，返回的实际Type是ParameterizedType接口的实现类ParameterizedTypeImpl类
+         * 若父类无泛型，返回的实际Type是Class类
+         */
+        System.out.println("泛型类声明的父类泛型类型:");
+        Type genericSuperclass = GenericTest.class.getGenericSuperclass();
+        printType(genericSuperclass);
+
+        /*
+         * Type[] getGenericInterfaces()：获取接口的Type集合
+         * 若父类有泛型，返回的实际Type是ParameterizedType接口的实现类ParameterizedTypeImpl类
+         * 若父类无泛型，返回的实际Type是Class类
+         */
+        System.out.println("泛型类声明的接口泛型类型:");
+        Type[] types = GenericTest.class.getGenericInterfaces();
+        for (Type type : types) {
+            printType(type);
+        }
+
+        System.out.println("成员变量中的泛型类型 -list：");
+        Field field = GenericTest.class.getDeclaredField("list");
+        Type genericType = field.getGenericType();
+        printType(genericType);
+
+        System.out.println("成员变量中的泛型类型 -map");
+        Field fieldMap = GenericTest.class.getDeclaredField("map");
+        Type genericTypeMap = fieldMap.getGenericType();
+        printType(genericTypeMap);
+
+        System.out.println("方法参数中的泛型类型");
+        Method aa = GenericTest.class.getMethod("aa");
+        Type genericReturnType = aa.getGenericReturnType();
+        printType(genericReturnType);
+
+        System.out.println("方法返回值中的泛型类型");
+        Method bb = GenericTest.class.getMethod("bb", List.class);
+        Type[] genericParameterTypes = bb.getGenericParameterTypes();
+        for (Type type : genericParameterTypes) {
+            printType(type);
+        }
+    }
+
+    private static void printType(Type type) {
+
+        if (type == null) {
+            return;
+        }
+
+        // 如果Type是ParameterizedType接口的实现类则其实就是 ParameterizedTypeImpl类
+        if (type instanceof ParameterizedType ParameterizedType) {
+            System.out.print(ParameterizedType.getTypeName() + "：");
+            // Type[] getActualTypeArguments(); 返回的是一个数组，因为泛型类型可以有多个类型参数。例如Map<K, V> 带两个泛型类型参数K、V
+            for (Type actualTypeArgument : ParameterizedType.getActualTypeArguments()) {
+                System.out.print(actualTypeArgument.getTypeName());
+            }
+        } else {
+            // 否则实际Type就是Class类
+            System.out.println(type.getTypeName());
+        }
+        System.out.println("\n");
+
+    }
+}
+
+class TestClass<T> {
+}
+
+interface TestInterface1<T> {
+    List<T> aa();
+}
+
+interface TestInterface2<T> {
+    void bb(List<T> list);
+}
+  ```
+
+
+
+- 构建对象时，自己就维护对象的信息，这个在写工具类或者框架代码时常用的做法
+
+```java
+public class GenericClass<T> {
+    private Class<T> type;
+
+    public GenericClass(Class<T> type) {
+        this.type = type;
+    }
+
+    public void printType() {
+        System.out.println("Type: " + type.getName());
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        GenericClass<String> generic = new GenericClass<>(String.class);
+        generic.printType();  // 输出 "Type: java.lang.String"
+    }
+}
+  ```
+
+
+
+#### 泛型的实例化
+
+由于类型擦除的机制，直接实例化泛型对象存在一些限制。类型擦除意味着在运行时，泛型类型的具体类型参数会被擦除，导致不能直接使用 `new T()` 或 `new T[]` 这样的语法来创建泛型对象。但能够通过如下方式创建：
+
+1. 使用反射--要使用反射则对应的实际泛型类必须有无参构造器，否则调用`newInstance`会报错。
+
+```java
+public class GenericClass<T> {
+    private T instance;
+
+    public GenericClass(Class<T> clazz) {
+        try {
+            // 使用传递的类型信息来创建对象
+            this.instance = clazz.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public T getInstance() {
+        return instance;
+    }
+}
+
+// 使用示例
+public class Main {
+    public static void main(String[] args) {
+        GenericClass<String> stringInstance = new GenericClass<>(String.class);
+        String str = stringInstance.getInstance();
+        System.out.println(str);  // 输出：空字符串
+
+
+        GenericClass<Integer> integerInstance = new GenericClass<>(Integer.class);
+        Integer integer = integerInstance.getInstance();
+        System.out.println(integer);  // 运行报错，因为Integer没有提供无参构造器
+    }
+}
+
+   ```
+
+
+
+2. 使用工厂方法
+
+```java
+interface Factory<T> {
+    T create();
+}
+
+class ExplicitFactory {
+    public static <T> T instantiate(Factory<T> factory) {
+        return factory.create();
+    }
+}
+
+class IntegerFactory implements Factory<Integer> {
+    @Override
+    public Integer create() {
+        return new Integer(0);
+    }
+}
+
+class Widget {
+    public static class WidgetFactory implements Factory<Widget> {
+        @Override
+        public Widget create() {
+            return new Widget();
+        }
+    }
+}
+
+public class FactoryConstraint {
+    @SuppressWarnings("unused")
+    public static void main(String[] args) {
+        Integer integer = ExplicitFactory.instantiate(new IntegerFactory());
+        Widget widget = ExplicitFactory.instantiate(new Widget.WidgetFactory());
+    }
+}
+   ```
+
+
+
+3. 手动传递实例化的对象
+
+```java
+public class Container<T> {
+    private T item;
+
+    public Container(T item) {
+        this.item = item;
+    }
+
+    public T getItem() {
+        return item;
+    }
+}
+
+// 使用示例
+public class Main {
+    public static void main(String[] args) {
+        Container<String> stringContainer = new Container<>(new String("Hello"));
+        System.out.println(stringContainer.getItem());  // 输出：Hello
+    }
+}
+   ```
+
+
+
+4. 使用 `Supplier`
+
+Java 8 之后，可以使用 `Supplier<T>` 接口提供泛型对象的实例。这个其实就是自己手动传值的语法糖
+
+```java
+import java.util.function.Supplier;
+
+public class Box<T> {
+    private T value;
+
+    public Box(Supplier<T> supplier) {
+        this.value = supplier.get();
+    }
+
+    public T getValue() {
+        return value;
+    }
+}
+
+// 使用示例
+public class Main {
+    public static void main(String[] args) {
+        Box<String> stringBox = new Box<>(() -> new String("Hello"));
+        System.out.println(stringBox.getValue());  // 输出：Hello
+    }
+}
+
+   ```
+
+
+
+
+
+

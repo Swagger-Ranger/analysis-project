@@ -330,6 +330,7 @@ public class ReferenceTest {
 
 - 防止内存泄漏：因为只有弱引用引用对象时，对象能自动参与gc，不需要手动设置为null，并且在下一次gc时一定被回收。
 - 快速回收对象释放空间：正常对象的回收，在gc时需要经过两次gc标记，一次被标记为回收对象，下次标记时判断其`finilize`方法是否被重新，如果有重新会放入队列中等待执行`finilize`方法。而弱引用对象，没有这个过程，在发生gc时只被弱引用的对象会被直接回收。
+- 因为上面的原因，使得只要正确remove掉，`ThreadLocal`对象是可以大量创建的，因为其存储的`entry`对象是弱引用所以也会被自动清理掉。
 
 ### ThreadLocal核心源码
 
@@ -683,10 +684,10 @@ private int expungeStaleEntry(int staleSlot) {
 
 
 
-再总结来说，threadlocal发生内存泄漏有两个条件：
+总结来说，threadlocal发生内存泄漏有两个条件：
 
-1. theadlocal变量没有被回收。`ThreadLocal` 对象仍然被 `ThreadLocalMap` 中的 `Entry` 引用着（通过弱引用），因此键不会变为 `null`，此时对应的值对象是不会被清理的。*（严格来讲，这种其实也不能叫内存泄漏，因为内存泄漏是无法访问但也无法回收，此时是可以通过theadlocal对象访问到的）*
-2. 线程对theadlocalmap中entry的value的引用没有断开。因为线程存活进而其中的entry数组就一直存活而entry节点对象就会一直存活，而ThreadLocal被清理了就没有了key来引用它，使得value被entry节点持有但却永远也无法再被访问到，这才发生内存泄漏。
+1. theadlocal变量没有被回收，theadlocal没有为null则对应theadlocalMap中的entry对象就不会被回收。因为`ThreadLocal` 对象仍然被 `ThreadLocalMap` 中的 `Entry` 引用着（通过弱引用），因此键不会变为 `null`，此时对应的值对象是不会被清理的。     -- 这个会导致 `ThreadLocalMap` 中的 `Entry` 节点无法被回收
+2. 线程对theadlocalmap中entry的value的引用没有断开。因为线程存活进而其中的entry数组就一直存活而entry节点对象就会一直存活，而ThreadLocal被清理了就没有了key来引用它，使得value被entry节点持有但却永远也无法再被访问到，这才发生内存泄漏。 -- 这个会导致 `ThreadLocalMap` 中的 `Entry` 引用的value对象无法被回收 *（注意：entry和其value是独立的在回收时，entry被回收但其value是可以继续存在的）*。
 
 当这两个，存在任意一个时都会发生内存泄漏。而remove其实就是在干两件事：一个处理弱引用本身即` e.clear();`，另一个将value的强引用断开即`expungeStaleEntry(i);`。
 

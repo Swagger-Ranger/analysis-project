@@ -28,6 +28,15 @@
   color: #ce7878; /* 导航栏链接在悬停时的颜色 */
 }
 
+.markdown a {
+  color: #35479b; /* 自定义markdown链接颜色 */
+}
+
+/* 修改悬停状态的链接颜色 */
+.markdown a:hover {
+  color: #33C3FF; /* 自定义markdown链接悬停颜色 */
+}
+
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
   --ifm-color-primary: #25c2a0;

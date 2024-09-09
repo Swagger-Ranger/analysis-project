@@ -1,0 +1,122 @@
+---
+title: JavaDoc标签
+sidebar_position: 6
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+这里是一下常用的JavaDoc标签
+
+- **`<pre>`**：保留文本的格式，用于显示多行代码块或格式化文本。
+- **`{@code ...}`**：格式化代码片段，显示为等宽字体并适当转义。
+- **`{@link ...}`**、**`{@see ...}`**：用于创建链接，指向文档中的其他部分。
+- **`{@inheritDoc}`**：继承父类或接口的 Javadoc 注释。
+- **`{@literal ...}`**：显示文本字面值，而不进行 HTML 转义。
+- **`{@value ...}`**：显示常量字段的值。
+
+
+
+### `<pre>` 标签
+
+`<pre>` 标签用来保持文本的原始格式。它会保留代码中的空格、换行符和缩进，常用于展示多行代码、表格、或者其他需要严格格式的内容。
+
+```java
+/**
+ * This method does the following:
+ * <pre>
+ * {@code
+ * if (condition) {
+ *     doSomething();
+ * } else {
+ *     doSomethingElse();
+ * }
+ * </pre>
+ */
+public void myMethod() {
+    // Method implementation
+}
+```
+
+这里，`<pre>` 标签会让 `if`-`else` 代码块按原样显示，包括缩进和换行。
+
+
+
+### `{@code ...}` 标签
+
+用于将代码片段格式化为等宽字体，并在 HTML 中进行适当的转义，以便在文档中显示为代码，通常用于单行代码片段或简单的代码片段内联显示。
+
+```java
+/**
+ * The result of the method is {@code true} if the operation succeeds.
+ */
+public boolean isSuccessful() {
+    return true;
+}
+```
+
+
+
+### `{@link ...}`
+
+创建一个链接，指向另一个类、方法、字段或构造方法，在文档中引用其他类或成员，提供导航功能。
+
+```java
+/**
+ * See {@link java.util.List} for more information.
+ */
+```
+
+
+
+### `{@see ...}`
+
+类似 `{@link}`，但一般用于文档的 "See Also" 部分，生成链接列表，提供相关主题的参考链接。
+
+```java
+/**
+ * @see java.util.Map
+ * @see java.util.List
+ */
+```
+
+
+
+### `{@inheritDoc}`
+
+指示 Javadoc 继承父类或接口的文档内容，当子类或实现类不需要额外注释时，直接继承父类或接口的方法注释。
+
+```java
+/**
+ * {@inheritDoc}
+ */
+@Override
+public void myMethod() {
+    // Implementation here
+}
+```
+
+
+
+### `{@literal ...}`
+
+显示文本字面值，而不进行 HTML 转义，用于在文档中显示 `<`, `>` 等特殊字符。
+
+```java
+/**
+ * This method compares {@literal <} and {@literal >}.
+ */
+```
+
+
+
+### `{@value ...}`
+
+显示常量字段的值，用于在文档中显示常量的实际值。
+
+```java
+/**
+ * The maximum value is {@value MAX_VALUE}.
+ */
+public static final int MAX_VALUE = 100;
+```
+
