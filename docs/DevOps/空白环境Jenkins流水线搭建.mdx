@@ -4,5 +4,354 @@ sidebar_position: 6
 toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
+### 创建jenkins用户组和用户
+
+首先在申请的linux主机上创建jenkins用户组与用户，因为jenkins运行默认使用jenkins用户，并且后面git代码下载也是使用的jenkins用户
+
+> 创建用户组： groupadd jenkins
+> 创建用户：useradd -g jenkins jenkins
+> 设置用户密码： passwd jenkins 然后连续输入密码（这里密码默认为用户名jenkins）
+
+### 创建jenkins环境变量
+
+```sh
+vim /etc/profile
+```
+
+在最后添加，默认放到挂载磁盘的app目录下
+
+```sh
+export JENKINS_HOME=/app/jenkins_data/
+```
+
+保存退出，并执行命令来使修改生效。
+
+```sh
+source /etc/profile
+```
+
+> 释下为什么设置环境变量和对应设置的目录
+> 如果不设置环境变量，在运行jenkins之后会自动在当前的路径下生成一个./jenkins的隐藏文件来作为工作目录存放Jenkins的文件。这里jenkins是运行在jenkins用户目录下的，但是一般linux主机存储磁盘的挂载在别的路径，所以当jenkins运行后会下载代码，插件以及打包文件而占用比较多的空间时，就最好单独指定工作目录（这里的/app/jenkins_data/ 目录就是磁盘挂载在/app下，当jenkins启动后就会去创建对应的jenkins用户所属的目录）
+
+
+
+### 下载jenkins并安装
+
+获取Jenkins.war包（到官网下载或者公司内部提供），这里已经下载好放到对应svn目录（历史数据平台/04-设计与实施）下。war包可以直接运行，也可以放到容器中运行，本文档安装直接运行来部署
+
+将运行包放到jenkins用户目录：/home/jenkins 下
+进入目录，更改文件用户和用户组和增加执行权限
+
+```sh
+chown jenkins jenkins.war
+chgrp jenkins jenkins.war
+chmod 755 jenkins.war
+```
+
+
+
+- 启动jenkins，并制定端口 （--httpPort=port）默认8080
+
+```sh
+java -jar jenkins.war --httpPort=8080
+## 或者使用后台运行命令：
+nohup java -jar jenkins.war --httpPort=8080 &
+  ```
+
+
+
+启动之后，jenkins会在执行目录下也就是/home/jenkins下（或者对应配置的jenkins环境变量的目录下）生成关于权限的隐藏文件。启动命令的端口是可以修改的，并且修改端口启动不影响Jenkins的配置，因为jenkins启动后配置的信息都会保存在war包里。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-0.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-0.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- 网页访问
+输入http://ip:8080
+然后输入生成的密码
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-1.png" alt="image" style="zoom:30%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-1.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-2.png" alt="image" style="zoom: 50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-2.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+- 下一步：跳过插件安装，也不配置代理。因为是本地安装，连不上服务器，如果能连上会自动弹出插件安装，插件我们后面手动装。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-3.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-3.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- 下一步：设置管理员用户，这里账号密码都是admin，full name就是登陆后页面显示的用户名
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-4.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-4.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- 下一步：保存并完成
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-6.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-6.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+安装完成
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-7.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-7.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- 插件安装
+插件安装强烈建议联通网络，这样可以自动安装，如果是隔离的环境，就要手动安装，如下操作，插件包已经准备好了
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-8.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-8.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+然后手动选择jpi文件或者hpi文件上传，这里所需的插件都已经上传，并且分了一个pre目录，优先安装pre目录，因为插件之间部分存中依赖，如果安装失败就是因为存中依赖，此时就在当前目录里找一下先上传被依赖的插件。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-9.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-0.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+### 安装GIT
+
+GIT是版本管理工具，现在主流都是使用git来进行代码的管理，所以在构建jenkins流水线时如果使用git就必须在执行任务的机器上配置好git。因为这里jenkins的管理节点master和执行任务的节点slave都在一台机器上，所以一下操作都是在一台主机上进行的。
+GIT安装有点繁琐，因为是在本地离线安装，所以只能源码安装并自己去解决文件依赖。
+
+#### 安装git编译依赖包
+
+##### 安装gcc
+
+将gcc的包拷贝到/home/jenkins，然后进入目录，执行如下命令（注意这里的环境是redhat，如果是别的Linux发行版，依赖包和安装命令则不能使用）
+
+```sh
+rpm -Uvh *.rpm -- nodeps --force
+```
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-12.png" alt="image" style="zoom:39%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-12.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+完成后输入 `gcc -v` 查看
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-11.png" alt="image" style="zoom:30%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-11.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+
+
+#### 安装依赖
+
+将gitDep目录拷贝到/home/jenkins下，依赖的包都已经拷贝到了里面，执行如下命令
+
+```sh
+cd gitDep
+rpm -Uvh *.rpm -- nodeps --force
+```
+
+##### 安装m4
+
+使用root用户，将包拷贝到目录，这里就是/home/jenkins，然后依次执行以下命令
+
+```sh
+chmod 755 m4-1.4.10b.tar.gz
+tar zxvf m4-1.4.10b.tar.gz
+cd m4-1.4.10b
+./configure
+make
+make install
+```
+
+#### 安装 autoconf
+
+使用root用户，将包拷贝到目录，这里就是/home/jenkins，然后依次执行以下命令
+
+```sh
+chmod 755 autoconf-2.68b.tar.gz
+tar zxvf autoconf-2.68b.tar.gz
+cd autoconf-2.68b
+./configure
+make
+make install
+```
+
+
+
+#### 安装git
+
+使用root用户，将包拷贝到目录，这里就是/home/jenkins，然后依次执行以下命令
+
+```sh
+chmod 755 git-2.25.1.tar.gz
+tar zxvf git-2.25.1.tar.gz
+cd git-2.25.1
+make configure --生成安装的配置文件configure
+./configure
+make
+make install
+```
+
+安装完成后，输入`git --version`查看命令
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-13.png" alt="image" style="zoom:80%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-13.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+### 配置git
+
+安装完成git后，在当前的主机上配置git信息
+
+#### 配置用户名和邮箱
+
+gitlab的账号，需要管理员去配置，这里我使用自己的账号。后面可以让gitlab管理员去添加一个专门的jenkins账号
+
+```sh
+git config --global user.name "liufei32@outlook.com"
+git config --global user.email "liufei32@outlook.com"
+```
+
+配置完后，可以使用如下命令查看
+
+```sh
+git config user.name
+git config user.email
+```
+
+
+
+#### 配置git公钥
+
+git在和仓库通信时是非对称加密的，所以需要生成密码对，在本地保存私钥，并将公钥保存到gitlab仓库对应的用户配置中。
+生成密码对
+
+```sh
+# 你的邮箱，然后一直回车
+ssh-keygen -t rsa -C liufei32@outlook.com.
+```
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-14.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-14.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+然后显示公钥public key就保存在对应用户目录里
+
+#### 配置公钥到git仓库
+
+注意是将公钥添加到git仓库，不是私钥
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-15.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-15.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+然后登陆到git仓库，在用户配置中添加ssh key
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-16.png" alt="image" style="zoom: 30%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-16.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+### 安装maven
+
+如果要构建maven工程就需要在执行命令的主机上安装maven，因为我们的应用都是maven构建的所以这一步是必要的。
+
+#### 拷贝maven
+
+安装maven相对git要简单得多，因为maven可以直接将包拷贝到执行机上并修改配置就可以了。
+因为内网已经有主机安装了maven，所以我就直接拷过来的，当在搭建别的环境时也可以直接拷，到已有的maven主机目录下，执行命令如下：
+
+```sh
+scp -r {local_file} {remote_username}@{remote_ip}:{remote_folder}
+# 比如：scp -r maven jenkins@ip:/app/jenkins_home/maven
+```
+
+也可以下载一个maven包然后直接解压
+
+#### 修改maven conf文件
+
+修改 maven目录下，conf/setting.xml文件
+
+##### 修改远端仓库配置
+
+增加如下配置，profile标签下的所有内容，然后将url指向自己的maven仓库，并将activeProfiles标签中的activeProfile内容改为上面profile配置的中的id标签中的值。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-17.png" alt="image" style="zoom: 50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-17.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+##### 修改本地仓库地址
+
+将localRepository标签中的值修改为maven执行机上的存储地址，
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-18.png" alt="image" style="zoom:60%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-18.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+#### 修改jenkins中maven配置
+
+登陆jenkins管理页面，进入系统配置-全局工具配置页面，设置mven配置
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-19.png" alt="image" style="zoom: 33%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-19.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+#### 指定maven命令执行目录
+
+如下填写maven的目录和命令
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-20.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-20.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-21.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-21.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+### FAQ
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-22.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-22.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/devops/jenkins-23.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/devops/jenkins-23.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+#### jenkins登录报HTTP Status 403 j_acegi_security_check
+
+找到环境变量配置的路径下如果没有配环境变量就是.jenkins下的config.xml文件将\<useSecurity\>true\</useSecurity\>改为\<useSecurity\>false\</useSecurity\>然后重启服务
+
+
+
+
 
 
