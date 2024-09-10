@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-Hans" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-JavaDocs/DSA/algo-共识算法-raft" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.5.2">
+<title data-rh="true">algo-共识算法-Raft | Analysis Project</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" name="twitter:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" property="og:url" content="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft"><meta data-rh="true" property="og:locale" content="zh_Hans"><meta data-rh="true" name="docusaurus_locale" content="zh-Hans"><meta data-rh="true" name="docsearch:language" content="zh-Hans"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="algo-共识算法-Raft | Analysis Project"><meta data-rh="true" name="description" content="世界上只有一种共识协议，就是 Paxos，其他所有共识算法都是 Paxos 的退化版本。—— Mike Burrows，Inventor of Google Chubby"><meta data-rh="true" property="og:description" content="世界上只有一种共识协议，就是 Paxos，其他所有共识算法都是 Paxos 的退化版本。—— Mike Burrows，Inventor of Google Chubby"><link data-rh="true" rel="icon" href="/analysis-project/img/apachecassandra-color.svg"><link data-rh="true" rel="canonical" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft" hreflang="x-default"><link rel="alternate" type="application/rss+xml" href="/analysis-project/blog/rss.xml" title="Analysis Project RSS Feed">
+<link rel="alternate" type="application/atom+xml" href="/analysis-project/blog/atom.xml" title="Analysis Project Atom Feed"><link rel="stylesheet" href="/analysis-project/assets/css/styles.460af289.css">
+<script src="/analysis-project/assets/js/runtime~main.581244b0.js" defer="defer"></script>
+<script src="/analysis-project/assets/js/main.331849e2.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/analysis-project/"><div class="navbar__logo"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/analysis-project/docs/AnalysisProject/Analysis Project是什么">All for analysis</a><a class="navbar__item navbar__link" href="/analysis-project/docs/coreMiddleware/concurrentFramework/Disruptor">Middlewares</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/analysis-project/docs/category/juc">Codes</a><a class="navbar__item navbar__link" href="/analysis-project/docs/DevOps/JavaOptimizing">DevOps</a><a class="navbar__item navbar__link" href="/analysis-project/blog">Blog</a></div><div class="navbar__items navbar__items--right"><a class="navbar__item navbar__link" href="/analysis-project/about">关于作者</a><a href="https://github.com/Swagger-Ranger/analysis-project" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="切换浅色/暗黑模式（当前为浅色模式）" aria-label="切换浅色/暗黑模式（当前为浅色模式）" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist" href="/analysis-project/docs/category/juc">JUC</a><button aria-label="展开侧边栏分类 &#x27;JUC&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--active" href="/analysis-project/docs/category/dsa">DSA</a><button aria-label="折叠侧边栏分类 &#x27;DSA&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul style="display:block;overflow:visible;height:auto" class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft">algo-共识算法-Raft</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-哈希">data-structure-哈希</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-位图">data-structure-位图</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-多维数据索引">data-structure-多维数据索引</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-跳表">data-structure-跳表</a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist" href="/analysis-project/docs/category/sa">SA</a><button aria-label="展开侧边栏分类 &#x27;SA&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/analysis-project/docs/JavaDocs/JDK/泛型">JDK</a></div></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="页面路径"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="主页面" class="breadcrumbs__link" href="/analysis-project/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item"><a class="breadcrumbs__link" itemprop="item" href="/analysis-project/docs/category/dsa"><span itemprop="name">DSA</span></a><meta itemprop="position" content="1"></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">algo-共识算法-Raft</span><meta itemprop="position" content="2"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>algo-共识算法-Raft</h1></header><blockquote>
+<p>世界上只有一种共识协议，就是 Paxos，其他所有共识算法都是 Paxos 的退化版本。—— <a href="https://en.wikipedia.org/wiki/Michael_Burrows" target="_blank" rel="noopener noreferrer">Mike Burrows</a>，Inventor of Google Chubby</p>
+</blockquote>
+<p>Raft 就是Paxos的更容易理解的实现版本。提供了和 Paxos 算法相同的功能和性能，但是它的算法结构和 Paxos 不同，使得 Raft 算法更加容易理解并且更容易构建实际的系统。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="算法设计">算法设计<a href="#算法设计" class="hash-link" aria-label="算法设计的直接链接" title="算法设计的直接链接">​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="raft一致性和可靠性的基础">Raft一致性和可靠性的基础<a href="#raft一致性和可靠性的基础" class="hash-link" aria-label="Raft一致性和可靠性的基础的直接链接" title="Raft一致性和可靠性的基础的直接链接">​</a></h3>
+<p>Raft算法的节点都是有限状态机（FSM-finite-state machine），FSM的特性是：给定相同的初始状态和相同的指令序列，总是会产生相同的结果。这意味着，在Raft算法中，只要所有节点从同样的日志起点开始并应用相同的日志条目顺序，最终状态就会一致。</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="raft设计">Raft设计<a href="#raft设计" class="hash-link" aria-label="Raft设计的直接链接" title="Raft设计的直接链接">​</a></h3>
+<p>在设计层面，Raft把算法流程分为三个子问题：领导选举（Leader election）、日志复制（Log replication）、安全性（Safety）。 Raft开始时在集群中选举出Leader负责日志复制的管理，Leader接受来自客户端的事务请求（日志），并将它们复制给集群的其他节点，然后负责通知集群中其他节点提交日志，Leader负责保证其他节点与他的日志同步，当Leader宕机后集群其他节点会发起选举选出新的Leader。</p>
+<blockquote>
+<p>Raft算法所有的核心部分（领导选举、日志复制、安全性）都是在围绕维护每个节点fsm的一致；具体就是通过日志复制的手段来维护fsm的指令和指令顺序一致，并且使用了领导节点来简化复杂性，而安全性就是为了保证这些操作都是分布式安全的比如动作都是分布式事务提交的</p>
+<p><strong>领导选举</strong>：通过选举出一个领导节点，简化了决策过程和日志复制的复杂性。</p>
+<p><strong>日志复制</strong>：领导节点将其接收到的指令  复制到所有从节点上，确保所有节点的日志一致，从而保持FSM的指令一致性。</p>
+<p><strong>安全性</strong>：通过一致性协议，确保所有操作都像分布式事务那样安全提交，即使在节点故障的情况下也能保持一致性。</p>
+</blockquote>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="领袖选举">领袖选举<a href="#领袖选举" class="hash-link" aria-label="领袖选举的直接链接" title="领袖选举的直接链接">​</a></h4>
+<p>在起始算法或领袖死机、断线的时候，就需要选举出新的领袖。</p>
+<p>此时集群进入新的任期（term）并开始选举，如果选举成功则新的领袖开始执行工作，反之则视此任期终止，开始新的任期并开始下一场选举。</p>
+<p>选举是由候选人发动的。当领袖的心跳超时的时候，追随者就会把自己的任期编号（term counter）加一、宣告竞选、投自己一票、并向其他服务器拉票。每个服务器在每个任期只会投一票，固定投给最早拉票的服务器。</p>
+<p>如果候选人收到其他候选人的拉票、而且拉票的任期编号不小于自己的任期编号，就会自认落选，成为追随者，并认定来拉票的候选人为领袖。如果有候选人收到过半的选票就当选为新的领袖。如果超时仍没有选出新领袖，此任期自动终止，开始新的任期并开始下一场选举。</p>
+<p><em>Raft每个服务器的超时期限是随机的，这降低同时竞选的几率，也降低因两个竞选人得票都不过半而选举失败的几率。</em></p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="日志复制">日志复制<a href="#日志复制" class="hash-link" aria-label="日志复制的直接链接" title="日志复制的直接链接">​</a></h4>
+<p>日志复制的责任在领袖身上。</p>
+<p>整个集群有个复写的状态机（state machine），可执行外来的指令。领袖接收指令，将之写入自己记录中的新指令部分，然  后把指令转发给追随者。如果有追随者没反应，领袖会不断重发指令、直到每个追随者都成功将新指令写入记录为止。</p>
+<p>当领袖收到过半追随者确认写入的消息，就会把指令视为已存储（committed）。当追随者发现指令状态变成已存储，就会在其状态机上执行该指令。</p>
+<p>当领袖死机时，领袖的某些新指令可能还没复写到集群整体，造成集群的记录处于不一致的状态。新领袖会担起重返一致的责任，让每个追随者的记录都和它的一致，做法是：和每个追随者比对记录，找出两者一致的最后一笔指令，删除追随者之后的指令，把自己之后的指令拷贝给追随者。这个机制完成时，每个服务器的记录就会一致。</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="安全性">安全性<a href="#安全性" class="hash-link" aria-label="安全性的直接链接" title="安全性的直接链接">​</a></h4>
+<p>Raft的安全性规则，保证以下的安全性：</p>
+<ul>
+<li>选举安全性：每个任期最多只能选出一个领袖。</li>
+<li>领袖附加性：领袖只会把新指令附加（append）在记录尾端，不会改写或删除已有指令。</li>
+<li>记录符合性：如果某个指令在两个记录中的任期和指令序号一样，则保证序号较小的指令也完全一样。</li>
+<li>领袖完整性：如果某个指令在某个任期中存储成功，则保证存在于领袖该任期之后的记录中。</li>
+<li>状态机安全性：如果某服务器在其状态机上执行了某个指令，其他服务器保证不会在同个状态上执行不同的指令。</li>
+</ul>
+<p>选举安全性、领袖附加性、记录符合性、领袖完整性这四项保证是由选主和日志复制来保证的。而状态机安全性则需要靠如下机制来保证。</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="状态机安全性">状态机安全性<a href="#状态机安全性" class="hash-link" aria-label="状态机安全性的直接链接" title="状态机安全性的直接链接">​</a></h5>
+<ul>
+<li><strong>追随者死机</strong></li>
+</ul>
+<p>当某台追随者死机时，所有给它的转发指令和拉票的消息都会因没有回应而失败，此时发送端会持续重送。当这台追随者开机重新加入集群，就会收到这些消息，追随者会重新回应，如果转发的指令已经写入，不会重复写入。</p>
+<ul>
+<li><strong>领袖死机</strong></li>
+</ul>
+<p>领袖死机或断线时，每个已存储指令必定已经写入到过半的服务器中，此时选举流程会让记录最完整的服务器胜选。其中一个因素是Raft候选人拉票时会带上自己记录最新一笔的信息，如果服务器自己的记录比较新，就不会投票给候选人。</p>
+<ul>
+<li><strong>超时期限和可用性</strong></li>
+</ul>
+<p>因为Raft启动选举是基于超时，使得超时期限的选择至为关键。若遵守算法的时限需求</p>
+<blockquote>
+<p><em>广播时间 &lt;&lt; 超时期限 &lt;&lt; 平均故障间隔</em></p>
+</blockquote>
+<p>就能达到稳定性。这三个时间定义如下：</p>
+<ul>
+<li><em>广播时间</em> 是单一服务器发送消息给集群中每台服务器并得到回应的平均时间，需要测量得到。</li>
+<li><em>超时期限</em> 是发动选举的超时期限，由部署Raft集群的人手动设置。</li>
+<li><em>平均故障间隔</em> 是服务器发生故障之间的平均时间，可以测量或估计得到。</li>
+</ul>
+<p><em>广播时间</em>典型是 0.5ms 到 20ms，<em>平均故障间隔</em>通常是用周或月来计算的，所以可以将<em>超时期限</em>设在 10ms 到 500ms。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="核心流程">核心流程<a href="#核心流程" class="hash-link" aria-label="核心流程的直接链接" title="核心流程的直接链接">​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="领袖选举-1">领袖选举<a href="#领袖选举-1" class="hash-link" aria-label="领袖选举的直接链接" title="领袖选举的直接链接">​</a></h3>
+<p><strong>节点状态</strong></p>
+<p>每个节点的状态有三种：领导者、跟随者、候选人。跟随者只响应来自其他服务器的请求。如果跟随者接收不到消息，那么他就会变成候选人并发起一次选举。获得集群中大多数选票的候选人将成为领导人。在一个任期内，领导人一直都会是领导人，直到自己宕机了。</p>
+<p>三者的状态转化如下图：</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/algo/raft-图4.png" alt="image" style="max-width:80%;height:auto;display:block;margin:0 auto"></div>
+<p><strong>任期</strong></p>
+<p><em>任期在 Raft 算法中充当逻辑时钟的作用，这一编号在整个时期内单调递增</em>。每当服务器之间通信的时候都会交换当前任期号；如果一个服务器的当前任期号比其他人小，那么他会更新自己的任期号到较大的任期号值。如果一个候选人或者领导人发现自己的任期号过期了，那么他会立即恢复成跟随者状态。如果一个节点接收到一个包含过期的任期号的请求，那么他会直接拒绝这个请求。</p>
+<p>Raft运行时期分为选举时期和正常时期。选举时期是用于选出一个新的领导者，这个过程期间，系统是无法处理客户端请求的。只有在选举结束并确认领导者后，系统才能进入正常时期，由领导者来协调和处理客户端请求，并进行状态复制。有时候选举会失败，那么这个任期就会没有领导人而结束。任期之间的切换可以在不同的时间不同的服务器上观察到。<em>也就是如下图中的蓝色部分，系统是处于不可用的状态，绿色的才是正常运行状态。</em></p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/algo/raft-图5.png" alt="image" style="max-width:80%;height:auto;display:block;margin:0 auto"></div>
+<blockquote>
+<p>不同的服务器节点可能多次观察到任期之间的转换，但在某些情况下，一个节点也可能观察不到任何一次选举或者整个任期全程。</p>
+</blockquote>
+<p><strong>选举超时</strong></p>
+<p>选举超时是节点用来触发选举新领导者的重要机制之一。选举超时的重置通常在以下情况下发生：</p>
+<ol>
+<li>选举成功：如果一个节点成功地成为领导者（收到了大多数节点的选票），它会停止当前的选举过程，并开始发送心跳信号给其他节点。这时候选举超时会被重置，节点进入正常的领导者角色，不再参与选举。</li>
+<li>收到领导者的心跳信号：如果一个节点在等待选举超时期间收到了来自现存领导者的有效心跳信号，它会意识到当前的领导者仍然活跃，不会发起新的选举，因此选举超时会被重置。</li>
+<li>收到其他候选人的选票请求：如果一个节点收到了来自其他候选人的选票请求，并且这些候选人的任期号大于或等于当前节点的任期号，它会重新评估是否需要参与新一轮的选举，这可能导致选举超时的重置。</li>
+</ol>
+<p>Raft 算法使用随机选举超时时间的方法来确保很少会发生选票瓜分的情况，就算发生也能很快的解决。为了阻止选票起初就被瓜分，选举超时时间是从一个固定的区间（例如 150-300 毫秒）随机选择。这样可以把服务器都分散开以至于在大多数情况下只有一个服务器会选举超时；然后他赢得选举并在其他服务器超时之前发送心跳包。同样的机制被用在选票瓜分的情况下。每一个候选人在开始一次选举的时候会重置一个随机的选举超时时间，然后在超时时间内等待投票的结果；这样减少了在新的选举中另外的选票瓜分的可能性。</p>
+<p><strong>选举过程</strong></p>
+<p>Raft 使用一种心跳机制来触发领导人选举。当服务器程序启动  时，他们都是跟随者身份。一个服务器节点继续保持着跟随者状态只要他从领导人或者候选人处接收到有效的消息。领导人周期性的向所有跟随者发送心跳包来维持自己的权威。如果一个跟随者在一段时间里没有接收到任何消息，也就是<em>选举超时</em>，那么他就会认为系统中没有可用的领导人,并且发起选举以选出新的领导人。</p>
+<p>要开始一次选举过程，跟随者先要增加自己的当前任期号并且转换到候选人状态（Raft每个服务器的超时期限是随机的，这降低同时竞选的几率）。然后他会并行地向集群中的其他服务器节点发送请求投票的 RPCs 来给自己投票。当追随者收到候选人的投票请求时，响应候选人回复的结果有两种：同意（true）或拒绝（false），如果拒绝投票请求，追随者会带上拒绝的原因。</p>
+<p>当追随者收到候选人的投票请求有如下的情况：</p>
+<ul>
+<li>
+<p><strong>同意</strong>：当追随者投赞同票时必须满足以下两种情况：</p>
+</li>
+<li>
+<p>追随者尚未在当前任期内投过票。</p>
+</li>
+<li>
+<p>候选人的日志和任期要么更新要么相同。</p>
+</li>
+<li>
+<p><strong>拒绝</strong>：有以下任何情况，追随者都会投拒绝票：</p>
+</li>
+<li>
+<p>已经投票：追随者在当前任期内已经投票给其他候选人。追随者会拒绝新的投票请求。</p>
+</li>
+<li>
+<p>任期较旧（Term Outdated）：如果候选人的任期小于追随者的当前任期，追随者会回复一个带有当前任期的消息，告知候选人它的任期过期。</p>
+</li>
+<li>
+<p>日志不匹配（Log Not Up-to-Date）：追随者检查自己日志的最后一个条目的 <code>term</code> 和 <code>index</code>。如果追随者的日志比候选人的日志更新（即追随者的最后一个日志条目的 <code>term</code> 大于候选人的最后一个日志条目的 <code>term</code>，或在相同 <code>term</code>   下追随者的日志更长），追随者会拒绝投票。</p>
+</li>
+</ul>
+<p>当候选人收到追随者的拒绝响应有如下情况：</p>
+<ul>
+<li>
+<p><strong>更新任期</strong>：如果拒绝信息中包含更高的任期（不管是其他角色是领导者还是追随者），候选人会将自己的任期更新到更高的任期，并立即转换为追随者。</p>
+</li>
+<li>
+<p><strong>继续拉票</strong>：如果任期没有问题，但日志的最新条目较旧，候选人可能会继续拉票，直到得到足够的选票成为领导者。</p>
+</li>
+<li>
+<p><strong>放弃选举</strong>：如果在选举超时时间内没有获得多数选票，候选人会放弃选举并重新进入追随者状态，等待新的领导者出现。</p>
+</li>
+</ul>
+<p>候选人会继续保持着当前状态直到以下三件事情之一发生：(a) 他自己赢得了这次的选举，(b) 其他的服务器成为领导人，(c) 投票超时，放弃选举</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="日志复制-1">日志复制<a href="#日志复制-1" class="hash-link" aria-label="日志复制的直接链接" title="日志复制的直接链接">​</a></h3>
+<p>一旦一个领导人被选举出来，他就开始为客户端提供服务。客户端的每一个请求都包含一条被复制状态机执行的指令。领导人把这条指令作为一条新的日志条目附加到日志中去，然后并行地发起附加条目 RPCs 给其他的服务器，让他们复制这条日志条目。领导人会应用这条日志条目到它的状态机中然后把执行的结果返回给客户端。如果跟随者崩溃或者运行缓慢，再或者网络丢包，领导人会不断的重复尝试附加日志条目 RPCs （尽管已经回复了客户端）直到所有的跟随者都最终存储了所有的日志条目。一旦一个日志条目存在于大多数节点，那么该日志条目是committed的。</p>
+<p><strong>日志格式</strong></p>
+<p>每个日志条目中包含：可执行的指令、日志被创建时的任期号、在日志中的位置index。</p>
+<p>日志组织形式如下图：</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/algo/raft-图6.png" alt="image" style="max-width:80%;height:auto;display:block;margin:0 auto"></div>
+<p><strong>日志匹配特性（Log Matching Property）</strong></p>
+<ul>
+<li>如果在不同的日志中的两个条目拥有相同的索引和任期号，那么他们存储了相同的指令。</li>
+<li>如果在不同的日志中的两个条目拥有相同的索引和任期号，那么他们之前的所有日志条目也全部相同。</li>
+</ul>
+<p>第一个特性来自这样的一个事实，领导人最多在一个任期里在指定的一个日志索引位置创建一条日志条目，同时日志条目在日志中的位置也从来不会改变。第二个特性由附加日志 RPC 的一个简单的一致性检查所保证。在发送附加日志 RPC 的时候，领导人会把新的日志条目前紧挨着的条目的索引位置和任期号包含在日志内。如果跟随者在它的日志中找不到包含相同索引位置和任期号的条目，那么他就会拒绝接收新的日志条目。一致性检查就像一个归纳步骤：一开始空的日志状态肯定是满足日志匹配特性的，然后一致性检查在日志扩展的时候保护了日志匹配特性。因此，每当附加日志 RPC 返回成功时，领导人就知道跟随者的日志一定是和自己相同的了。</p>
+<p><strong>日志合并</strong></p>
+<p>在 Raft 算法中，领导人是通过强制跟随者直接复制自己的日志来处理不一致问题的。这意味着在跟随者中的冲突的日志条目会被领导人的日志覆盖。（在领导者选举阶段就会比较日志的一致性，Raft 使用投票的方式来阻止一个候选人赢得选举，除非这个候选人包含了所有已经提交的日志条目。所以日志合并是单向的，只从领导者复制到追随者）</p>
+<p>要使得跟随者的日志进入和自己一致的状态，领导人必须找到最后两者达成一致的地方，然后删除跟随者从那个点之后的所有日志条目，并发送自己在那个点之后的日志给跟随者。所有的这些操作都在进行附加日志 RPCs 的一致性检查时完成。领导人针对每一个跟随者维护了一个 <strong>nextIndex</strong>，这表示下一个需要发送给跟随者的日志条目的索引地址。当一个领导人刚获得权力的时候，他初始化所有的 nextIndex 值为自己的最后一条日志的 index 加 1。如果一个跟随者的日志和领导人不一致，那么在下一次的附加日志 RPC 时的一致性检查就会失败。在被跟随者拒绝之后，领导人就会减小 nextIndex 值并进行重试。最终 nextIndex 会在某个位置使得领导人和跟随者的日志达成一致。当这种情况发生，附加日志 RPC 就会成功，这时就会把跟随者冲突的日志条目全部删除并且加上领导人的日志。一旦附加日志 RPC 成功，那么跟随者的日志就会和领导人保持一致，并且在接下来的任期里一直继续保持。</p>
+<p>通过这种机制，领导人在获得权力的时候就不需要任何特殊的操作来恢复一致性。他只需要进行正常的操作，然后日志就能在回复附加日志 RPC 的一致性检查失败的时候自动趋于一致。领导人从来不会覆盖或者删除自己的日志，领导人只附加日志。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="引用参考">引用参考<a href="#引用参考" class="hash-link" aria-label="引用参考的直接链接" title="引用参考的直接链接">​</a></h2>
+<p><a href="http://thesecretlivesofdata.com/raft/" target="_blank" rel="noopener noreferrer">Raft算法图解</a></p>
+<p><a href="https://github.com/maemual/raft-zh_cn/blob/master/raft-zh_cn.md" target="_blank" rel="noopener noreferrer">Raft算法精解</a></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col"><a href="https://github.com/Swagger-Ranger/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft.mdx" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>编辑此页</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="文件选项卡"><a class="pagination-nav__link pagination-nav__link--prev" href="/analysis-project/docs/category/dsa"><div class="pagination-nav__sublabel">上一页</div><div class="pagination-nav__label">DSA</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/analysis-project/docs/JavaDocs/DSA/data-structure-哈希"><div class="pagination-nav__sublabel">下一页</div><div class="pagination-nav__label">data-structure-哈希</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#算法设计" class="table-of-contents__link toc-highlight">算法设计</a><ul><li><a href="#raft一致性和可靠性的基础" class="table-of-contents__link toc-highlight">Raft一致性和可靠性的基础</a></li><li><a href="#raft设计" class="table-of-contents__link toc-highlight">Raft设计</a><ul><li><a href="#领袖选举" class="table-of-contents__link toc-highlight">领袖选举</a></li><li><a href="#日志复制" class="table-of-contents__link toc-highlight">日志复制</a></li><li><a href="#安全性" class="table-of-contents__link toc-highlight">安全性</a><ul><li><a href="#状态机安全性" class="table-of-contents__link toc-highlight">状态机安全性</a></li></ul></li></ul></li></ul></li><li><a href="#核心流程" class="table-of-contents__link toc-highlight">核心流程</a><ul><li><a href="#领袖选举-1" class="table-of-contents__link toc-highlight">领袖选举</a></li><li><a href="#日志复制-1" class="table-of-contents__link toc-highlight">日志复制</a></li></ul></li><li><a href="#引用参考" class="table-of-contents__link toc-highlight">引用参考</a></li></ul></div></div></div></div></main></div></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 Analysis Project, author liufei32@outlook.com</div></div></div></footer></div>
+</body>
+</html>

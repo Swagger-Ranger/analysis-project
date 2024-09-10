@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="zh-Hans" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-DevOps/JavaOptimizing" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.5.2">
+<title data-rh="true">Java optimizing | Analysis Project</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" name="twitter:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" property="og:url" content="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing"><meta data-rh="true" property="og:locale" content="zh_Hans"><meta data-rh="true" name="docusaurus_locale" content="zh-Hans"><meta data-rh="true" name="docsearch:language" content="zh-Hans"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Java optimizing | Analysis Project"><meta data-rh="true" name="description" content="Java optimizing就是Java的优化手册。"><meta data-rh="true" property="og:description" content="Java optimizing就是Java的优化手册。"><link data-rh="true" rel="icon" href="/analysis-project/img/apachecassandra-color.svg"><link data-rh="true" rel="canonical" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing" hreflang="x-default"><link rel="alternate" type="application/rss+xml" href="/analysis-project/blog/rss.xml" title="Analysis Project RSS Feed">
+<link rel="alternate" type="application/atom+xml" href="/analysis-project/blog/atom.xml" title="Analysis Project Atom Feed"><link rel="stylesheet" href="/analysis-project/assets/css/styles.460af289.css">
+<script src="/analysis-project/assets/js/runtime~main.581244b0.js" defer="defer"></script>
+<script src="/analysis-project/assets/js/main.331849e2.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/analysis-project/"><div class="navbar__logo"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/analysis-project/docs/AnalysisProject/Analysis Project是什么">All for analysis</a><a class="navbar__item navbar__link" href="/analysis-project/docs/coreMiddleware/concurrentFramework/Disruptor">Middlewares</a><a class="navbar__item navbar__link" href="/analysis-project/docs/category/juc">Codes</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/analysis-project/docs/DevOps/JavaOptimizing">DevOps</a><a class="navbar__item navbar__link" href="/analysis-project/blog">Blog</a></div><div class="navbar__items navbar__items--right"><a class="navbar__item navbar__link" href="/analysis-project/about">关于作者</a><a href="https://github.com/Swagger-Ranger/analysis-project" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="切换浅色/暗黑模式（当前为浅色模式）" aria-label="切换浅色/暗黑模式（当前为浅色模式）" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/analysis-project/docs/DevOps/JavaOptimizing">Java optimizing</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Linux系统探测工具">Linux系统探测工具</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/JVM数据分析">JVM数据分析</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Harbor手册">Harbor</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/容器中的日志">容器中的日志</a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="页面路径"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="主页面" class="breadcrumbs__link" href="/analysis-project/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">Java optimizing</span><meta itemprop="position" content="1"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>Java optimizing</h1></header><p>Java optimizing就是Java的优化手册。</p>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="理论">理论<a href="#理论" class="hash-link" aria-label="理论的直接链接" title="理论的直接链接">​</a></h2>
+<p>理论知识是很重要的，每次听别人说什么JVM调优，感觉就跟搞宗教迷信一样，感觉都没有弄清楚为什么，其实还是要搞清楚原理才行，理由至少有两点：</p>
+<ol>
+<li>任何改进都应该先有一套理论模型能够推到出理论边界，然后实际的改进都是在围绕如何去逼近那个极限来的。有那个理论边界，才知道改进的方向是什么，最终改进的效果怎么衡量。虽然我听到很多人包括大牛分享的说把什么什么提升了百分之多少多少，但我感觉如果没有先指明理论的边界和现实的约束，那宣称再多改进都是假的，因为你不知道这个改进是不是真的有意义，结果的数字你可以往任何方向以任何方式来计算得到。</li>
+<li>有了理论的边界，然后才能真的去衡量改进的方法和效果。否则，改进了多少，改进的对不对，还有没有改进的空间，其实都是不清楚的。</li>
+</ol>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="阿姆达尔定律">阿姆达尔定律<a href="#阿姆达尔定律" class="hash-link" aria-label="阿姆达尔定律的直接链接" title="阿姆达尔定律的直接链接">​</a></h3>
+<p>阿姆达尔定律（Amdahl&#x27;s law），一个计算机科学界的经验法则。它代表了处理器并行运算之后效率提升的能力。<strong>这个规律指出了存在必须的串行代码中增加机器能带来的效率提升的边界</strong>。</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>S</mi><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><mi>a</mi><mo>+</mo><mfrac><mi>a</mi><mi>n</mi></mfrac></mrow></mfrac></mrow><annotation encoding="application/x-tex">S=\frac{1}{1-a+\frac{a}{n}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6833em"></span><span class="mord mathnormal" style="margin-right:0.05764em">S</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span></span><span class="base"><span class="strut" style="height:2.3524em;vertical-align:-1.031em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6954em"><span style="top:-2.655em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.394em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">a</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.031em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span>
+<p>推导过程如下</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mtable rowspacing="0.25em" columnalign="right left" columnspacing="0em"><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mi>S</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mi>T</mi><mrow><mi>T</mi><mtext>’</mtext></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mrow><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi></mrow><mrow><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi><mtext>’</mtext></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mo stretchy="false">(</mo><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi><mtext>’</mtext><mo stretchy="false">)</mo><mi mathvariant="normal">/</mi><mo stretchy="false">(</mo><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi><mo stretchy="false">)</mo></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><mfrac><mi>t</mi><mrow><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi></mrow></mfrac><mo>+</mo><mfrac><mrow><mi>t</mi><mtext>’</mtext></mrow><mrow><msub><mi>t</mi><mi>n</mi></msub><mo>+</mo><mi>t</mi></mrow></mfrac></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><mi>f</mi><mtext>’</mtext><mo>+</mo><mfrac><mrow><mi>f</mi><mtext>’</mtext></mrow><mrow><mi>s</mi><mtext>’</mtext></mrow></mfrac></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mrow><mn>1</mn><mo>−</mo><mi>F</mi><mi>r</mi><mi>a</mi><mi>c</mi><mi>t</mi><mi>i</mi><mi>o</mi><msub><mi>n</mi><mrow><mi>e</mi><mi>n</mi><mi>h</mi><mi>a</mi><mi>n</mi><mi>c</mi><mi>e</mi><mi>d</mi></mrow></msub></mrow><mo>+</mo><mi>F</mi><mi>r</mi><mi>a</mi><mi>c</mi><mi>t</mi><mi>i</mi><mi>o</mi><msub><mi>n</mi><mrow><mi>e</mi><mi>n</mi><mi>h</mi><mi>a</mi><mi>n</mi><mi>c</mi><mi>e</mi><mi>d</mi></mrow></msub><mi mathvariant="normal">/</mi><mi>S</mi><mi>p</mi><mi>e</mi><mi>e</mi><mi>d</mi><mi>u</mi><msub><mi>p</mi><mrow><mi>e</mi><mi>n</mi><mi>h</mi><mi>a</mi><mi>n</mi><mi>c</mi><mi>e</mi><mi>d</mi></mrow></msub></mrow></mfrac></mrow></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow></mrow></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="true"><mrow><mrow></mrow><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>−</mo><mi>a</mi><mo>+</mo><mfrac><mi>a</mi><mi>n</mi></mfrac></mrow></mfrac></mrow></mstyle></mtd></mtr></mtable><annotation encoding="application/x-tex">\begin{aligned} S&amp;=\frac{T}{T’}\\ &amp;=\frac{t_n+t}{t_n+t’}\\ &amp;=\frac{1}{(t_n+t’)/(t_n+t)}\\ &amp;=\frac{1}{1-\frac{t}{t_n+t}+\frac{t’}{t_n+t}}\\ &amp;=\frac{1}{1-f’+\frac{f’}{s’}}\\ &amp;=\frac{1}{{1-Fraction_{enhanced}}+Fraction_{enhanced}/Speedup_{enhanced}}\\ &amp;=\frac{1}{1-a+\frac{a}{n}} \end{aligned}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:18.167em;vertical-align:-8.8335em"></span><span class="mord"><span class="mtable"><span class="col-align-r"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:9.3335em"><span style="top:-11.3335em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05764em">S</span></span></span><span style="top:-9.0554em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span><span style="top:-6.598em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span><span style="top:-4.0406em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span><span style="top:-1.2039em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span><span style="top:1.5847em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span><span style="top:4.1422em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:8.8335em"><span></span></span></span></span></span><span class="col-align-l"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:9.3335em"><span style="top:-11.3335em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em">T</span><span class="mord">’</span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.13889em">T</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-9.0554em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.2921em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">t</span><span class="mord">’</span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">t</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.836em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-6.598em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">t</span><span class="mord">’</span><span class="mclose">)</span><span class="mord">/</span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1514em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">t</span><span class="mclose">)</span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-4.0406em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.2299em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8246em"><span style="top:-2.655em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1645em"><span style="top:-2.357em;margin-left:0em;margin-right:0.0714em"><span class="pstrut" style="height:2.5em"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em"><span></span></span></span></span></span></span><span class="mbin mtight">+</span><span class="mord mathnormal mtight">t</span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.394em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4451em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.8801em"><span style="top:-2.655em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.1645em"><span style="top:-2.357em;margin-left:0em;margin-right:0.0714em"><span class="pstrut" style="height:2.5em"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.143em"><span></span></span></span></span></span></span><span class="mbin mtight">+</span><span class="mord mathnormal mtight">t</span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.394em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">t</span><span class="mord mtight">’</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.4451em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.2152em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-1.2039em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.1778em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal" style="margin-right:0.10764em">f</span><span class="mord">’</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9322em"><span style="top:-2.655em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">s</span><span class="mord mtight">’</span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.4461em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right:0.10764em">f</span><span class="mord mtight">’</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.1672em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:1.5847em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal" style="margin-right:0.13889em">F</span><span class="mord mathnormal" style="margin-right:0.02778em">r</span><span class="mord mathnormal">a</span><span class="mord mathnormal">c</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">nhan</span><span class="mord mathnormal mtight">ce</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal" style="margin-right:0.13889em">F</span><span class="mord mathnormal" style="margin-right:0.02778em">r</span><span class="mord mathnormal">a</span><span class="mord mathnormal">c</span><span class="mord mathnormal">t</span><span class="mord mathnormal">i</span><span class="mord mathnormal">o</span><span class="mord"><span class="mord mathnormal">n</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">nhan</span><span class="mord mathnormal mtight">ce</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span><span class="mord">/</span><span class="mord mathnormal">Sp</span><span class="mord mathnormal">ee</span><span class="mord mathnormal">d</span><span class="mord mathnormal">u</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.3361em"><span style="top:-2.55em;margin-left:0em;margin-right:0.05em"><span class="pstrut" style="height:2.7em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">e</span><span class="mord mathnormal mtight">nhan</span><span class="mord mathnormal mtight">ce</span><span class="mord mathnormal mtight">d</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em"><span></span></span></span></span></span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.936em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:4.1422em"><span class="pstrut" style="height:3.3603em"></span><span class="mord"><span class="mord"></span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3214em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord mathnormal">a</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.6954em"><span style="top:-2.655em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">n</span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.394em"><span class="pstrut" style="height:3em"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">a</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.345em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.031em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:8.8335em"><span></span></span></span></span></span></span></span></span></span></span></span>
+<blockquote>
+<p><em>这里数学公式出现了重复渲染，没有去处理渲染组件的冲突</em>
+其中：</p>
+</blockquote>
+<blockquote>
+<p>a = Fraction enhanced = parallel code/total code，如果总共100行代码，其中有50行是可以并行执行的，那parallel code=50，Fraction enhanced= 50/100=0.5</p>
+</blockquote>
+<blockquote>
+<p>n = Speedup enhanced =Old execution time / New execution time</p>
+</blockquote>
+<ul>
+<li>﻿S 为我们所需要的结果，全局提速倍速</li>
+<li>﻿Old total execution time（原来系统执行总时间）为<code>T</code></li>
+<li>﻿New total enecution time（加速后系统执行总时间）为<code>T&#x27;</code></li>
+<li>﻿系统中并行代码块（指能够通过并行计算加速的代码块）原来执行时间为<code>t</code></li>
+<li>﻿系统中并行代码块（指能够通过并行计算加速的代码块）加速后执行时间为<code>t&#x27;</code></li>
+<li>﻿系统中串行代码块（指不能通过并行计算加速的代码块）执行时间为<code>tn</code></li>
+<li>﻿<code>Fraction enhanced</code> 为<code>f</code></li>
+<li>﻿<code>Speedup enhanced</code> 为 <code>s&#x27;</code></li>
+</ul>
+<p>根据此公式，可以看到增加机器数量来提升执行效率是有极限的，大致有如下的极限：</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/JavaOptimizing/amdallaw-1.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
+<p>上图展示了 3 种情况:底层任务的并行度分别为 75%、90% 和 95%。这清楚地表明，只要工作负载有任何部分必须串行执行，线性可扩展性就不可能实现，而且对能够实现多大程度的可扩展性有严格的限制。即使情况良好， 线性可扩展性也不可能实现。</p>
+<p>Amdahl 定律所施加的限制是非常严格的。特别要注意的是，图中的横轴是对数，因此即使是(只有)5% 串行的算法，也需要 32 个处理器来实现 12 倍的加速。更糟糕的是，无论使用多少个核心，对于该算法来说，最大的提速也只能达到 20 倍。在实际应用中，很多算法的串行度远远超过 5%，所以最大可能的提速倍数就更受约束了。</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="利特尔定律">利特尔定律<a href="#利特尔定律" class="hash-link" aria-label="利特尔定律的直接链接" title="利特尔定律的直接链接">​</a></h3>
+<p><a href="https://en.wikipedia.org/wiki/Little&#x27;s_law" target="_blank" rel="noopener noreferrer">利特尔定律 (Little&#x27;s Law)</a>：</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mstyle scriptlevel="0" displaystyle="true"><mi>L</mi><mo>=</mo><mi>λ</mi><mi>W</mi><mi mathvariant="normal">.</mi></mstyle></mrow><annotation encoding="application/x-tex">{\displaystyle L=\lambda W.}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em"></span><span class="mord"><span class="mord mathnormal">L</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mord mathnormal" style="margin-right:0.13889em">λW</span><span class="mord">.</span></span></span></span></span></span>
+<blockquote>
+<p>wiki的解释如下：</p>
+<p><strong>L（平均在系统中的客户数量）</strong>：这是系统中任意时刻的平均客户数量。对于一个排队系统来说，这可以理解为平均等待人数加上正在服务的人数。</p>
+<p><strong>λ（平均到达率）</strong>：这是单位时间内进入系统的客户数量。例如，如果每分钟有5个人到达一个服务台，那么到达率λ就是5人/分钟。</p>
+<p><strong>W（平均在系统中的时间）</strong>：这是客户从进入系统到离开系统所花费的平均时间。这包括等待时间和服务时间。</p>
+</blockquote>
+<p>该定律将延迟、并发性和吞吐量联系起来：对于给定的请求处理持续时间 (即延迟)，应用程序同时处理的请求数 (即并发性) 必须与到达率 (即吞吐量) 成比例增长。例如，假设平均延迟为 50 毫秒的应用程序通过并发处理 10 个请求实现了每秒 200 个请求的吞吐量*（每个线程每秒处理20个请求，10个线程就是200个请求的吞吐量）*。为了使该应用程序扩展到每秒 2000 个请求的吞吐量，它将需要并发处理 100 个请求。如果每个请求在请求持续时间内都在一个线程中处理，那么为了使应用程序跟上，线程数必须随着吞吐量的增长而增长。</p>
+<p><strong>即系统中物体的平均数量等于物体离开系统的平均速率和物体在系统中平均停留时间的乘积。这个定律其实就在要求处理量和需求量保持一致的情况下，系统中需要维持多大的并行处理数量。指出了，完全并发请求中，要达到响应的吞吐量需要的线程数量。</strong></p>
+<blockquote>
+<p><strong>在Java线程池中，如何确认需要多少个线程和队列大小</strong></p>
+<p>要解决这个问题，首先要知道任务的类型：</p>
+<ul>
+<li>
+<p><strong>CPU密集型任务</strong>：任务主要使用CPU进行计算</p>
+<p>CPU密集型任务，最佳线程数通常是可用处理器核心数<code>Runtime.getRuntime().availableProcessors()</code>的1到1.5倍，这样在某些情况下（如线程需要等待I/O或者短暂的非计算任务），可以保持较高的CPU利用率，而不至于过多造成上下文切换开销。<em>即将线程池的核心线程数通常设置为可用核心数，以确保在负载较轻时，线程池不会创建过多的线程。最大线程数可以设置为核心数的1到1.5倍，这样可以在负载较重时，允许线程池根据需要创建更多的线程，但不会过多导致上下文切换的开销过大。过多的线程会导致频繁的上下文切换，反而减少CPU的有效工作时间。</em></p>
+<p>而对于队列大小，则看任务数量的波动，队列大小就为了应对波动而做的缓冲。</p>
+</li>
+<li>
+<p><strong>I/O密集型任务</strong>：任务主要等待I/O操作（如网络、文件读写）</p>
+<p>对于I/O密集型任务，由于线程大部分时间在等待I/O操作，可以增加更多的线程以提高并发性。经验法则是：</p>
+<span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>O</mi><mi>p</mi><mi>t</mi><mi>i</mi><mi>m</mi><mi>a</mi><mi>l</mi><mtext> </mtext><mi>T</mi><mi>h</mi><mi>r</mi><mi>e</mi><mi>a</mi><mi>d</mi><mtext> </mtext><mi>C</mi><mi>o</mi><mi>u</mi><mi>n</mi><mi>t</mi><mo>=</mo><mi>N</mi><mi>u</mi><mi>m</mi><mi>b</mi><mi>e</mi><mi>r</mi><mtext> </mtext><mi>o</mi><mi>f</mi><mtext> </mtext><mi>C</mi><mi>o</mi><mi>r</mi><mi>e</mi><mi>s</mi><mo>×</mo><mo stretchy="false">(</mo><mn>1</mn><mo>+</mo><mfrac><mrow><mi>W</mi><mi>a</mi><mi>i</mi><mi>t</mi><mi>T</mi><mi>i</mi><mi>m</mi><mi>e</mi></mrow><mrow><mi>S</mi><mi>e</mi><mi>r</mi><mi>v</mi><mi>i</mi><mi>c</mi><mi>e</mi><mi>T</mi><mi>i</mi><mi>m</mi><mi>e</mi></mrow></mfrac><mo stretchy="false">)</mo></mrow><annotation encoding="application/x-tex">Optimal Thread Count=Number of Cores× (1+\frac{WaitTime}{ServiceTime})</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em"></span><span class="mord mathnormal">Opt</span><span class="mord mathnormal">ima</span><span class="mord mathnormal" style="margin-right:0.01968em">l</span><span class="mord"> </span><span class="mord mathnormal" style="margin-right:0.13889em">T</span><span class="mord mathnormal">h</span><span class="mord mathnormal">re</span><span class="mord mathnormal">a</span><span class="mord mathnormal">d</span><span class="mord"> </span><span class="mord mathnormal" style="margin-right:0.07153em">C</span><span class="mord mathnormal">o</span><span class="mord mathnormal">u</span><span class="mord mathnormal">n</span><span class="mord mathnormal">t</span><span class="mspace" style="margin-right:0.2778em"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2778em"></span></span><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em"></span><span class="mord mathnormal" style="margin-right:0.10903em">N</span><span class="mord mathnormal">u</span><span class="mord mathnormal">mb</span><span class="mord mathnormal" style="margin-right:0.02778em">er</span><span class="mord"> </span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.10764em">f</span><span class="mord"> </span><span class="mord mathnormal" style="margin-right:0.07153em">C</span><span class="mord mathnormal">ores</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222em"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222em"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222em"></span></span><span class="base"><span class="strut" style="height:2.0463em;vertical-align:-0.686em"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.3603em"><span style="top:-2.314em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord mathnormal" style="margin-right:0.05764em">S</span><span class="mord mathnormal" style="margin-right:0.02778em">er</span><span class="mord mathnormal" style="margin-right:0.03588em">v</span><span class="mord mathnormal">i</span><span class="mord mathnormal">ce</span><span class="mord mathnormal" style="margin-right:0.13889em">T</span><span class="mord mathnormal">im</span><span class="mord mathnormal">e</span></span></span><span style="top:-3.23em"><span class="pstrut" style="height:3em"></span><span class="frac-line" style="border-bottom-width:0.04em"></span></span><span style="top:-3.677em"><span class="pstrut" style="height:3em"></span><span class="mord"><span class="mord mathnormal">Wai</span><span class="mord mathnormal" style="margin-right:0.13889em">tT</span><span class="mord mathnormal">im</span><span class="mord mathnormal">e</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.686em"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span><span class="mclose">)</span></span></span></span></span>
+<p>这里等待的时间比例越大，对应需要的线程数量就越多</p>
+</li>
+</ul>
+</blockquote>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="应用高性能的定义">应用高性能的定义<a href="#应用高性能的定义" class="hash-link" aria-label="应用高性能的定义的直接链接" title="应用高性能的定义的 直接链接">​</a></h3>
+<p>性能良好的应用程序，一个定义就是能有效地利用系统资源，这包括 CPU 利用率、内存、网络或 I/O 带宽。而如果一个应用程序导致一个或多个资源的使用达到极限，那就是出现了性能问题。</p>
+<blockquote>
+<p>任何性能诊断的第一步就是要识别出哪种资源的使用达到了极限。如果不处理资源短缺问题，就无法调优适当的性能指标——要么增加可用资源，要么提高使用效率。</p>
+<p>同时，要避免出现操作系统频繁的分配和管理资源，而使得整体的系统利用率降低，这种情况出现往往就是资源已经非常稀缺，操作系统难以分配足够的资源来满足用户的需求，而出现了频繁的资源协调。对于大多数现代的服务器级硬件来说，这种情况只有在 I/O(偶尔是内存)的需求大大超过供应能力时才会出现。</p>
+<p>​                                                                                                -- Java性能优化实践: JVM调优策略、工具与技巧</p>
+</blockquote>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="硬件和操作系统的一些特性和假设">硬件和操作系统的一些特性和假设<a href="#硬件和操作系统的一些特性和假设" class="hash-link" aria-label="硬件和操作系统的一些特性和假设的直接链接" title="硬件和操作系统的一些特性和假设的直接链接">​</a></h3>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="操作系统协调资源的假设">操作系统协调资源的假设<a href="#操作系统协调资源的假设" class="hash-link" aria-label="操作系统协调资源的假设的直接链接" title="操作系统协调资源的假设的直接链接">​</a></h4>
+<p>所有的资源都是有限的，而所有的进程都很贪婪，所以必须有一个中心系统来对访问做仲裁和计量。</p>
+<p>在这些稀缺资源中，最重要的两个通常为内存和 CPU 时间。其中对 CPU 的访问是由进程调度器控制的。它使用了一个所谓的运行队列，作为有资格运行 但必须等待 CPU 的线程或进程的等待区。因为想要运行的线程 / 进程实际 上总是比能够运行的多，所以需要一种机制来解决 CPU 争用问题。</p>
+<blockquote>
+<p>调度器的工作是响应中断，并管理对 CPU 核心的访问。操作系统的调度器会将线程移动到 单核上和将线程从单核上移走。在时间片结束时(在比较老的操作系统中通常是 10 毫秒 或 100 毫秒)，调度器会将线程移动到运行队列的后面，以等待线程到达队列的前面并有 资格再次运行。<em>（如果一个线程想主动放弃其时间片，有两种方式，一种是指定固定的时间(通过 sleep())，一种是等待某个条件被满足(使用 wait())。）</em></p>
+</blockquote>
+<p><strong>基于这个前提设计的操作系统中，因为 CPU 是一种稀缺资源，所以代码等待的时间往往要比运行的时间长。</strong></p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="内核态切换会导致大量的系统成本">内核态切换会导致大量的系统成本<a href="#内核态切换会导致大量的系统成本" class="hash-link" aria-label="内核态切换会导致大量的系统成本的直接链接" title="内核态切换会导致大量的系统成本的直接链接">​</a></h4>
+<p>内核态切换（从用户态到内核态，再从内核态返回用户态）是一个系统消耗较大的操作。因为其往往涉及到一下的原因：</p>
+<ol>
+<li>上下文切换的开销</li>
+</ol>
+<p>当系统从用户态切换到内核态时，需要保存当前进程的上下文（如寄存器、程序计数器等），并且加载新的上下文来执行内核代码。这个过程涉及多次寄存器的保存与恢复，可能还需要刷新 CPU 缓存、TLB等</p>
+<blockquote>
+<p>TLB (Translation Lookaside Buffer后备缓冲) 是操作系统中的一种缓存机制，用于加速虚拟地址到物理 地址的转换过程。在现代计算机系统中，内存管理通常采用<strong>虚拟内存</strong>的方式。虚拟内存允许程序使用比实际物理内存更大的地址空间，并且为每个进程提供独立的地址空间，从而提高了系统的安全性和稳定性。</p>
+<p>虚拟地址需要通过页表（Page Table）转换成物理地址，而这个转换过程是非常频繁的。如果每次内存访问都要查找页表，会导致严重的性能瓶颈。</p>
+<p>为了加速虚拟地址到物理地址的转换过程，处理器中引入了 TLB。TLB 是一种专门的缓存，存储了最近使用的虚拟地址到物理地址的映射。</p>
+</blockquote>
+<ol start="2">
+<li>模式切换的开销</li>
+</ol>
+<p>用户态和内核态是两种不同的运行模式。内核态有更高的权限，可以执行特权指令，而用户态权限较低。切换这两种模式需要 CPU 做一系列的工作，如：改变 CPU 的权限级别；切换内存管理单元（MMU）配置，可能需要刷新页表；切换堆栈指针，使用内核堆栈而不是用户堆栈。</p>
+<ol start="3">
+<li>
+<p>内核态代码的复杂性
+一旦进入内核态，操作系统要执行一些复杂的操作，比如处理系统调用、管理硬件资源、处理中断等。这些操作通常比在用户态执行的普通应用代码更加复杂，需要更多的时间来执行。</p>
+</li>
+<li>
+<p>缓存命中率下降
+内核态切换通常会导致 CPU 缓存中的数据失效，因为内核态和用户态的代码和数据一般位于不同的内存区域。这意味着在切换后，CPU 可能需要重新加载数据和指令，从而降低缓存命中率，增加内存访问的时间。</p>
+</li>
+</ol>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="上下文切换会导致大量的系统成本">上下文切换会导致大量的系统成本<a href="#上下文切换会导致大量的系统成本" class="hash-link" aria-label="上下文切换会导致大量的系统成本的直接链接" title="上下文切换会导致大量的系统成本的直接链接">​</a></h4>
+<p>上下文切换是指 CPU 将处理从一个线程或进程切换到另一个线程或进程的过程。它涉及保存当前线程或进程的状态（如寄存器、程序计数器等），并恢复即将运行的线程或进程的状态。上下文切换可以发生在以下几种场景中：</p>
+<ol>
+<li><strong>线程或进程的阻塞</strong>：比如等待 I/O 操作完成。</li>
+<li><strong>时间片轮转</strong>：多任务操作系统在时间片结束时切换到另一个任务。</li>
+<li><strong>优先级调度</strong>：高优先级任务抢占低优先级任务的 CPU。</li>
+</ol>
+<blockquote>
+<p>无论是用户线程之间的上下文切换，还是从用户模式进入内核模式(有时称为模式切换)， 都是一个成本很高的操作。后一种情况尤为重要，因为用户线程在其时间片中途可能需要 切换到内核模式以便执行某些功能，这种切换将强制清空指令和其他高速缓存，因为用户空间代码所访问的内存区域与内核空间通常没有任何交叉。</p>
+</blockquote>
+<p><strong>Java中会导致用户态切换或上下文切换的操作</strong></p>
+<table><thead><tr><th><strong>操作类别</strong></th><th><strong>操作描述</strong></th><th><strong>内核态切换</strong></th><th><strong>上下文切换</strong></th></tr></thead><tbody><tr><td><strong>I/O 操作</strong></td><td>文件读写 (<code>FileInputStream</code>, <code>FileOutputStream</code>, <code>FileReader</code>, <code>FileWriter</code> 等)，操作系统介入来访问磁盘，因此会导致内核态切换</td><td>是</td><td>否</td></tr><tr><td></td><td>网络操作 (<code>Socket</code>, <code>ServerSocket</code>, <code>DatagramSocket</code>)，底层需要调用操作系统的网络栈，这会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>标准输入输出 (<code>System.in</code>, <code>System.out</code>)，涉及底层 I/O 操作，同样会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>线程管理</strong></td><td>线程创建与销毁 (<code>new Thread().start()</code>)，Java 虚拟机需要与操作系统交互以管理线程资源，这涉及内核态切换。并且会涉及线程的上下文切换</td><td>是</td><td>是</td></tr><tr><td></td><td>线程同步 (<code>synchronized</code>, <code>Lock</code>, <code>ReentrantLock</code>)，当线程需要等待锁或被唤醒时，操作系统可能会介入，这时也会发生内核态切换，因为有时需要内核来仲裁。</td><td>可能</td><td>是</td></tr><tr><td></td><td>线程睡眠与等待 (<code>Thread.sleep()</code>, <code>Object.wait()</code>)，使线程进入睡眠或等待状态，操作系统需要将当前线程挂起，这需要从用户态切换到内核态。</td><td>是</td><td>是</td></tr><tr><td><strong>系统调用</strong></td><td>执行系统命令 (<code>Runtime.getRuntime().exec()</code>)，执行系统命令时，会导致内核态切换，因为 Java 需要通过操作系统来启动新的进程。</td><td>是</td><td>否</td></tr><tr><td></td><td>垃圾回收 (<code>System.gc()</code>)，垃圾回收的触发机制是由 JVM 管理的，但在某些情况下，JVM 可能需要与操作系统交互来释放内存资源，这可能导致内核态切换。</td><td>可能</td><td>否</td></tr><tr><td><strong>中断处理</strong></td><td>硬件中断处理，Java 的中断处理大多是用户态的逻辑，但当涉及到线程调度或 I/O 完成时，底层操作系统会介入处理硬件中断，这会导致内核态切换。</td><td>是</td><td>是</td></tr><tr><td><strong>内存管理</strong></td><td>内存映射文件 (<code>MappedByteBuffer</code>)，涉及操作系统的内存映射功能，这会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>直接内存分配 (<code>ByteBuffer.allocateDirect()</code>)，分配直接内存时，JVM 会调用操作系统的底层功能来分配非堆内存，这也会导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>进程管理</strong></td><td>进程间通信 (<code>ProcessBuilder</code>)，通过 <code>ProcessBuilder</code> 启动子进程，或者与子进程进行通信时，涉及操作系统的进程管理，导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>锁竞争</strong></td><td>线程竞争锁时需要阻塞等待，当多个线程竞争某个锁时，如果一个线程需要阻塞等待锁释放，操作系统将会介入调度，这种情况下会导致内核态切换。</td><td>是</td><td>是</td></tr></tbody></table>
+<p>一旦Java中有这些操作，则意味着性能的损耗，此时就需要衡量这些操作是否有必要，以及是否有优化的空间。</p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="对象分配率">对象分配率<a href="#对象分配率" class="hash-link" aria-label="对象分配率的直接链接" title="对象分配率的直接链接">​</a></h3>
+<p><strong>Java 性能的关键主题之一是应用程序对对象分配率的敏感性。</strong></p>
+<p>在 Java 性能优化中，特别需要关注应用程序中对象分配的频率和模式，因为这会对应用程序的性能产生显著影响。以下是更详细的解释：</p>
+<p>对象分配率（Object Allocation Rate）：指应用程序在运行时创建新对象的速度和频率。在 Java 中，对象的创建是通过 <code>new</code> 关键字或者其他方式（如反射、序列化等）来进行的。</p>
+<p>对象分配对性能的影响：</p>
+<ol>
+<li><strong>内存管理开销</strong>：Java 使用垃圾回收机制（Garbage Collection, GC）来自动管理内存。频繁创建对象会导致频繁的垃圾回收操作。虽然现代 JVM（Java Virtual Machine）有高效的垃圾回收算法，但高对象分配率仍然会增加垃圾回收的频率和开销，从而影响应用性能。</li>
+<li><strong>年轻代GC压力</strong>：Java 内存管理通常会将新创建的对象分配到年  轻代（Young Generation）内存中。如果年轻代内存填满，垃圾回收器将执行 Minor GC 来回收内存。高对象分配率会导致年轻代频繁被填满，从而导致频繁的 Minor GC，这会导致应用程序停顿，影响响应时间和吞吐量。</li>
+<li><strong>老年代GC影响</strong>：如果对象在年轻代中存活时间较长，它们会被移动到老年代（Old Generation）内存中。频繁的对象分配和晋升可能会增加老年代的内存压力，导致 Full GC 的频率增加。Full GC 是较为昂贵的垃圾回收操作，会导致更长的停顿时间。</li>
+<li><strong>内存碎片化</strong>：频繁的对象分配和释放可能导致内存碎片化，增加内存管理的复杂性和开销，进一步影响性能。</li>
+</ol>
+<p>如何减少对象分配率的影响：</p>
+<ol>
+<li><strong>对象重用</strong>：尽量重用已经创建的对象，减少不必要的对象创建。例如，使用对象池（Object Pool）来管理频繁使用的对象。</li>
+<li><strong>减少临时对象</strong>：在热点代码路径（如循环或频繁调用的方法）中，尽量避免创建临时对象。可以通过使用基本数据类型或适当的数据结构来减少临时对象的创建。</li>
+<li><strong>优化数据结构</strong>：选择适当的数据结构，以减少对象的创建。例如，使用数组而不是链表，使用基本数据类型的数组而不是包装类型的集合等。</li>
+<li><strong>监控和调优GC</strong>：通过监控工具（如JVisualVM、JProfiler等）观察应用程序的GC行为，调整JVM参数（如堆大小、GC算法等）以优化垃圾回收性能。</li>
+</ol>
+<h2 class="anchor anchorWithStickyNavbar_LWe7" id="实战">实战<a href="#实战" class="hash-link" aria-label="实战的直接链接" title="实战的直接链接">​</a></h2>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="操作系统维度">操作系统维度<a href="#操作系统维度" class="hash-link" aria-label="操作系统维  度的直接链接" title="操作系统维度的直接链接">​</a></h3>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="系统监控命令">系统监控命令<a href="#系统监控命令" class="hash-link" aria-label="系统监控命令的直接链接" title="系统监控命令的直接链接">​</a></h4>
+<p>见 <a href="/analysis-project/docs/DevOps/Linux系统探测工具">Linux系统探测工具</a></p>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="jvm维度">JVM维度<a href="#jvm维度" class="hash-link" aria-label="JVM维度的直接链接" title="JVM维度的直接链接">​</a></h3>
+<p>此章节参考:<a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener noreferrer">深入理解Java虚拟机-第3版</a></p>
+<blockquote>
+<p>tips：jvm gc 只影响cpu 用户时间利用率：</p>
+<p>内存是启动时分配， 并在用户空间内进行管理。这意味着不需要使用系统调用(如 sbrk())来分配内存，进而也说明了用于垃圾收集的内核切换活动相当少。</p>
+<p>因此，如果某个系统表现出的系统 CPU 利用率过高，那么它一定没有把大量时间花在垃圾收集上，因为垃圾收集活动会让用户空间的 CPU 周期飙升，但不会影响内核空间的 CPU 利用率。</p>
+<p>另外，如果一个 JVM 进程在用户空间使用了 100%(或接近这个值)的 CPU，那么垃圾收 集往往就是罪魁祸首。</p>
+</blockquote>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="gc">GC<a href="#gc" class="hash-link" aria-label="GC的直接链接" title="GC的直接链接">​</a></h4>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="内存布局">内存布局<a href="#内存布局" class="hash-link" aria-label="内存布局的直接链接" title="内存布局的直接链接">​</a></h5>
+<p>先来看一下jvm中的内存布局，这对理解gc很有帮助：</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-0.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
+<p>Java内存运行时区域的各个部分，其中程序计数器、虚拟机栈、本地方法栈3个区域随 线程而生，随线程而灭，栈中的栈帧随着方法的进入和退出而有条不紊地执行着出栈和入 栈操作。每一个栈帧中分配多少内存基本上是在类结构确定下来时就已知的(尽管在运行 期会由即时编译器进行一些优化，但在基于概念模型的讨论里，大体上可以认为是编译期 可知的)，因此这几个区域的内存分配和回收都具备确定性，在这几个区域内就不需要过 多考虑如何回收的问题，当方法结束或者线程结束时，内存自然就跟随着回收了。</p>
+<p>而Java堆和方法区这两个区域则有着很显著的不确定性:一个接口的多个实现类需要 的内存可能会不一样，一个方法所执行的不同条件分支所需要的内存也可能不一样，只有处于运行期间，我们才能知道程序究竟会创建哪些对象，创建多少个对象，这部分内存的 分配和回收是动态的。垃圾收集器所关注的正是这部分内存该如何管理</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jvm中gc方案的背景约束">jvm中gc方案的背景约束<a href="#jvm中gc方案的背景约束" class="hash-link" aria-label="jvm中gc方案的背景约束的直接链接" title="jvm中gc方案的背景约束的直接链接">​</a></h5>
+<p>为什么选择某一种gc方案，其实都是源于其所处的jvm对象生命周期分布，即在 JVM 和类似的软件系统中，对象生命周期的表现为<strong>双峰分布</strong> ：大部分对象寿命很短，而次一级对象的寿命大大长于预期。</p>
+<p>然后基于这种jvm对象生命周期的分布状态，而作的两个分代假设和一个推导假设：</p>
+<ul>
+<li>1)弱分代假说(<code>Weak Generational Hypothesis</code>):绝大多数对象都是朝生夕灭的。</li>
+<li>2)强分代假说(<code>Strong Generational Hypothesis</code>):熬过 越多次垃圾收集过程的对象就越难以消亡。</li>
+</ul>
+<blockquote>
+<p>这两个分代假说共同奠定了多款常用的垃圾收集器的一致的设计原则:收集器应该将 Java堆划分出不同的区域，然后将回收对象依据其年龄(年龄即对象熬过垃圾收集过程的次数)分配到不同的区域之中存储。显而易见，如果一个区域中大多数对象都是朝生夕灭，难以熬过垃圾收集过程的话，那么把它们集中放在一起，每次回收时只关注如何保留少量存活而不是去标记那些大量将要被回收的对象，就能以较低代价回收到大量的空间; 如果剩下的都是难以消亡的对象，那把它们集中放在一块，虚拟机便可以使用较低的频率 来回收这个区域，这就同时兼顾了垃圾收集的时间开销和内存的空间有效利用。</p>
+<p>在Java堆划分出不同的区域之后，垃圾收集器才可以每次只回收其中某一个或者某些 部分的区域——因而才有了<code>Minor GC</code>,<code>Major GC</code>,<code>Full GC</code>这样的回收类型的划分，也才能够针对不同的区域安排与里面存储对象存亡特征相匹配的垃圾收集算法——因而发展 出了<code>标记-复制算法</code>、<code>标记-清除算法</code>、<code>标记-整理算法</code>等针对性的垃圾收集算法。</p>
+</blockquote>
+<p>然后基于前两个假设还可以推导出第三个假设：</p>
+<ul>
+<li>3)跨代引用假说(Intergenerational Reference Hypothesis):跨代引用相对于同代引 用来说仅占极少数。--<em>因为存在互相引用关系的两个对象，是应该倾向于同时生存或者同时消亡的</em></li>
+</ul>
+<blockquote>
+<p>依据这条进一步推导的假说，我们就不应再为了少量的跨代引用去扫描整个老年代，也不必浪费空间专门记录每一个对象是否存在及存在哪些跨代引用，只需在新生代上建立一个全局的数据结构(该结构被称为“记忆集”，<code>Remembered Set</code>)，这个结构把老年代划分成若干小块，标识出老年代的哪一块内存会存在跨代引用。此后当发生<code>Minor GC</code>时，只有包含了 跨代引用的小块内存里的对象才会被加入到<code>GC Roots</code>进行扫描。虽然这种方法需要在对象 改变引用关系(如将自己或者某个属性赋值)时维护记录数据的正确性，会增加一些运行 时的开销，但比起收集时扫描整个老年代来说仍然是划算的。</p>
+</blockquote>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="gc的大致流程">gc的大致流程<a href="#gc的大致流程" class="hash-link" aria-label="gc的大致流程的直接链接" title="gc的大致流程的直接链接">​</a></h5>
+<p>然后gc算法，Java 的垃圾收集依赖于一个叫**标记和清除(mark and sweep)<strong>的算法，并且使用了一个叫</strong>已分配对象链表(allocated object list)**的链表结构来保存指向每个已经分配但尚未回收的对象的指针。</p>
+<p>整个标记清除的垃圾收集算法过程大致如下：</p>
+<ol>
+<li>
+<p>循环遍历已分配链表，清空标记位。</p>
+</li>
+<li>
+<p>从GC根开始，寻找活跃对象。</p>
+</li>
+<li>
+<p>在到达的每个对象上设置一个标记位。</p>
+</li>
+<li>
+<p>循环遍历已分配链表，对于每个标记位尚未设置的对象。</p>
+</li>
+</ol>
+<p>a. 回收堆中内存，将其放回空闲链表。</p>
+<p>b. 从已分配链表中移除该对象。</p>
+<p>现在我们就把这个过程中的一些细节理清楚</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="已分配对象链表allocated-object-list">已分配对象链表(allocated object list)<a href="#已分配对象链表allocated-object-list" class="hash-link" aria-label="已分配对象链表(allocated object list)的直接链接" title="已分配对象链表(allocated object list)的直接链接">​</a></h5>
+<p>AOL是一个包含所有已经被分配但尚未被垃圾收集器回收的对象的链表，JVM内部维护的一种数据结构，用来跟踪当前正在使用的对象，帮助JVM跟踪哪些对象已经被分配。JVM使用这个链表来了解有哪些对象在堆上，从而决定什么时候需要触发垃圾收集，或者在垃圾收集过程中哪些对象需要被回收。</p>
+<p>AOL通常包含堆内存中所有正在使用的对象。这些对象在程序中可能会被GC根对象直接或间接引用，也可能没有被任何GC根引用。</p>
+<p>在基于标记清除的gc算法中，如果AOL确实存在并在GC中被使用，则gc的开始阶段其被用来清除对象标记，因为JVM需要确保所有对象的标记位（通常是存储在对象的头部或与对象关联的元数据中）处于干净的状态以只标记当前可达的对象，清空标记位就是为了确保这一点；并且避免上一轮GC中遗留的标记导致某些对象被错误地识别为存活对象，进而导致对象无法被回收而发生内存泄漏。</p>
+<blockquote>
+<p>AOL是用来跟踪管理对象的，在某些JVM实现中，可能没有明确的AOL数据结构，而是使用其他方式管理对象，比如通过内存区域（如新生代、老年代）和对象头部的元数据来实现标记和清除。在这些情况下，标记位的清空仍然是标记-清除算法的一部分，但它们不是通过AOL来进行，而是通过遍历堆内存或使用其他优化结构来完成。</p>
+</blockquote>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="gc根">gc根<a href="#gc根" class="hash-link" aria-label="gc根的直接链接" title="gc根的直接链接">​</a></h5>
+<p>从GC根开始，寻找活跃对象。这里涉及对活跃对象的判定，而判断是否一个对象为活跃，现在使用的就是可达性分析的算法*（当然还有别的算法，比如引用计数，当一个对象的引用计数为0时，即是可回收的对象，实现简单但这种方法弊端太多：比如难以解决循环引用的问题、难以准确处理引用在并发环境下的准确计数 问题）*。</p>
+<p>如下图，从GC根开始通过引用去搜索，搜索过程所走过的路径称为“引用链”(Reference Chain)， 如果某个对象到GC Roots间没有任何引用链相连，或者用图论的话来说就是从GC Roots到 这个对象不可达时，则证明此对象是不可能再被使用的。</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-1.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
+<p>在Jvm里面，固定可作为GC Roots的对象包括以下几种:</p>
+<ul>
+<li>
+<p>在虚拟机栈(栈帧中的本地变量表)中引用的对象，譬如各个线程被调用的方法堆 栈中使用到的参数、局部变量、临时变量等。</p>
+</li>
+<li>
+<p>在方法区中类静态属性引用的对象，譬如Java类的引用类型静态变量。</p>
+</li>
+<li>
+<p>在方法区中常量引用的对象，譬如字符串常量池(String Table)里的引用。</p>
+</li>
+<li>
+<p>在本地方法栈中JNI(即通常所说的Native方法)引用的对象。</p>
+</li>
+<li>
+<p>Java虚拟机内部的引用，如基本数据类型对应的Class对象，一些常驻的异常对象 (比如NullPointExcepiton、OutOfMemoryError)等，还有系统类加载器。</p>
+</li>
+<li>
+<p>所有被同步锁(synchronized关键字)持有的对象。</p>
+</li>
+<li>
+<p>反映Java虚拟机内部情况的JMXBean、JVMTI中注册的回调、本地代码缓存等。</p>
+</li>
+<li>
+<p>除了上面这些固定的GC Roots集合以外，根据用户所选用的垃圾收集器以及当前回收的内 存区域不同，还可以有其他对象“临时性”地加入，共同构成完整GC Roots集合。</p>
+</li>
+</ul>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="oopmap">oopMap<a href="#oopmap" class="hash-link" aria-label="oopMap的直接链接" title="oopMap的直接链接">​</a></h5>
+<p>上面说了从gc根开始搜索引用以确定安心对象在被引用来标记其为存活以告诉后续的gc操作哪些对象要被回收，而实际在查找对象时并不需要一个不漏地检查完所有执行上下文和全局的引用位置，虚拟机是有办法直接得到哪些 地方存放着对象引用的。在<code>HotSpot</code>里是使用一组称为<code>OopMap</code>（Ordinary Object Pointer Map）的数据结构来达到这个目的。</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-2.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
+<blockquote>
+<p>在 JVM 中，OopMap（Object-Oriented Pointer Map）是一个用于优化垃圾回收和安全点（Safepoint）处理的重要数据结构。它记录了在特定字节码指令执行时，栈帧中哪些位置保存的是对象引用（即 OOP：Ordinary Object Pointer），哪些位置保存的是非引用数据（如整数、浮点数等）。OopMap设计目的就是为了帮助垃圾回收器在安全点处高效地识别和标记存活对象。</p>
+<p>比如：<em>上图：String.hashCode()方法编译后的本地代码，在0x026eb7a9处的call指令有OopMap记录，它指明了EBX寄存器和栈 中偏移量为16的内存区域中各有一个普通对象指针(Ordinary Object Pointer，OOP)的引 用，有效范围为从call指令开始直到0x026eb730(指令流的起始位置)+142(OopMap记 录的偏移量)=0x026eb7be，即hlt指令为止。</em></p>
+</blockquote>
+<p><code>OopMap</code> 是在方法的初始编译（通常是解释执行时）和 <code>JIT</code> 编译（即时编译器）时生成的。它与每个方法或代码段的上下文相关联，记录了在特定时刻（通常是安全点）栈帧中哪些局部变量、操作数栈、以及寄存器中保存的是对象引用。这个信息在 JIT 编译时尤其详细，因为即时编译器会生成机器码，并嵌入 OopMap 以便在运行时使用。也就是无论是解释执行还是 JIT 编译，JVM 都会在编译过程中生成 <code>OopMap</code>。只是对于解释执行，<code>OopMap</code> 通常较为简单，而在 <code>JIT</code>编译时，由于涉及优化和编译后的本地代码，<code>OopMap</code> 会更加复杂。</p>
+<p>**<code>OopMap</code> 的整个思想就是，通过在编译时就直接插入引用信息数据来避免在实际运行中时去搜索对象，即用静态生成的OopMap 来规避在运行时去搜索大量的对象引用，来极大的提高gc时标记对象的效率。**所以每当 JVM 进入一个安全点，并触发垃圾回收时，OopMap 就会被用来快速、准确地标记哪些对象在当前栈帧或寄存器中被引用。</p>
+<p>但这里还有细节，就是反射这种在运行时生产的对象，要如何处理<code>OopMap</code>，以及在<code>AOP</code>中是如何嵌入<code>OopMap</code>的？</p>
+<ul>
+<li>
+<p>反射时 OopMap 生成：虽然反射调用的具体对象或方法是动态的，但反射的底层实现仍然是通过正常的字节码执行路径调用目标方法，在反射调用进入具体方法之前，栈帧和寄存器状态通常是固定的，JVM 会在这些位置插入安全点并生成 OopMap，与普通的代码路径没有本质区别，只是处理过程中可能需要考虑更多的边界条件，如动态类型检查、方法分派等。</p>
+</li>
+<li>
+<p>运行时 OopMap 生成：如果 AOP 是在编译时通过工具（如 AspectJ）织入切面逻辑，生成的字节码将与正常的字节码没有区别。这些字节码在 JVM 中的执行路径是固定的，JVM 会根据这些固定的路径生成相应的 OopMap。  而运行时织入的 AOP（如使用 JDK 动态代理或 CGLIB），切面逻辑会在运行时生成代理类或增强的字节码。这些动态生成的字节码在第一次执行时，可能通过解释执行或 JIT 编译来生成 OopMap，JIT 编译器会识别出这些动态生成的字节码，并为其生成 OopMap。</p>
+</li>
+</ul>
+<p>在 JVM 中，每个安全点都有相应的 OopMap。OopMap 描述了线程在该安全点处的栈帧状态，特别是哪些位置保存着对象引用。JVM 在到达安 全点时，会使用 OopMap 来快速识别和处理对象引用。</p>
+<p>总结就是：OopMap 是由 JVM 编译器在编译字节码时生成的。编译器在每个可能成为安全点的指令位置，都会生成一张 OopMap，这张表记录了当前栈帧中哪些位置保存的是对象引用。一旦类加载动作完成的时候，HotSpot就会把对象内什么偏移量上是什么 类型的数据计算出来，在即时编译过程中，也会在特定的位置记录下栈里和寄存器里哪些位置是引用。这样收集器在扫描时就可以直接得知这些信息了，并不需要真正一个不漏地从方法区等GC Roots开始查找。</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="安全点和安全区域">安全点和安全区域<a href="#安全点和安全区域" class="hash-link" aria-label="安全点和安全区域的直接链接" title="安全点和安全区域的直接链接">​</a></h5>
+<p>如果为每一条指令都生成对应的OopMap，那将会需要大量的额外存储空间，这样垃圾收集伴随而来的空间成本就会变得无法忍受的高昂。实际上HotSpot也的确没有为每条指令都生成OopMap，只是在“特定 的位置”记录了这些信息，这些位置被称为安全点(Safepoint)。</p>
+<p>具体来说就是 JVM 在编译字节码时插入的检查点，JVM 在编译过程中选择某些适合的指令位置（如方法调用、循环边界、异常处理等），将这些位置标记为安全点。</p>
+<blockquote>
+<p>注意：OopMap和安全点密切相关，但不是所有的安全点都会生成OopMap。实际上只有在栈帧中存在对象引用的情况下，JVM 才会在该安全点生成 OopMap。如果某个安全点上没有任何对象引用（例如该安全点是在处理纯计算逻辑的代码处），则可能不需要生成 OopMap。</p>
+</blockquote>
+<p><strong>那什么样的地方是安全点？</strong></p>
+<p>安全点位置的选取基本上是以*“是否具有让程序长时间执行的特征”*为标准进行选定的，因为每条指令执 行的时间都非常短暂，程序不太可能因为指令流长度太长这样的原因而长时间执行，“长时间执行”的最明显特征就是指令序列的复用，例如方法调用、循环跳转、异常跳转等都属于指令序列复用，所以只有具有这些功能的指令才会产生安全点。所以常见的安全点有：</p>
+<ul>
+<li>
+<p>循环的末尾：循环回边处是常见的安全点，因为循环可能执行很长时间。</p>
+</li>
+<li>
+<p>方法调用：方法调用是自然的中断点，适合作为安全点。</p>
+</li>
+<li>
+<p>异常处理：异常处理代码块的入口通常也作为安全点。</p>
+</li>
+<li>
+<p>特定的字节码指令：如访问类的字段或执行同步操作等。</p>
+</li>
+</ul>
+<p><strong>程序如何进入安全点？</strong></p>
+<p>即如何在垃圾收集发生时让所有线程(这里其实不包括执行<code>JNI</code>调用的线程)都跑到最近的安全点，然后停顿下来。这里有两种方案可供选择:</p>
+<ul>
+<li>
+<p>抢先式中断(<code>Preemptive Suspension</code>)和主动式中断(<code>Voluntary Suspension</code>)，抢先式中断不需要线程的执行代码主动去配合，在垃圾收集发生时，系统 首先把所有用户线程全部中断，如果发现有用户线程中断的地方不在安全点上，就恢复这 条线程执行，让它一会再重新中断，直到跑到安全点上。现在几乎没有虚拟机实现采用抢 先式中断来暂停线程响应GC事件。</p>
+</li>
+<li>
+<p>主动式中断的思想是当垃圾收集需要中断线程的时候，不直接对线程操作，仅仅简单地设置一个标志位，各个线程执行过程时会不停地主动去轮询这个标志，一旦发现中断 标志为真时就自己在最近的安全点上主动中断挂起。轮询标志的地方和安全点是重合的， 另外还要加上所有创建对象和其他需要在Java堆上分配内存的地方，这是为了检查是否即 将要发生垃圾收集，避免没有足够内存分配新对象。</p>
+</li>
+</ul>
+<p>这里因为轮询操作在代码中会频繁出现，HotSpot把轮询操作精简至只有一条汇编指令的程度，以保证它足够高效。</p>
+<p><strong>安全区域</strong></p>
+<p>安全区域（Safe Region）指的是程序执行的一段代码区间，在这个区间内，线程不会发生任何状态变化，特别是不会进行任何对象分配或修改对象引用的操作。</p>
+<p>对那些无法及时到达安全点的线程，例如，一个线程可能在执行一些长时间的阻塞操作（如等待 I/O）或处于等待状态（如 <code>Thread.sleep()</code> 或 <code>Object.wait()</code>）。这些线程在阻塞期间无法主动检查是否需要进入安全点，因此 JVM 需要一种机制来处理这种情况，这就是安全区域的作用。</p>
+<p>安全区域并不像安全点那样，是通过直接在字节码中插入的标记。安全区域更多的是一种逻辑概念，它指的是程序执行的一段代码，这段代码在某些条件下可以被认为是“安全”的，即在这段代码中，线程的状态不会影响垃圾回收。而是通过当线程进入某种状态（如等待、阻塞、休眠）时，JVM 会将该线程标记为处于安全区域。此时，JVM 认为该线程不会修改堆中的对象引用，所以可以在不干扰该线程的情况下进行垃圾回收。而线程在离开安全区域之前，会进行检查，确保垃圾回收已完成。</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="记忆集与卡表">记忆集与卡表<a href="#记忆集与卡表" class="hash-link" aria-label="记忆集与卡表的直接链接" title="记忆集与卡表的直接链接">​</a></h5>
+<p>在分代垃圾回收中，通常只对年轻代的对象进行频繁回收，而老年代的回收较少。然而，年轻代的对象可能被老年代的对象引用，这就产生了跨代引用。在回收年轻代时，垃圾回收器需要知道哪些老年代的对象引用了年轻代的对象，以确保这些被引用的对象不会被误回收。</p>
+<p>为了解决跨代收集的问题，以避免把整个老年代加进 GC Roots扫描范围。采用了一种叫记忆集(<code>Remembered Set</code>)的数据结构来优化跨代收集。</p>
+<p>记忆集是一种用于记录从非收集区域指向收集区域的指针集合的抽象数据结构，它本质上是一个集合。</p>
+<blockquote>
+<p>如果我们不考虑效率和成本的话，最简单的实现可以用非收集区域中所有含跨代引用的对象数 组来实现这个数据结构，比如：</p>
+<div class="language-java codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-java codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token class-name">Class</span><span class="token plain"> </span><span class="token class-name">RememberedSet</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    </span><span class="token class-name">Object</span><span class="token punctuation" style="color:#393A34">[</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> set</span><span class="token punctuation" style="color:#393A34">[</span><span class="token constant" style="color:#36acaa">OBJECT_INTERGENERATIONAL_REFERENCE_SIZE</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>这样的实现无论是空间占用还是维护成本都相当高昂，只是举个例子。</p>
+</blockquote>
+<p>而这个记忆集的具体实现就是卡表*（当然，理论上可以有别的方式，但卡表是是最常用的方式）*。</p>
+<p>具体来说，卡表是一种位图数据结构，记录堆内存中某些区域可能包含指向年轻代（Young Generation）对象的引用。卡表通过将堆内存划分为固定大小的卡页（通常是 512 字节或 1 KB），并为每个卡页在卡表中对应一个条目。当 JVM 发现某个老年代的对象引用了年轻代的对象时，它会将该对象所在的卡页标记为“脏”（即在卡表中将对应的条目标记为 1）。下图就是卡表与卡页的对应示意：</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-3.png" alt="image" style="max-width:32%;height:auto;display:block;margin:0 auto"></div>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="卡表的维护">卡表的维护<a href="#卡表的维护" class="hash-link" aria-label="卡表的维护的直接链接" title="卡表的维护的直接链接">​</a></h5>
+<p>然后为了保证卡表的有效和并发安全，卡表的维护主要依靠**写屏障（Write Barrier）**机制，以及在对象引用发生变化时的卡表更新。</p>
+<blockquote>
+<p>写屏障是一种在对象引用发生变化时插入的额外指令，用于拦截并处理这种引用变化。</p>
+</blockquote>
+<div class="language-java codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-java codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token keyword" style="color:#00009f">void</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">oop_field_store</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">oop</span><span class="token operator" style="color:#393A34">*</span><span class="token plain"> field</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> oop new_value</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">// 引用字段赋值操作</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token operator" style="color:#393A34">*</span><span class="token plain">field </span><span class="token operator" style="color:#393A34">=</span><span class="token plain"> new_value</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token comment" style="color:#999988;font-style:italic">// 写后屏障，在这里完成卡表状态更新 post_write_barrier(field, new_value);</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>应用写屏障后，虚拟机就会为所有赋值操作生成相应的指令，<em>即这一过程是通过在字节码或机器码级别插入额外指令实现的</em>，一旦收集器在写屏障中增加了更新卡表操作，无论更新的是不是老年代对新生代对象的引用，每次只要对引用进行更新，就会产生额外的开销，不过这个开销与Minor GC时扫描整个老年代的代价相比 还是低得多的。</p>
+<p>同时卡表的更新是增量的，即如果一个卡页已经被标记为“脏”，再次发生引用更新时无需重复标记，这样可以减少不必要的写操作。</p>
+<p>同时因为卡表对应的是内存区域是否被更新，此时当多线程修改互相独立的变量时，如果这些 变量恰好共享同一个缓存行，就会彼此影响(写回、无效化或者同步)而导致性能降低， 这就是伪共享问题，即一个线程的修改导致了另一个线程的cpu缓存失效，导致缓存命中降低而影响性能。为了避免伪共享问题，一种简单的解决方案是不采用无条 件的写屏障，而是先检查卡表标记，只有当该卡表元素未被标记过时才将其标记为变脏，<em>在JDK 7之后，HotSpot虚拟机增加了一个新的参数-XX:+UseCondCardMark，用来决定是否开启卡表更新的条件判断。开启会增加一次额外判断的开销，但能够避免伪共享 问 题，两者各有性能损耗，是否打开要根据应用实际运行情况来进行测试权衡。</em></p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="三色标记">三色标记<a href="#三色标记" class="hash-link" aria-label="三色标记的直接链接" title="三色标记的直接链接">​</a></h5>
+<p><strong>标记的并发修改</strong></p>
+<blockquote>
+<p>为什么要并发修改？</p>
+<p>可达性分析算法理论上要求全过程都基于一个能保障一致性的快照中才能够进行分析，这意味着必须全程冻结用户线程的运行。在根节点枚举这个步骤中，由于GC Roots相比起整个Java堆中全部的对象毕竟还算是极少数，且在 各种优化技巧(如OopMap)的加持下，它带来的停顿已经是非常短暂且相对固定(不随堆容量而增长)的了。</p>
+<p>可从GC Roots再继续往下遍历对象图，这一步骤的停顿时间就必定 会与Java堆容量直接成正比例关系了:堆越大，存储的对象越多，对象图结构越复杂，要标记更多对象而产生的停顿时间自然就更长，这肯定会导致很长的停顿时间，必然是不能接受的。</p>
+</blockquote>
+<p>并发修改要处理的两个问题？</p>
+<ul>
+<li>一种是把原本消亡的对象错误标记为存活，这不是好事，但其实是可以容忍的，只不过产 生了一点逃过本次收集的浮动垃圾而已，下次收集清理掉就好。</li>
+<li>另一种是把原本存活的对 象错误标记为已消亡，这就是非常致命的后果了，程序肯定会因此发生错误，必须解决。</li>
+</ul>
+<p><strong>三色标记</strong></p>
+<p>三色标记算法本身是设计用来避免回收存活对象的，三色标记是一个辅助标记对象存活的算法。</p>
+<p>先说三个颜色对应的含义和jvm对三种不同颜色状态的对象的处理：</p>
+<ul>
+<li><strong>白色（White）</strong>：对象还未被扫描，在垃圾回收的标记阶段，所有未被访问的对象最初都被认为是白 色的。</li>
+</ul>
+<p>如果某个对象在标记阶段结束后仍然是白色，那么它就被认为是不可达的，也就是垃圾，回收器会将其回收。</p>
+<ul>
+<li><strong>灰色（Gray）</strong>：对象已被扫描，但其子对象（即它引用的其他对象）还未全部被访问。</li>
+</ul>
+<p>灰色的对象在遍历过程中需要继续被扫描，以确保它们所引用的对象也能被正确标记为存活对象。</p>
+<ul>
+<li><strong>黑色（Black）</strong>：对象已被扫描 ，并且它所有的子对象都已被标记（不论是灰色还是黑色）。</li>
+</ul>
+<p>黑色的对象被认为是完全处理过的，它们和它们的子对象都会被保留在堆中，不会被回收。</p>
+<p>基本的扫描逻辑如下：</p>
+<ul>
+<li>
+<p><strong>初始阶段</strong>：所有对象最初都被标记为白色。从根对象（即GC Roots）开始，将根对象标记为灰色并将其放入一个待处理队列中。</p>
+</li>
+<li>
+<p><strong>扫描阶段</strong>：从待处理队列中取出一个灰色对象，遍历它所引用的所有对象：</p>
+</li>
+<li>
+<p>如果被引用的对象是白色，将其标记为灰色，并将其添加到待处理队列中。</p>
+</li>
+<li>
+<p>将当前的灰色对象标记为黑色，表示它已经被处理完毕。</p>
+</li>
+<li>
+<p>这个过程反复进行，直到所有灰色对象都被处理完毕，待处理队列为空为止。</p>
+</li>
+<li>
+<p><strong>标记结束</strong>：当扫描阶段结束后，所有可达的对象将是黑色（或灰色，最终会转为黑色），所有仍为白色的对象就是不可达的对象，即可以被回收的对象。</p>
+</li>
+</ul>
+<p><strong>总结一下：也就是从gc 根开始，每个对象都是从白色--&gt; 灰色 --&gt; 黑色的标记过程，都是通过灰色对象一点点的扫描其引用推进对象的颜色标记，对象的颜色标记不可能直接从白色到黑色，最后指导没有灰色对象，只有白色和黑色对象，此时黑色对象保 留，白色对象回收。</strong></p>
+<p><strong>如何处理并发修改问题中对象消失问题</strong></p>
+<p>Wilson于1994年在理论上证明了，当且仅当以下两个条件同时满足时，会产生“对象消失”的问题，即原本应该是黑色的对象被误标为白色：</p>
+<ul>
+<li>
+<p>赋值器插入了一条或多条从黑色对象到白色对象的新引用。</p>
+</li>
+<li>
+<p>赋值器删除了全部从灰色对象到该白色对象的直接或间接引用。</p>
+</li>
+</ul>
+<p>解决办法就是两个：增量更新(<code>Incremental Update</code>)和原始快照 (<code>Snapshot At The Beginning，SATB</code>)</p>
+<ul>
+<li>增量更新：破坏的是第一个条件，当黑色对象插入新的指向白色对象的引用关系时，增量更新会通过写屏障<code>Write Barrier</code>捕获这些变化，将这个新插入的引用记录下来，等并发扫描结束之后，再将这些记录过的引用关系中的黑色对象为根，重新扫描一次。这可以简化理解为，黑色对象一旦新插入了指向白色对象的引用之后，它就变回灰色对象了。</li>
+<li><strong>优点</strong>：</li>
+<li>实时性好：处理新增引用的及时性较好，确保引用关系变化后新产生的引用对象不会被漏标。</li>
+<li>垃圾量小：相较于 SATB，增量更新不保留已经被删除的引用关系，避免了标记阶段产生大量的浮动垃圾（floating garbage）。</li>
+<li><strong>缺点</strong>：</li>
+<li>实现复杂：增量更新的实现较为复杂，特别是在高并发环境下，保证写屏障的性能是一个挑战。</li>
+<li>延迟增加：增量更新会增加一些额外的延迟，因为每次对象引用变化都需要立即更新卡表和进行标记。</li>
+<li>原始快照：破坏的是第二个条件，当灰色对象要删除指向白色对象的引用关系时，就将这个要删除的引用记录下来，在并发扫描结束之后，再将这些记录过的引用关系中的灰色对象为根， 重新扫描一次。这也可以简化理解为，无论引用关系删除与否，都会按照刚刚开始扫描那一刻的对象图快照来进行搜索。</li>
+<li><strong>优点</strong>：</li>
+<li>实现简单：SATB 的实现相对简单，因为它只需要在标记开始时捕获快照，不需要动态处理新增引用。</li>
+<li>一致性强：SATB 保证了垃圾回收过程中对象引用关系的整体一致性，不易出现遗漏。</li>
+<li><strong>缺点</strong>：</li>
+<li>浮动垃圾多：由于 SATB 保留了快照时刻的引用关系，即使这些关系在实际运行中已经不再有效，也会被保留到标记结束，导致生成较多的浮动垃圾。</li>
+<li>额外开销：SATB 可能会带来更多的内存开销，因为保留了快照中的一些无效引用关系。</li>
+</ul>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="标记与对象回收">标记与对象回收<a href="#标记与对象回收" class="hash-link" aria-label="标记与对象回收的直接链接" title="标记与对象回收的直接链接">​</a></h5>
+<p>即使在可达性分析算法中判定为不可达的对象，也不是“非死不可”的，这时候它们暂 时还处于“缓刑”阶段，要真正宣告一个对象死亡，至少要经历两次标记过程:如果对象在 进行可达性分析后发现没有与<code>GC Roots</code>相连接的引用链，那它将会被第一次标记，随后进 行一次筛选，筛选的条件是此对象是否有必要执行<code>finalize()</code>方法。假如对象没有覆盖 <code>finalize()</code>方法，或者<code>finalize()</code>方法已经被虚拟机调用过，那么虚拟机将这两种情况都视 为“没有必要执行”。</p>
+<p>如果这个对象被判定为确有必要执行<code>finalize()</code>方法，那么该对象将会被放置在一个名 为<code>F-Queue</code>的队列之中，并在稍后由一条由虚拟机自动建立的、低调度优先级的<code>Finalizer</code> 线程去执行它们的<code>finalize()</code>方法。这里所说的“执行”是指虚拟机会触发这个方法开始运 行，但并不承诺一定会等待它运行结束。这样做的原因是，如果某个对象的<code>finalize()</code>方法 执行缓慢，或者更极端地发生了死循环，将很可能导致<code>F-Queue队列</code>中的其他对象永久处 于等待，甚至导致整个内存回收子系统的崩溃。<code>finalize()</code>方法是对象逃脱死亡命运的最后 一次机会，稍后收集器将对<code>F-Queue</code>中的对象进行第二次小规模的标记，如果对象要在 <code>finalize()</code>中成功拯救自己——只要重新与引用链上的任何一个对象建立关联即可，譬如把 自己(this关键字)赋值给某个类变量或者对象的成员变量，那在第二次标记时它将被移 出“即将回收”的集合;如果对象这时候还没有逃脱，那基本上它就真的要被回收了。</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="收集">收集<a href="#收集" class="hash-link" aria-label="收集的直接链接" title="收集的直接链接">​</a></h5>
+<ul>
+<li>
+<p>部分收集(Partial GC):指目标不是完整收集整个Java堆的垃圾收集，其中又分 为:</p>
+</li>
+<li>
+<p>新生代收集(Minor GC/Young GC):指目标只是新生代的垃圾收集。</p>
+</li>
+<li>
+<p>老年代收集(Major GC/Old GC):指目标只是老年代的垃圾收集。目前只有CMS 收集器会有单独收集老年代的行为。另外请注意“Major GC”这个说法现在有点混淆，在不 同资料上常有不同所指，读者需按上下文区分到底是指老年代的收集还是整堆收集。</p>
+</li>
+<li>
+<p>混合收集(Mixed GC):指目标是收集整个新生代以及部分老年代的垃圾收集。目 前只有G1收集器会有这种行为。</p>
+</li>
+<li>
+<p>整堆收集(Full GC):收集整个Java堆和方法区的垃圾收集。</p>
+</li>
+</ul>
+<p><strong>如何收集和为什么gc时会发生停顿</strong></p>
+<p>gc时会发生停顿是和其  采用的gc算法相关的，即当标记对象之后的具体如何回收操作，会面临一个选择，即：</p>
+<ul>
+<li>就地清除留下内存碎片而让后续分配对象变得复杂；这就是标记-清除，其不考虑移动和整理存活对象的话，使得弥散于堆中的存活对象导致的空间碎片化，而这个问题就只能依赖更为复杂的内存分配器和内存访问器来解决。</li>
+<li>还是标记之后移动对象整理内存的碎片，这会让回收动作变得复杂，而且需要暂停其他线程，因为如果移动存活对象，尤其是在老年代这种每次回收都有大量对象存活区域，移动存活对象并更新所有引用这些对象的地方将会是一种极为负重的操作，而且这种对象移动操作必须全程暂停用户应用程序才能进行，像这样的停顿被最初的虚拟机设计者形象地描述为<code>“Stop The World”</code>。</li>
+</ul>
+<p>基于以上两点，是否移动对象都存在弊端，移动则内存回收时会更复杂，不移动则内存分配时会更复杂。从垃圾收集的停顿时间来看，不移动对象停顿时间会更短，甚至可以不需要停顿，但是从整个程序的吞吐量来看，移动对象会更划算。因为内存分配和访问相比垃圾收集频率要高得多，这部分的耗时增加， 总吞吐量仍然是下降的。</p>
+<p>基于上面的现实，jvm使用了基于标记整理的回收算法，就是导致其回收时会出现停顿的原因。<code>HotSpot</code>虚拟机里面关注吞吐量的<code>Parallel Scavenge</code>收集器是基于 标记-整理算法的，而关注延迟的<code>CMS</code>收集器则是基于标记-清除算法的，所以<code>CMS</code>是低停顿的*（<code>CMS</code>一样会停顿至少延迟更低，因为所有收集器在根节点枚举即确定从哪些对象开始搜索其引用链时，这一步骤时都是必须暂停用户线程的，因此毫无疑问根节点枚举与整理内存碎片一样会面临相  似的<code>“Stop The World”</code>的困扰）*。</p>
+<p>所以这里有两个地方会导致停顿：</p>
+<ol>
+<li>根节点枚举</li>
+</ol>
+<p>因为根节点枚举始终必须在一个能保障一致性的快照中才得以进行 -- *这里“一致性”的意思是整个枚举期间执行子系统看起来就像被冻结在某个时间点上，不会出现分析过程中，根节点集合的对象引用关系还在不断变化的情况，若这点不能满足的话，分析结果准确性也就无法保证。*这是导致垃圾收集过程必须停顿所有用户线程的其中一个重要原因，即使是号称停顿时间可控，或者(几乎)不会发生停顿的CMS、G1、 ZGC等收集器，枚举根节点时也是必须要停顿的。</p>
+<ol start="2">
+<li>内存空间整理而产生的对象移动</li>
+</ol>
+<p>因为移动对象之后，需要更新所有对这些对象的引用。</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="收集器">收集器<a href="#收集器" class="hash-link" aria-label="收集器的直接链接" title="收集器的直接链接">​</a></h5>
+<p>衡量垃圾收集器的三项最重要的指标是:内存占用(<code>Footprint</code>)、吞吐量 (<code>Throughput</code>)和延迟(<code>Latency</code>)，三者共同构成了一个“不可能三角”，也就是最多只能完全选择其中的两项，不可能全部都做到。</p>
+<p>三者总体的表现会随技术进步而越来越好，但是要在这三个方面同时具有卓越表现的“完美”收集器是极 其困难甚至是不可能的，一款优秀的收集器通常最多可以同时达成其中的两项。</p>
+<div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-4.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="gc日志格式">gc日志格式<a href="#gc日志格式" class="hash-link" aria-label="gc日志格式的直接链接" title="gc日志格式的直接链接">​</a></h5>
+<p>设置日志的格式，命令：</p>
+<blockquote>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">-Xlog</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">:</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">selector</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">:</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">output</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">:</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">decorators</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">:output-options</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">]</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p><strong>选择器（selector）</strong>:</p>
+<ul>
+<li><code>gc</code>：垃圾收集日志</li>
+<li><code>safepoint</code>：安全点日志</li>
+<li><code>compiler</code>：编译器日志</li>
+<li><code>heap</code>：堆日志</li>
+</ul>
+<p><strong>输出目标（output）</strong>:</p>
+<ul>
+<li><code>stdout</code>：标准输出</li>
+<li><code>stderr</code>：标准错误输出</li>
+<li><code>file=&lt;filename&gt;</code>：输出到指定文件</li>
+</ul>
+<p><strong>修饰符（decorators）</strong>:</p>
+<ul>
+<li><code>summary</code>：简要摘要</li>
+<li><code>verbose</code>：详细日志</li>
+<li><code>time</code>：包括时间戳</li>
+</ul>
+<p><strong>输出选项（output-options）</strong>:</p>
+<ul>
+<li><code>filecount=&lt;number&gt;</code>：日志文件数量（用于轮转）</li>
+<li><code>filesize=&lt;size&gt;</code>：日志文件大小（用于轮转）</li>
+</ul>
+<p>比如：<code>-Xlog:gc+cpu,safepoint:file=logfile.log:verbose:time</code>：启用垃圾收集、CPU 使用和安全点的日志输出，输出到 <code>logfile.log</code> 文件中，使用 <code>verbose</code> 修饰符获取详细日志，并包括时间戳。</p>
+</blockquote>
+<p><strong>输出内容</strong></p>
+<p>示例：</p>
+<div class="language-java codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-java codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">java </span><span class="token operator" style="color:#393A34">-</span><span class="token class-name">Xlog</span><span class="token operator" style="color:#393A34">:</span><span class="token plain">gc </span><span class="token class-name">ReferenceCountingGC</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.005</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token class-name">Using</span><span class="token plain"> </span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.025</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">0</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Young</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">Normal</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"> </span><span class="token class-name">Evacuation</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">24</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">516</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">0.819</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.046</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">1</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Young</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">Normal</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"> </span><span class="token class-name">Evacuation</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">300</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">516</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">0.542</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.060</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Young</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">Normal</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"> </span><span class="token class-name">Evacuation</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">300</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">516</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">0.534</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.062</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">3</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Young</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">Normal</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"> </span><span class="token class-name">Evacuation</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">300</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">516</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">0.396</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.065</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">4</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Young</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">Normal</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token constant" style="color:#36acaa">G1</span><span class="token plain"> </span><span class="token class-name">Evacuation</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">300</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">836</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">0.602</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">[</span><span class="token number" style="color:#36acaa">0.078</span><span class="token plain">s</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">info</span><span class="token punctuation" style="color:#393A34">]</span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">gc</span><span class="token punctuation" style="color:#393A34">]</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">GC</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">5</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token class-name">Pause</span><span class="token plain"> </span><span class="token class-name">Full</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token class-name">System</span><span class="token punctuation" style="color:#393A34">.</span><span class="token function" style="color:#d73a49">gc</span><span class="token punctuation" style="color:#393A34">(</span><span class="token punctuation" style="color:#393A34">)</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">123</span><span class="token plain">M</span><span class="token operator" style="color:#393A34">-&gt;</span><span class="token function" style="color:#d73a49">1M</span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">28</span><span class="token plain">M</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">3.974</span><span class="token plain">ms</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token class-name">Finished</span><span class="token plain"> memory allocation</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>日志行字段含义：</p>
+<ul>
+<li><code>[0.003s][info][gc] Using G1</code>：</li>
+</ul>
+<ul>
+<li>
+<p>时间戳：<code>0.003s</code> 表示程序启动后 0.003 秒时的日志输出。</p>
+</li>
+<li>
+<p>日志级别：<code>[info]</code> 表示这是一个信息级别的日志。</p>
+</li>
+<li>
+<p>模块：<code>[gc]</code> 表示这是一个垃圾收集相关的日志。</p>
+</li>
+<li>
+<p>内容：<code>Using G1</code> 表示 JVM 正在使用 G1 垃圾收集器。</p>
+</li>
+<li>
+<p><code>[0.022s][info][gc] GC(0) Pause Young (Normal) (G1 Evacuation Pause) 24M-&gt;1M(516M) 0.674ms</code>:</p>
+</li>
+<li>
+<p>时间戳：<code>0.022s</code> 表示程序启动后 0.022 秒时发生的事件。</p>
+</li>
+<li>
+<p>GC ID：<code>GC(0)</code> 表示这是第 0 次垃圾收集事件。</p>
+</li>
+<li>
+<p>事件类型：<code>Pause Young (Normal)</code> 表示这是一次年轻代垃圾收集（Young GC）事件，通常会清理新创建对象所在的 Eden 区域。</p>
+</li>
+<li>
+<p>GC 触发原因：<code>(G1 Evacuation Pause)</code> 表示这是一次 G1 的 Evacuation Pause，也就是对象从 Eden 区域向 Survivor 或老年代区域的转移操作。</p>
+</li>
+<li>
+<p>内存变化：<code>24M-&gt;1M(516M)</code> 表示 GC 之前占用的内存为 24MB，GC 之后减少到 1MB，总堆内存大小为 516MB。</p>
+</li>
+<li>
+<p>GC 耗时：<code>0.674ms</code> 表示这次垃圾收集操作花费了 0.674 毫秒。</p>
+</li>
+</ul>
+<div class="language-txt codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-txt codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">java -Xlog:gc+cpu,safepoint:file=logfile.log:time ReferenceCountingGC</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">输出：</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.355+0800] GC(0) User=0.00s Sys=0.00s Real=0.00s</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.355+0800] Safepoint &quot;G1CollectForAllocation&quot;, Time since last: 10650416 ns, Reaching safepoint: 4917 ns, Cleanup: 4792 ns, At safepoint: 791541 ns, Total: 801250 ns</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.377+0800] GC(1) User=0.00s Sys=0.00s Real=0.00s</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.377+0800] Safepoint &quot;G1CollectForAllocation&quot;, Time since last: 21675584 ns, Reaching safepoint: 4708 ns, Cleanup: 8000 ns, At safepoint: 567625 ns, Total: 580333 ns</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">...</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.410+0800] GC(5) User=0.00s Sys=0.01s Real=0.01s</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">[2024-08-22T16:50:30.410+0800] Safepoint &quot;G1CollectFull&quot;, Time since last: 8986042 ns, Reaching safepoint: 500 ns, Cleanup: 791 ns, At safepoint: 3982625 ns, Total: 3983916 ns</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>这是一个更复杂的日志块：
+<code>java -Xlog:gc+cpu,safepoint:file=logfile.log:time ReferenceCountingGC</code></p>
+<ul>
+<li>
+<p><strong><code>+</code></strong>：在一个配置中分隔多个日志选择器。</p>
+</li>
+<li>
+<p><strong><code>,</code></strong>：在配置中分隔不同的日志模块或选择器。</p>
+</li>
+<li>
+<p><strong><code>:</code></strong>：分隔不同的配置项（如输出目标、修饰符）。</p>
+</li>
+</ul>
+<p>安全点日志：<code>[2024-08-22T16:50:30.377+0800] Safepoint &quot;G1CollectForAllocation&quot;, Time since last: 21675584 ns, Reaching safepoint: 4708 ns, Cleanup: 8000 ns, At safepoint: 567625 ns, Total: 580333 ns</code></p>
+<ul>
+<li>
+<p>G1CollectForAllocation: 安全点的名称，表示 GC 操作的类型。比如 &quot;G1CollectForAllocation&quot; 是 G1 垃圾收集器中的一个操作阶段。</p>
+</li>
+<li>
+<p>Time since last: 从上一个安全点到当前安全点的时间间隔（以纳秒为单位）。例如，<code>10650416 ns</code> 表示自上一个安全点以来的时间。</p>
+</li>
+<li>
+<p>Reaching safepoint: 进入安全点所需的时间。表示达到安全点所需的时间（以纳秒为单位）。例如，<code>4917 ns</code>。</p>
+</li>
+<li>
+<p>Cleanup: 清理时间，即在安全点期间进行清理操作所需的时间（以纳秒为单位）。例如，<code>4792 ns</code>。</p>
+</li>
+<li>
+<p>At safepoint: 实际在安全点上停留的时间（以纳秒为单位）。例如，<code>791541 ns</code>。</p>
+</li>
+<li>
+<p>Total: 从开始到结束的总时间，包括达到安全点、清理和停留的时间（以纳秒为单位）。例如，<code>801250 ns</code>。</p>
+</li>
+</ul>
+<p>cpu日志：<code>[2024-08-22T16:50:30.392+0800] GC(2) User=0.00s Sys=0.00s Real=0.00s</code></p>
+<ul>
+<li>第2次GC，用户态时间、系统态时间和实际时间。</li>
+</ul>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="主流收集器对比">主流收集器对比<a href="#主流收集器对比" class="hash-link" aria-label="主流收集器对比的直接链接" title="主流收集器对比的直接链接">​</a></h5>
+<p>下面是几款主流垃圾收集器的对比表格。这个表格总结了它们的主要特点、适用场景和优缺点。</p>
+<table><thead><tr><th>特性</th><th>G1GC (Garbage-First GC)</th><th>Serial GC</th><th>Parallel GC (Throughput Collector)</th><th>CMS (Concurrent Mark-Sweep) GC</th><th>ZGC (Z Garbage Collector)</th><th>Shenandoah GC</th></tr></thead><tbody><tr><td><strong>目标</strong></td><td>适用于大内存应用，最小化 GC 停顿时间</td><td>适用于小型单线程应用</td><td>适用于多核机器，高吞吐量</td><td>适用于需要低延迟的应用</td><td>低延迟，高并发应用</td><td>低延迟，高并发应用</td></tr><tr><td><strong>主要特点</strong></td><td>- 分区堆，逐步回收 - 并行处理 - 可预测的 GC 停顿时间</td><td>- 单线程 - 简单实现</td><td>- 多线程 - 高吞吐量</td><td>- 并行和并发处理 - 低延迟</td><td>- 并发回收 - 低延迟 - 不停顿</td><td>- 并发回收 - 低延迟 - 不停顿</td></tr><tr><td><strong>堆划分</strong></td><td>年轻代、老年代，垃圾优先的分区堆</td><td>年轻代和老年代，单块堆</td><td>年轻代、老年代</td><td>年轻代、老年代</td><td>年轻代、老年代，分区堆</td><td>年轻代、老年代，分区堆</td></tr><tr><td><strong>GC  停顿时间</strong></td><td>可预测，通常较低</td><td>长时间，单线程</td><td>较低，但会受到 GC 暂停时间的影响</td><td>较低，但仍会有较长的 GC 停顿时间</td><td>极低，无停顿</td><td>极低，无停顿</td></tr><tr><td><strong>并发/并行</strong></td><td>并发与并行</td><td>单线程</td><td>并行</td><td>并发和并行</td><td>并发</td><td>并发</td></tr><tr><td><strong>优点</strong></td><td>- 适合大内存应用 - 可预测停顿 - 对新生代和老年代有良好支持</td><td>- 简单实现 - 对低延迟有良好支持</td><td>- 高吞吐量 - 支持多线程 - 实现简单</td><td>- 低延迟 - 并发回收</td><td>- 几乎无停顿 - 支持大内存 - 并发回收</td><td>- 几乎无停顿 - 对大内存支持良好 - 并发回收</td></tr><tr><td><strong>缺点</strong></td><td>- 配置复杂 - 高内存消耗</td><td>- 单线程 - 不适合大内存应用</td><td>- GC 停顿可能较长</td><td>- 较高的 GC 停顿时间 - 配置复杂</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td></tr></tbody></table>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="jvm监测命令工具">JVM监测命令工具<a href="#jvm监测命令工具" class="hash-link" aria-label="JVM监测命令工具的直接链接" title="JVM监测命令工具的直接链接">​</a></h4>
+<p>这几个工具：<code>jps</code>、<code>jstat</code>、<code>jinfo</code>、<code>jmap</code> 和 <code>jstack</code> 总览如下：</p>
+<table><thead><tr><th><strong>命令</strong></th><th><strong>用途</strong></th><th><strong>主要功能</strong></th><th><strong>常用选项</strong></th></tr></thead><tbody><tr><td><code>jps</code></td><td>查看 Java 进程</td><td>显示正在运行的 Java 进程及其 PID 和简要信息</td><td><code>-l</code> 显示完全限定的类名，<code>-v</code> 显示 JVM 参数，<code>-m</code> 显示传递给主类的参数</td></tr><tr><td><code>jstat</code></td><td>查  看JVM 性能统计监控</td><td>用于监控 JVM 的垃圾回收、内存使用和其他性能统计信息</td><td><code>-gc</code> 显示垃圾收集相关信息，<code>-gcutil</code> 显示内存区域的垃圾收集使用率，<code>-class</code> 显示类加载统计信息</td></tr><tr><td><code>jinfo</code></td><td>显示和更改 JVM 配置参数</td><td>查看 JVM 配置参数（如系统属性、命令行参数等），并在某些情况下动态更改</td><td><code>-sysprops</code> 显示系统属性，<code>-flags</code> 显示 JVM 参数，<code>-flag &lt;name&gt;</code> 显示或设置特定 JVM 参数</td></tr><tr><td><code>jmap</code></td><td>内存映像（heap dump）生成和分析</td><td>获取 JVM 中的堆转储、内存使用统计信息、对象分布等</td><td><code>-dump</code> 生成堆转储，<code>-heap</code> 显示类加载，<code>-histo</code> 显示堆中对象统计</td></tr><tr><td><code>jstack</code></td><td>Java 线程的堆栈跟踪</td><td>用于诊断线程问题，生成所有线程的堆栈跟踪</td><td><code>-l</code> 显示额外的锁信息</td></tr></tbody></table>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jps">jps<a href="#jps" class="hash-link" aria-label="jps的直接链接" title="jps的直接链接">​</a></h5>
+<p><code>jps</code>(Java Process Status) 是 Java 提供的一个实用命令工具。它用于显示当前用户运行的所有 Java 进程的相关信息。这个工具类似于 Unix 系统中的 <code>ps</code> 命令，但专门针对 Java 进程。</p>
+<p>命令：<code>jps [options] [hostid]</code></p>
+<ul>
+<li>
+<p><strong><code>-q</code></strong>: 只输出 Java 进程 ID（PID），不显示类名、JAR 文件名或参数。</p>
+</li>
+<li>
+<p><strong><code>-m</code></strong>: 显示传递给 main 方法的参数。</p>
+</li>
+<li>
+<p><strong><code>-l</code></strong>: 输出完全限定的类名或 JAR 文件路径。</p>
+</li>
+<li>
+<p><strong><code>-v</code></strong>: 显示传递给 JVM 的参数。</p>
+</li>
+</ul>
+<p>示例：</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jps </span><span class="token parameter variable" style="color:#36acaa">-l</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">1920</span><span class="token plain"> com.intellij.idea.Main</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">90771</span><span class="token plain"> ReferenceCountingGC</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">23188</span><span class="token plain"> org.jetbrains.jps.cmdline.Launcher</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">90879</span><span class="token plain"> jdk.jcmd/sun.tools.jps.Jps</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">25583</span><span class="token plain"> org.jetbrains.jps.cmdline.Launcher</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jstat">jstat<a href="#jstat" class="hash-link" aria-label="jstat的直接链接" title="jstat的直接链接">​</a></h5>
+<p><code>jstat</code> 是一个 Java 虚拟机统计监控工具，用于监视和分析 Java 应用程序的性能。它可以显示 jvm的各种运行时统计信息，如垃圾回收、内存使用、类加载、编译器性能等。</p>
+<p>语法：<code>jstat [options] &lt;vmid&gt; [interval] [count]</code></p>
+<ul>
+<li>
+<p><strong><code>&lt;vmid&gt;</code></strong>: 要监视的 Java 虚拟机的进程 ID（PID）。可以通过 <code>jps</code> 命令获取。</p>
+</li>
+<li>
+<p><strong><code>[interval]</code></strong>: 更新统计信息的时间间隔，以毫秒为单位（可选）。</p>
+</li>
+<li>
+<p><strong><code>[count]</code></strong>: 更新统计信息的次数（可选）。</p>
+</li>
+</ul>
+<p>options选项：</p>
+<ul>
+<li><strong><code>-class</code></strong>: 显示类加载相关的统计信息，包括已加载类的数量、字节数以及卸载的类信息。</li>
+<li><strong><code>-gc</code></strong>: 显示垃圾回收相关的统计信息，包括新生代、老年代、永久代的空间使用和垃圾回收次数、时间等。</li>
+<li><strong><code>-gccapacity</code></strong>: 显示各个代的内存空间使用容量信息。</li>
+<li><strong><code>-gcnew</code></strong>: 显示新生代的垃圾回收统计信息。</li>
+<li><strong><code>-gcnewcapacity</code></strong>: 显示新生代的内存空间使用容量信息。</li>
+<li><strong><code>-gcold</code></strong>: 显示老年代的垃圾回收统计信息。</li>
+<li><strong><code>-gcoldcapacity</code></strong>: 显示老年代的内存空间使用容量信息。</li>
+<li><strong><code>-gcmetacapacity</code></strong>: 显示元数据空间的容量信息（Java 8 及更高版本）。</li>
+<li><strong><code>-gcutil</code></strong>: 显示垃圾回收的整体统计信息，以百分比的形式展示各代的空间使用率和垃圾回收时间。</li>
+<li><strong><code>-gccause</code></strong>: 显示垃圾回收统计信息和最近一次或当前正在发生的垃圾回收的原因。</li>
+<li><strong><code>-compiler</code></strong>: 显示 JIT 编译器的性能统计信息。</li>
+<li><strong><code>-printcompilation</code></strong>: 显示正在进行的或最近完成的类编译信息。</li>
+</ul>
+<p><strong>-gc</strong></p>
+<p>示例：</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jstat </span><span class="token parameter variable" style="color:#36acaa">-gc</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">91776</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">    S0C         S1C         S0U         S1U          EC           EU           OC           OU          MC         MU       CCSC      CCSU     YGC     YGCT     FGC    FGCT     CGC    CGCT       GCT</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">        </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">24576.0</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">4096.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">1105.6</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">320.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">78.1</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">128.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">4.3</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">5</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0.003</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">1</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0.004</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0.000</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0.006</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<ul>
+<li>
+<p><strong>S0C, S1C</strong>: 新生代中两个幸存区（Survivor Space）的容量。</p>
+</li>
+<li>
+<p><strong>S0U, S1U</strong>: 新生代中两个幸存区的使用量。</p>
+</li>
+<li>
+<p><strong>EC, EU</strong>: 新生代 Eden 区的容量和使用量。</p>
+</li>
+<li>
+<p><strong>OC, OU</strong>: 老年代（Old Generation）的容量和使用量。</p>
+</li>
+<li>
+<p><strong>MC, MU</strong>: 元数据区（Metaspace）的容量和使用量。</p>
+</li>
+<li>
+<p><strong>CCSC</strong> (Compressed Class Space Capacity) - 压缩类空间的容量：前分配给压缩类空间的总容量（KB）。压缩类空间用于存储类的元数据。随着类的加载，压缩类空间的使用量会增加。如果使用量接近容量，JVM 可能会增加压缩类空间的容量。</p>
+</li>
+<li>
+<p><strong>CCSU</strong> (Compressed Class Space Used) - 压缩类空间的使用量：已使用的压缩类空间的大小（以 KB 为单位）。这个值显示了实际用于存储类元数据的空间量。随着 JVM 加载更多类，这个值会增加。</p>
+</li>
+<li>
+<p><strong>YGC</strong>: 新生代垃圾回收的次数。</p>
+</li>
+<li>
+<p><strong>YGCT</strong>: 新生代垃圾回收所用的总时间。</p>
+</li>
+<li>
+<p><strong>FGC</strong>: 老年代垃圾回收的次数（即 Full GC）。</p>
+</li>
+<li>
+<p><strong>FGCT</strong>: 老年代垃圾回收所用的总时间。</p>
+</li>
+<li>
+<p><strong>GCT</strong>: 垃圾回收总时间。</p>
+</li>
+<li>
+<p><strong>CGCT</strong> (Concurrent Garbage Collection Time) - 并发垃圾回收的总时间</p>
+</li>
+</ul>
+<p><strong>-class</strong></p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jstat </span><span class="token parameter variable" style="color:#36acaa">-class</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">91776</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Loaded  Bytes  Unloaded  Bytes     Time</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">452</span><span class="token plain">  </span><span class="token number" style="color:#36acaa">1135.2</span><span class="token plain">        </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">0.00</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<ul>
+<li>
+<p><strong>Loaded</strong>: 已加载的类的数量。</p>
+</li>
+<li>
+<p><strong>Bytes</strong>: 已加载类的字节数。</p>
+</li>
+<li>
+<p><strong>Unloaded</strong>: 已卸载的类的数量。</p>
+</li>
+<li>
+<p><strong>Time</strong>: 类加载或卸载操作所用的时间。</p>
+</li>
+<li>
+<p><strong>Compiled</strong>: 已编译的方法数。</p>
+</li>
+</ul>
+<p><strong>-gccapacity</strong></p>
+<p>查看gc空间</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jstat </span><span class="token parameter variable" style="color:#36acaa">-gccapacity</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">60213</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   NGCMN        NGCMX         NGC          S0C     S1C              EC         OGCMN        OGCMX         OGC           OC         MCMN       MCMX        MC       CCSMN     CCSMX     CCSC     YGC    FGC   CGC</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">         </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">    </span><span class="token number" style="color:#36acaa">8388608.0</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">90112.0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">12288.0</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">77824.0</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">    </span><span class="token number" style="color:#36acaa">8388608.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">8192.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">8192.0</span><span class="token plain">        </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">   </span><span class="token number" style="color:#36acaa">114688.0</span><span class="token plain">    </span><span class="token number" style="color:#36acaa">21568.0</span><span class="token plain">       </span><span class="token number" style="color:#36acaa">0.0</span><span class="token plain">   </span><span class="token number" style="color:#36acaa">49152.0</span><span class="token plain">    </span><span class="token number" style="color:#36acaa">2560.0</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">3</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">2</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>参数解释：</p>
+<p><strong>新生代 (Young Generation)</strong></p>
+<ul>
+<li><strong>NGCMN (New Generation Capacity Minimum)</strong>: 新生代最小容量，单位为 KB。值为 <code>0.0 KB</code>。</li>
+<li><strong>NGCMX (New Generation Capacity Maximum)</strong>: 新生代最大容量，单位为 KB。值为 <code>8388608.0 KB</code> (约 <code>8 GB</code>)。</li>
+<li><strong>NGC (New Generation Capacity Current)</strong>: 新生代当前容量，单位为 KB。值为 <code>90112.0 KB</code> (约 <code>88 MB</code>)。</li>
+<li><strong>S0C (Survivor Space 0 Capacity)</strong>: Survivor 0 区的容量，单位为 KB。值为 <code>0.0 KB</code>。</li>
+<li><strong>S1C (Survivor Space 1 Capacity)</strong>: Survivor 1 区的容量，单位为 KB。值为 <code>12288.0 KB</code> (约 <code>12 MB</code>)。</li>
+<li><strong>EC (Eden Space Capacity)</strong>: Eden 区的容量，单位为 KB。值为 <code>77824.0 KB</code> (约 <code>76 MB</code>)。</li>
+</ul>
+<p><strong>老年代 (Old Generation)</strong></p>
+<ul>
+<li><strong>OGCMN (Old Generation Capacity Minimum)</strong>: 老年代最小容量，单位为 KB。值为 <code>0.0 KB</code>。</li>
+<li><strong>OGCMX (Old Generation Capacity Maximum)</strong>: 老年代最大容量，单位为 KB。值为 <code>8388608.0 KB</code> (约 <code>8 GB</code>)。</li>
+<li><strong>OGC (Old Generation Capacity Current)</strong>: 老年代当前容量，单位为 KB。值为 <code>8192.0 KB</code> (约 <code>8 MB</code>)。</li>
+<li><strong>OC (Old Generation Capacity)</strong>: 老年代的当前容量，单位为 KB。值为 <code>8192.0 KB</code> (约 <code>8 MB</code>)。</li>
+</ul>
+<p><strong>方法区 (Metaspace)</strong></p>
+<ul>
+<li><strong>MCMN (Metaspace Capacity Minimum)</strong>: 方法区最小容量，单位为 KB。值为 <code>0.0 KB</code>。</li>
+<li><strong>MCMX (Metaspace Capacity Maximum)</strong>: 方法区最大容量，单位为 KB。值为 <code>114688.0 KB</code> (约 <code>112 MB</code>)。</li>
+<li><strong>MC (Metaspace Capacity Current)</strong>: 方法区当前容量，单位为 KB。值为 <code>21568.0 KB</code> (约 <code>21 MB</code>)。</li>
+</ul>
+<p><strong>代码缓存 (Code Cache)</strong></p>
+<ul>
+<li><strong>CCSMN (Code Cache Capacity Minimum)</strong>: 代码缓存最小容量，单位为 KB。值为 <code>0.0 KB</code>。</li>
+<li><strong>CCSMX (Code Cache Capacity Maximum)</strong>: 代码缓存最大容量，单位为 KB。值为 <code>49152.0 KB</code> (约 <code>48 MB</code>)。</li>
+<li><strong>CCSC (Code Cache Capacity Current)</strong>: 代码缓存当前容量，单位为 KB。值为 <code>2560.0 KB</code> (约 <code>2.5 MB</code>)。</li>
+</ul>
+<p><strong>垃圾回收统计 (Garbage Collection Stats)</strong></p>
+<ul>
+<li><strong>YGC (Young Generation GC Count)</strong>: 新生代垃圾回收次数。值  为 <code>3</code> 次。</li>
+<li><strong>FGC (Full GC Count)</strong>: 老年代垃圾回收次数 (Full GC)。值为 <code>0</code> 次。</li>
+<li><strong>CGC (Total GC Count)</strong>: 垃圾回收总次数。值为 <code>2</code> 次。</li>
+</ul>
+<p>这个统计特别有用，它能让你知道JVM 中各个内存区域的容量和使用情况，以及垃圾回收活动的频率</p>
+<p>还有别的参数就不展示了</p>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jinfo">jinfo<a href="#jinfo" class="hash-link" aria-label="jinfo的直接链接" title="jinfo的直接链接">​</a></h5>
+<p><code>jinfo</code> 是一个 Java 虚拟机（JVM）命令行工具，用于显示或修改运行中的 Java 应用程序的配置信息和 JVM 参数。这在在线排查问题，查看jvm参数并不停机修改运行参数很有用。</p>
+<ul>
+<li>
+<p><strong>查看系统参数</strong>：<code>jinfo -sysprops &lt;pid&gt;</code></p>
+</li>
+<li>
+<p><strong>查看jvm参数</strong>：<code>jinfo -flags &lt;pid&gt;</code></p>
+</li>
+<li>
+<p><strong>修改jvm参数</strong>：<code>jinfo -flag [+|-]&lt;name&gt; &lt;pid&gt;</code></p>
+</li>
+</ul>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jmap">jmap<a href="#jmap" class="hash-link" aria-label="jmap的直接链接" title="jmap的直接链接">​</a></h5>
+<p><code>jmap</code> 是一个 Java 虚拟机（JVM）提供的命令行工具，用于生成和查看 Java 应用程序的内存映像（heap dump），以及获取有关堆内存的详细信息。<code>jmap</code> 在内存分析、排查内存泄漏、性能调优等方面非常有用。</p>
+<ul>
+<li><strong>生成堆转储文件</strong> (<code>-dump</code>)：</li>
+</ul>
+<p>生成 JVM 当前堆的内存转储文件（heap dump）。该文件包含了 JVM 堆内存中的所有对象，通常用于诊断内存泄漏或分析对象使用情况。</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token comment" style="color:#999988;font-style:italic"># &lt;pid&gt;进程 ID,heapdump.hprof:堆转储文件名</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">jmap </span><span class="token parameter variable" style="color:#36acaa">-dump:format</span><span class="token operator" style="color:#393A34">=</span><span class="token plain">b,file</span><span class="token operator" style="color:#393A34">=</span><span class="token plain">heapdump.hprof </span><span class="token operator" style="color:#393A34">&lt;</span><span class="token plain">pid</span><span class="token operator" style="color:#393A34">&gt;</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>-b就是输出成二进制内容，然后用<code>MAT</code>,<code>VisualVM</code>,<code>JProfiler</code>可以打开输出的hprof堆转储文件</p>
+<blockquote>
+<p>使用VisualVM工具，可能需要配置一下插件才有部分功能，<a href="https://visualvm.github.io/pluginscenters.html" target="_blank" rel="noopener noreferrer">vm的插件配置下载地址</a>，<code>BTrace Workbench</code>、<code>Visual GC</code>这两个插件建议装上，</p>
+<ul>
+<li>
+<p>一个是实时跟踪 Java 应用程序的行为，例如方法调用、字段访问、线程状态等，</p>
+</li>
+<li>
+<p>后面一个是可视化显示垃圾回收的活动情况，包括年轻代、老年代的 GC 统计数据的。</p>
+</li>
+<li>
+<p>如果要监控远程主机的需要加jmx参数，比如：--一般线上环境还是不要配，一方面网络是隔离的，一方面开启实时监控然后远程调试可能会影响服务性能</p>
+<p>-Dcom. sun.management-jmxremote.port=1099
+-Dcom.sun.management.jmxremote.authenticate=false
+-Dcom. sun.management.jmxremote,ssl=false</p>
+</li>
+</ul>
+</blockquote>
+<ul>
+<li><strong>查看对象分布</strong> (<code>-histo</code>)：<code>jmap -histo &lt;pid&gt;</code></li>
+</ul>
+<p>生成包含 JVM 堆中所有对象实例的统计信息，按类名分组，并显示每个类的实例数量和占用的字节数。</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain"> num     </span><span class="token comment" style="color:#999988;font-style:italic">#instances         #bytes  class name (module)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">-------------------------------------------------------</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">1</span><span class="token plain">:             </span><span class="token number" style="color:#36acaa">8</span><span class="token plain">        </span><span class="token number" style="color:#36acaa">6471288</span><span class="token plain">  Ljdk.internal.vm.FillerArray</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">2</span><span class="token plain">:         </span><span class="token number" style="color:#36acaa">14081</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">800480</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">B </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">3</span><span class="token plain">:         </span><span class="token number" style="color:#36acaa">12582</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">301968</span><span class="token plain">  java.lang.String </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">4</span><span class="token plain">:          </span><span class="token number" style="color:#36acaa">2402</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">205560</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">Ljava.lang.Object</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">5</span><span class="token plain">:          </span><span class="token number" style="color:#36acaa">1587</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">195424</span><span class="token plain">  java.lang.Class </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">6</span><span class="token plain">:          </span><span class="token number" style="color:#36acaa">3450</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">110400</span><span class="token plain">  java.util.HashMap</span><span class="token variable" style="color:#36acaa">$Node</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">7</span><span class="token plain">:          </span><span class="token number" style="color:#36acaa">2734</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">87488</span><span class="token plain">  java.util.concurrent.ConcurrentHashMap</span><span class="token variable" style="color:#36acaa">$Node</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">8</span><span class="token plain">:           </span><span class="token number" style="color:#36acaa">296</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">53752</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">Ljava.util.HashMap</span><span class="token variable" style="color:#36acaa">$Node</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   </span><span class="token number" style="color:#36acaa">9</span><span class="token plain">:            </span><span class="token number" style="color:#36acaa">24</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">50752</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">C </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token number" style="color:#36acaa">10</span><span class="token plain">:          </span><span class="token number" style="color:#36acaa">1110</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">44400</span><span class="token plain">  java.util.LinkedHashMap</span><span class="token variable" style="color:#36acaa">$Entry</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token number" style="color:#36acaa">11</span><span class="token plain">:            </span><span class="token number" style="color:#36acaa">73</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">40848</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">Ljava.util.concurrent.ConcurrentHashMap</span><span class="token variable" style="color:#36acaa">$Node</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">  </span><span class="token number" style="color:#36acaa">12</span><span class="token plain">:           </span><span class="token number" style="color:#36acaa">523</span><span class="token plain">          </span><span class="token number" style="color:#36acaa">39504</span><span class="token plain">  </span><span class="token punctuation" style="color:#393A34">[</span><span class="token plain">I </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2</span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>#instances：该类的实例数量</p>
+<p>#bytes：实例占用的内存</p>
+<p>class name：类名</p>
+<blockquote>
+<p>Java中的类名规范：</p>
+<p><strong>普通类名</strong>：如<code>java.lang.String</code>, <code>java.util.ArrayList</code>，直接使用完整的类名，包括包路径。</p>
+<p><strong>数组类型</strong>：如<code>[Ljava.lang.String;</code>, <code>[I</code>，数组类型使用一种特殊的格式表示：</p>
+<ul>
+<li><strong><code>[</code></strong> 开头表示该对象是一个数组。</li>
+<li><strong><code>L</code></strong> 后跟类名表示该数组存储的是对象类型。例如，<code>[Ljava.lang.String;</code> 表示 <code>java.lang.String</code> 类型的对象数组。</li>
+<li>如果是基本类型的数组，使用对应的字母表示，例如：<!-- -->
+<ul>
+<li><code>[I</code> 表示 <code>int</code> 数组。</li>
+<li><code>[B</code> 表示 <code>byte</code> 数组。</li>
+<li><code>[C</code> 表示 <code>char</code> 数组。</li>
+<li><code>[D</code> 表示 <code>double</code> 数组。</li>
+<li><code>[F</code> 表示 <code>float</code> 数组。</li>
+<li><code>[J</code> 表示 <code>long</code> 数组。</li>
+<li><code>[S</code> 表示 <code>short</code> 数组。</li>
+<li><code>[Z</code> 表示 <code>boolean</code> 数组。</li>
+</ul>
+</li>
+</ul>
+<p><strong>内部类</strong>：如: <code>com.example.OuterClass$InnerClass</code>，格式为：外部类名和内部类名之间使用 <code>$</code> 符号连接。例如，<code>OuterClass$InnerClass</code></p>
+<p><strong>匿名内部类</strong>：即在类的内部new 一个对象然后用<code>{}</code>重写其中的方法就是一个匿名内部类，如 <code>com.example.OuterClass$1</code>，格式为：外部类名加 <code>$</code> 和一个数字表示。数字 <code>1</code> 表示这是定义的第一个匿名内部类。</p>
+<p><strong>本地类或局部类</strong>：本地类或局部类是同一种叫法，即在方法内部定义的类方法出栈局部类就会被卸载，如<code>com.example.OuterClass$1LocalClass</code>，本地类或局部类（在方法中定义的类）也会使用 <code>$</code> 符号，但后面会跟一个数字以及类名。</p>
+<p><strong>类加载器</strong>：如 <code>java.lang.ClassLoader$AppClassLoader</code>，对于 <code>ClassLoader</code> 类型的对象，会显示类加载器的完整类名。</p>
+<p><strong>基本类型（Primitive Types）</strong>：基本类型没有具体的类名，它们通常不会出现在 <code>jmap -histo</code> 的输出中，因为 <code>histo</code> 统计的是对象的数量，而基本类型的值不是对象。</p>
+</blockquote>
+<ul>
+<li><strong>查看类加载和加载的类分布</strong> (<code>-clstats</code>)：上面的<code>histo</code>(<em>英文名称：分布表</em>)就是展示jvm中类的分布情况，而<code>-clstats</code>是展示的加载的类的情况，具体就是metaspace中加载器和加载类的情况。</li>
+</ul>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jmap </span><span class="token parameter variable" style="color:#36acaa">-clstats</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">98237</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">ClassLoader         Parent              CLD*               Classes   ChunkSz   BlockSz  Type</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000a00006b360  0x000000a00006bbf0  0x00006000025e0140       </span><span class="token number" style="color:#36acaa">1</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">6144</span><span class="token plain">      </span><span class="token number" style="color:#36acaa">2448</span><span class="token plain">  jdk.internal.loader.ClassLoaders</span><span class="token variable" style="color:#36acaa">$AppClassLoader</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x0000000000000000  0x0000000000000000  0x00006000025e8b40     </span><span class="token number" style="color:#36acaa">540</span><span class="token plain">   </span><span class="token number" style="color:#36acaa">4456448</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">90864</span><span class="token plain">  </span><span class="token operator" style="color:#393A34">&lt;</span><span class="token plain">boot class loader</span><span class="token operator" style="color:#393A34">&gt;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000a00006bbf0  0x0000000000000000  0x00006000025e00a0       </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">         </span><span class="token number" style="color:#36acaa">0</span><span class="token plain">  jdk.internal.loader.ClassLoaders</span><span class="token variable" style="color:#36acaa">$PlatformClassLoader</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Total </span><span class="token operator" style="color:#393A34">=</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">3</span><span class="token plain">                                                      </span><span class="token number" style="color:#36acaa">541</span><span class="token plain">   </span><span class="token number" style="color:#36acaa">4462592</span><span class="token plain">     </span><span class="token number" style="color:#36acaa">93312</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">ChunkSz: Total size of all allocated metaspace chunks</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">BlockSz: Total size of all allocated metaspace blocks </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">each chunk has several blocks</span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>字段含义：</p>
+<ul>
+<li>
+<p><strong>ClassLoader</strong>: 类加载器对象的地址（在 JVM 内存中的位置）。</p>
+</li>
+<li>
+<p><strong>Parent</strong>: 父类加载器的对象地址。如果是 <code>0x0000000000000000</code>，表示没有父类加载器（即为根类加载器）。</p>
+</li>
+<li>
+<p><strong>CLD</strong>*: 代表 ClassLoaderData 的地址，ClassLoaderData 是 JVM 用来跟踪类加载器及其加载类的信息结构。</p>
+</li>
+<li>
+<p><strong>Classes</strong>: 由此类加载器加载的类的数量。</p>
+</li>
+<li>
+<p><strong>ChunkSz</strong>: 此类加载器在 Metaspace 中分配的所有元空间块的总大小（以字节为单位）。元空间是用于存储类元数据的堆外内存区域。</p>
+</li>
+<li>
+<p><strong>BlockSz</strong>: 此类加载器在 Metaspace 中分配的所有元空间块的总大小（每个块都有若干个块）。</p>
+</li>
+<li>
+<p><strong>Type</strong>: 类加载器的类型或类名。</p>
+</li>
+</ul>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="jstack">jstack<a href="#jstack" class="hash-link" aria-label="jstack的直接链接" title="jstack的直接链接">​</a></h5>
+<p><code>jstack</code> 用于生成 Java 线程的堆栈跟踪（stack trace）。堆栈跟踪提供了每个线程当前执行的位置，这对于调试和分析 Java 应用程序的性能问题、死锁、线程阻塞等问题非常有用。具体的用途如下：</p>
+<ul>
+<li>
+<p><strong>分析死锁</strong>： <code>jstack</code> 可以帮助识别应用程序中的死锁。死锁是一种情况，其中两个或多个线程相互等待对方持有的资源，导致这些线程永久阻塞。</p>
+</li>
+<li>
+<p><strong>线程状态分析</strong>： 可以查看每个线程的当前状态（如 <code>RUNNABLE</code>、<code>BLOCKED</code>、<code>WAITING</code> 等），以确定线程是否处于正常运行状态还是被阻塞或等待某个条件。</p>
+</li>
+<li>
+<p><strong>性能瓶颈分析</strong>： 通过查看哪些方法或代码片段占用了大量的 CPU 时间，可以帮助确定性能瓶颈。</p>
+</li>
+<li>
+<p><strong>线程泄漏检测</strong>： 如果应用程序中  存在线程泄漏（即某些线程没有被正确终止），<code>jstack</code> 可以帮助识别这种情况。</p>
+</li>
+</ul>
+<p>语法：<code>jstack [options] &lt;pid&gt;</code></p>
+<p>options参数：</p>
+<ul>
+<li><strong><code>-l</code></strong>: 输出有关锁的信息（包括 <code>java.util.concurrent</code> 中的 ownable synchronizers），对调试死锁特别有用。</li>
+</ul>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token comment" style="color:#999988;font-style:italic">## 不加参数l，就没有锁的信息</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">jstack </span><span class="token number" style="color:#36acaa">2306</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">2024</span><span class="token plain">-08-23 </span><span class="token number" style="color:#36acaa">14</span><span class="token plain">:46:21</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Full thread dump Java HotSpot</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">TM</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">64</span><span class="token plain">-Bit Server VM </span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">21.0</span><span class="token plain">.2+13-LTS-58 mixed mode, sharing</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain">:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Threads class SMR info:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token assign-left variable" style="color:#36acaa">_java_thread_list</span><span class="token operator" style="color:#393A34">=</span><span class="token plain">0x0000600000d4c920, </span><span class="token assign-left variable" style="color:#36acaa">length</span><span class="token operator" style="color:#393A34">=</span><span class="token number" style="color:#36acaa">11</span><span class="token plain">, </span><span class="token assign-left variable" style="color:#36acaa">elements</span><span class="token operator" style="color:#393A34">=</span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000013301cc00, 0x0000000133090000, 0x0000000133090800, 0x0000000133094000,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000013180ec00, 0x0000000131815c00, 0x0000000131816400, 0x000000013100b800,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x0000000131816c00, 0x000000013180f400, 0x0000000132819e00</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token string" style="color:#e3116c">&quot;main&quot;</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">#1 [8451] prio=5 os_prio=31 cpu=58.91ms elapsed=782.91s tid=0x000000013301cc00 nid=8451 waiting on condition  [0x000000016f902000]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   java.lang.Thread.State: TIMED_WAITING </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">sleeping</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.Thread.sleep0</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Native Method</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.Thread.sleep</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Thread.java:509</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at ReferenceCountingGC.main</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">ReferenceCountingGC.java:34</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token string" style="color:#e3116c">&quot;Reference Handler&quot;</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">#9 [31491] daemon prio=10 os_prio=31 cpu=0.07ms elapsed=782.89s tid=0x0000000133090000 nid=31491 waiting on condition  [0x0000000170a7a000]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   java.lang.Thread.State: RUNNABLE</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference.waitForReferencePendingList</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Native Method</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference.processPendingReferences</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Reference.java:246</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference</span><span class="token variable" style="color:#36acaa">$ReferenceHandler</span><span class="token plain">.run</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Reference.java:208</span><span class="token punctuation" style="color:#393A34">)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p><code>&quot;main&quot; #1 [8451] prio=5 os_prio=31 cpu=58.91ms elapsed=782.91s tid=0x000000013301cc00 nid=8451 waiting on condition  [0x000000016f902000]</code></p>
+<ul>
+<li>
+<p><strong>线程名称</strong>：如 <code>&quot;main&quot;</code> 表示线程的名字。</p>
+</li>
+<li>
+<p><strong>线程 ID (<code>#1</code>)</strong>：<code>#1</code> 是 JVM 内部分配的线程 ID。</p>
+</li>
+<li>
+<p><strong>操作系统线程 ID (<code>nid</code>)</strong>：如 <code>nid=8451</code>，这是操作系统分配给该线程的 ID。</p>
+</li>
+<li>
+<p><strong>优先级 (<code>prio=5</code>，<code>os_prio=31</code>)</strong>：<code>prio</code> 是 JVM 内的线程优先级，<code>os_prio</code> 是操作系统中的优先级。</p>
+</li>
+<li>
+<p><strong>CPU 时间 (<code>cpu=58.91ms</code>)</strong>：线程使用的 CPU 时间。</p>
+</li>
+<li>
+<p><strong>运行时间 (<code>elapsed=62.63s</code>)</strong>：线程已经运行的总时间。</p>
+</li>
+<li>
+<p><strong>线程状态 (<code>java.lang.Thread.State</code>)</strong>：如 <code>TIMED_WAITING (sleeping)</code> 表示线程当前处于休眠状态。</p>
+</li>
+<li>
+<p><strong>栈跟踪</strong>：显示当前线程的执行位置。在这个例子中，<code>main</code> 线程正处于 <code>Thread.sleep()</code> 方法中。</p>
+</li>
+<li>
+<p><strong>锁定信息</strong>：在 <code>Locked ownable synchronizers</code> 下显示了线程持有的锁。这里的 <code>None</code> 表示该线程没有持有任何可拥有的同步锁。</p>
+</li>
+</ul>
+<p><code>-l</code>参数会打出锁信息，并检测死锁</p>
+<div class="language-sh codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-sh codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">jstack </span><span class="token parameter variable" style="color:#36acaa">-l</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">2306</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token number" style="color:#36acaa">2024</span><span class="token plain">-08-23 </span><span class="token number" style="color:#36acaa">14</span><span class="token plain">:49:40</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Full thread dump Java HotSpot</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">TM</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token number" style="color:#36acaa">64</span><span class="token plain">-Bit Server VM </span><span class="token punctuation" style="color:#393A34">(</span><span class="token number" style="color:#36acaa">21.0</span><span class="token plain">.2+13-LTS-58 mixed mode, sharing</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain">:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">Threads class SMR info:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token assign-left variable" style="color:#36acaa">_java_thread_list</span><span class="token operator" style="color:#393A34">=</span><span class="token plain">0x0000600000d4c920, </span><span class="token assign-left variable" style="color:#36acaa">length</span><span class="token operator" style="color:#393A34">=</span><span class="token number" style="color:#36acaa">11</span><span class="token plain">, </span><span class="token assign-left variable" style="color:#36acaa">elements</span><span class="token operator" style="color:#393A34">=</span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000013301cc00, 0x0000000133090000, 0x0000000133090800, 0x0000000133094000,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x000000013180ec00, 0x0000000131815c00, 0x0000000131816400, 0x000000013100b800,</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x0000000131816c00, 0x000000013180f400, 0x0000000132819e00</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token string" style="color:#e3116c">&quot;main&quot;</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">#1 [8451] prio=5 os_prio=31 cpu=58.91ms elapsed=982.34s tid=0x000000013301cc00 nid=8451 waiting on condition  [0x000000016f902000]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   java.lang.Thread.State: TIMED_WAITING </span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">sleeping</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.Thread.sleep0</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Native Method</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.Thread.sleep</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Thread.java:509</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at ReferenceCountingGC.main</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">ReferenceCountingGC.java:34</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   Locked ownable synchronizers:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	- None</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token string" style="color:#e3116c">&quot;Reference Handler&quot;</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">#9 [31491] daemon prio=10 os_prio=31 cpu=0.07ms elapsed=982.33s tid=0x0000000133090000 nid=31491 waiting on condition  [0x0000000170a7a000]</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   java.lang.Thread.State: RUNNABLE</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference.waitForReferencePendingList</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Native Method</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference.processPendingReferences</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Reference.java:246</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	at java.lang.ref.Reference</span><span class="token variable" style="color:#36acaa">$ReferenceHandler</span><span class="token plain">.run</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">java.base@21.0.2/Reference.java:208</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain" style="display:inline-block"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">   Locked ownable synchronizers:</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">	- None</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col"><a href="https://github.com/Swagger-Ranger/analysis-project/docs/DevOps/JavaOptimizing.mdx" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>编辑此页</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="文件选项卡"><a class="pagination-nav__link pagination-nav__link--next" href="/analysis-project/docs/DevOps/Linux系统探测工具"><div class="pagination-nav__sublabel">下一页</div><div class="pagination-nav__label">Linux系统探测工具</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#理论" class="table-of-contents__link toc-highlight">理论</a><ul><li><a href="#阿姆达尔定律" class="table-of-contents__link toc-highlight">阿姆达尔定律</a></li><li><a href="#利特尔定律" class="table-of-contents__link toc-highlight">利特尔定律</a></li><li><a href="#应用高性能的定义" class="table-of-contents__link toc-highlight">应用高性能的定义</a></li><li><a href="#硬件和操作系统的一些特性和假设" class="table-of-contents__link toc-highlight">硬件和操作系统的一些特性和假设</a><ul><li><a href="#操作系统协调资源的假设" class="table-of-contents__link toc-highlight">操作系统协调资源的假设</a></li><li><a href="#内核态切换会导致大量的系统成本" class="table-of-contents__link toc-highlight">内核态切换会导致大量的系统成本</a></li><li><a href="#上下文切换会导致大量的系统成本" class="table-of-contents__link toc-highlight">上下文切换会导致大量的系统成本</a></li></ul></li><li><a href="#对象分配率" class="table-of-contents__link toc-highlight">对象分配率</a></li></ul></li><li><a href="#实战" class="table-of-contents__link toc-highlight">实战</a><ul><li><a href="#操作系统维度" class="table-of-contents__link toc-highlight">操作系统维度</a><ul><li><a href="#系统监控命令" class="table-of-contents__link toc-highlight">系统监控命令</a></li></ul></li><li><a href="#jvm维度" class="table-of-contents__link toc-highlight">JVM维度</a><ul><li><a href="#gc" class="table-of-contents__link toc-highlight">GC</a><ul><li><a href="#内存布局" class="table-of-contents__link toc-highlight">内存布局</a></li><li><a href="#jvm中gc方案的背景约束" class="table-of-contents__link toc-highlight">jvm中gc方案的背景约束</a></li><li><a href="#gc的大致流程" class="table-of-contents__link toc-highlight">gc的大致流程</a></li><li><a href="#已分配对象链表allocated-object-list" class="table-of-contents__link toc-highlight">已分配对象链表(allocated object list)</a></li><li><a href="#gc根" class="table-of-contents__link toc-highlight">gc根</a></li><li><a href="#oopmap" class="table-of-contents__link toc-highlight">oopMap</a></li><li><a href="#安全点和安全区域" class="table-of-contents__link toc-highlight">安全点和安全区域</a></li><li><a href="#记忆集与卡表" class="table-of-contents__link toc-highlight">记忆集与卡表</a></li><li><a href="#卡表的维护" class="table-of-contents__link toc-highlight">卡表的维护</a></li><li><a href="#三色标记" class="table-of-contents__link toc-highlight">三色标记</a></li><li><a href="#标记与对象回收" class="table-of-contents__link toc-highlight">标记与对象回收</a></li><li><a href="#收集" class="table-of-contents__link toc-highlight">收集</a></li><li><a href="#收集器" class="table-of-contents__link toc-highlight">收集器</a></li><li><a href="#gc日志格式" class="table-of-contents__link toc-highlight">gc日志格式</a></li><li><a href="#主流收集器对比" class="table-of-contents__link toc-highlight">主流收集器对比</a></li></ul></li><li><a href="#jvm监测命令工具" class="table-of-contents__link toc-highlight">JVM监测命令工具</a><ul><li><a href="#jps" class="table-of-contents__link toc-highlight">jps</a></li><li><a href="#jstat" class="table-of-contents__link toc-highlight">jstat</a></li><li><a href="#jinfo" class="table-of-contents__link toc-highlight">jinfo</a></li><li><a href="#jmap" class="table-of-contents__link toc-highlight">jmap</a></li><li><a href="#jstack" class="table-of-contents__link toc-highlight">jstack</a></li></ul></li></ul></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 Analysis Project, author liufei32@outlook.com</div></div></div></footer></div>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="zh-Hans" dir="ltr" class="docs-wrapper plugin-docs plugin-id-default docs-version-current docs-doc-page docs-doc-id-JavaDocs/DSA/data-structure-位图" data-has-hydrated="false">
+<head>
+<meta charset="UTF-8">
+<meta name="generator" content="Docusaurus v3.5.2">
+<title data-rh="true">data-structure-位图 | Analysis Project</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" name="twitter:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" property="og:url" content="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/data-structure-位图"><meta data-rh="true" property="og:locale" content="zh_Hans"><meta data-rh="true" name="docusaurus_locale" content="zh-Hans"><meta data-rh="true" name="docsearch:language" content="zh-Hans"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="data-structure-位图 | Analysis Project"><meta data-rh="true" name="description" content="位图"><meta data-rh="true" property="og:description" content="位图"><link data-rh="true" rel="icon" href="/analysis-project/img/apachecassandra-color.svg"><link data-rh="true" rel="canonical" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/data-structure-位图"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/data-structure-位图" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/JavaDocs/DSA/data-structure-位图" hreflang="x-default"><link rel="alternate" type="application/rss+xml" href="/analysis-project/blog/rss.xml" title="Analysis Project RSS Feed">
+<link rel="alternate" type="application/atom+xml" href="/analysis-project/blog/atom.xml" title="Analysis Project Atom Feed"><link rel="stylesheet" href="/analysis-project/assets/css/styles.460af289.css">
+<script src="/analysis-project/assets/js/runtime~main.581244b0.js" defer="defer"></script>
+<script src="/analysis-project/assets/js/main.331849e2.js" defer="defer"></script>
+</head>
+<body class="navigation-with-keyboard">
+<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/analysis-project/"><div class="navbar__logo"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/analysis-project/docs/AnalysisProject/Analysis Project是什么">All for analysis</a><a class="navbar__item navbar__link" href="/analysis-project/docs/coreMiddleware/concurrentFramework/Disruptor">Middlewares</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/analysis-project/docs/category/juc">Codes</a><a class="navbar__item navbar__link" href="/analysis-project/docs/DevOps/JavaOptimizing">DevOps</a><a class="navbar__item navbar__link" href="/analysis-project/blog">Blog</a></div><div class="navbar__items navbar__items--right"><a class="navbar__item navbar__link" href="/analysis-project/about">关于作者</a><a href="https://github.com/Swagger-Ranger/analysis-project" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="切换浅色/暗黑模式（当前为浅色模式）" aria-label="切换浅色/暗黑模式（当前为浅色模式）" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist" href="/analysis-project/docs/category/juc">JUC</a><button aria-label="展开侧边栏分类 &#x27;JUC&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--active" href="/analysis-project/docs/category/dsa">DSA</a><button aria-label="折叠侧边栏分类 &#x27;DSA&#x27;" aria-expanded="true" type="button" class="clean-btn menu__caret"></button></div><ul style="display:block;overflow:visible;height:auto" class="menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/algo-共识算法-raft">algo-共识算法-Raft</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-哈希">data-structure-哈希</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-位图">data-structure-位图</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-多维数据索引">data-structure-多维数据索引</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-2 menu__list-item"><a class="menu__link" tabindex="0" href="/analysis-project/docs/JavaDocs/DSA/data-structure-跳表">data-structure-跳表</a></li></ul></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist" href="/analysis-project/docs/category/sa">SA</a><button aria-label="展开侧边栏分类 &#x27;SA&#x27;" aria-expanded="false" type="button" class="clean-btn menu__caret"></button></div></li><li class="theme-doc-sidebar-item-category theme-doc-sidebar-item-category-level-1 menu__list-item menu__list-item--collapsed"><div class="menu__list-item-collapsible"><a class="menu__link menu__link--sublist menu__link--sublist-caret" role="button" aria-expanded="false" href="/analysis-project/docs/JavaDocs/JDK/泛型">JDK</a></div></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="页面路径"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="主页面" class="breadcrumbs__link" href="/analysis-project/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item"><a class="breadcrumbs__link" itemprop="item" href="/analysis-project/docs/category/dsa"><span itemprop="name">DSA</span></a><meta itemprop="position" content="1"></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">data-structure-位图</span><meta itemprop="position" content="2"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>data-structure-位图</h1></header><h3 class="anchor anchorWithStickyNavbar_LWe7" id="位图">位图<a href="#位图" class="hash-link" aria-label="位图的直接链接" title="位图的直接链接">​</a></h3>
+<p>位图是一种使用二进制位（0和1）来表示数据的结构，每一位对应一个特定的状态或属性。这种结构通常用于图像处理、内存管理和一些数据压缩算法。</p>
+<p><strong>基本概念</strong></p>
+<ul>
+<li>定义：位图是一组二进制位的集合，每个位可以表示一个状态，例如是否存在、是否被访问等。</li>
+<li>表示方式：通常表示为一个数组或连续的比特流。例如，一个8位的位图可以表示为 <code>10010110</code>。</li>
+</ul>
+<p><strong>位图的应用</strong></p>
+<ul>
+<li>图像处理：在图像处理中，位图常用于表示黑白图像，每一位表示一个像素的颜色（黑或白）。</li>
+<li>内存管理：操作系统使用位图来跟踪内存块的分配状态，每个位表示一个内存块是否被占用。</li>
+<li>布隆过滤器：布隆过滤器使用多个位图来实现快速集合成员查询，尽管可能会产生误报。</li>
+<li>列式存储中的查询：利用位图索引来加速查询，位图索引为每个不同的列值创建一个位图，查询时可以快速通过位图进行过滤。</li>
+<li>Linux命令中的 <code>chmod</code> 命令可以用数字表示文件权限，它的思想与位图也是相同的。</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="位图索引">位图索引<a href="#位图索引" class="hash-link" aria-label="位图索引的直接链接" title="位图索引的直接链接">​</a></h3>
+<p>位图索引是一种高效的数据索引方法，尤其适用于只读或少量更新的数据库，用于快速查询和分析数据。它通过为每个可能的值创建一个位图来加速查询操作。</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="基本概念">基本概念<a href="#基本概念" class="hash-link" aria-label="基本概念的直接链接" title="基本概念的直接链接">​</a></h4>
+<p>定义：位图索引将每个可能的值映射到一个位图，每个位表示数据集中一个记录的存在与否。</p>
+<p>结构：对于一个具有n个可能值的列，会创建n个位图，每个位图的长度与数据集的记录数相同。</p>
+<p><strong>位图索引的优点</strong></p>
+<ol>
+<li>高效查询：位图索引通过使用按位操作（AND、OR、NOT等）来实现快速查询。</li>
+<li>压缩存储：位图可以通过压缩技术（如字节填充编码、运行长度编码）来节省存储空间。</li>
+<li>适用性：适用于低基 数（低基数指的是列中不同值的数量相对较少）和只读或少量更新的数据集。</li>
+</ol>
+<p><strong>位图索引的应用</strong></p>
+<ul>
+<li>数据库查询优化：在数据仓库和OLAP（在线分析处理）系统中，位图索引用于加速多维查询和复杂分析。</li>
+<li>日志分析：在大规模日志数据分析中，位图索引用于快速过滤和聚合操作。</li>
+<li>基因数据分析：在生物信息学中，位图索引用于基因序列的快速比对和查询。</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="简单示例">简单示例<a href="#简单示例" class="hash-link" aria-label="简单示例的直接链接" title="简单示例的直接链接">​</a></h4>
+<p>假设我们有一个包含5条记录的表格，每条记录包含一个性别列和一个状态列：</p>
+<table><thead><tr><th>ID</th><th>性别</th><th>状态</th></tr></thead><tbody><tr><td>1</td><td>M</td><td>活跃</td></tr><tr><td>2</td><td>F</td><td>非活跃</td></tr><tr><td>3</td><td>M</td><td>活跃</td></tr><tr><td>4</td><td>F</td><td>非活跃</td></tr><tr><td>5</td><td>M</td><td>活跃</td></tr></tbody></table>
+<p>为性别列和状态列创建位图索引：</p>
+<ul>
+<li>性别列位图索引</li>
+</ul>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">M: 10101</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">F: 01010</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<ul>
+<li>状态列位图索引</li>
+</ul>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">活跃:   10101</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">非活跃: 01010</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>查询示例</p>
+<ul>
+<li>查询所有男性记录：位图索引：<code>M</code> 对应 <code>10101</code></li>
+<li>查询所有活跃的女性记录：位图索引：<code>F AND 活跃</code> 对应 <code>01010 AND 10101</code> = <code>00000</code>，结果为空，表示没有活跃的女性记录。</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="位的存储空间">位的存储空间<a href="#位的存储空间" class="hash-link" aria-label="位的存储空间的直接链接" title="位的存储空间的直接链接">​</a></h4>
+<blockquote>
+<p>位图索引的总位数是记录个数 n 和取值数 k 的乘积。</p>
+</blockquote>
+<p>每个取值的位图：</p>
+<ul>
+<li>对于每一个取值，我们会有一个位图，每个位图的长度等于记录数 n。</li>
+<li>因此，每个取值需要 n 位来存储。</li>
+</ul>
+<p>总存储空间：</p>
+<ul>
+<li>如果字段有 k 个不同取值，那么我们将需要 k 个位图，每个位图的长度为 n 位。</li>
+<li>总存储空间 = k×n 位。</li>
+</ul>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="应用示例">应用示例<a href="#应用示例" class="hash-link" aria-label="应用示例的直接链接" title="应用示例的直接链接">​</a></h4>
+<p>下面来看个例子，一个“薪资-年龄”表格如下：</p>
+<table><thead><tr><th style="text-align:left">年龄</th><th style="text-align:left">薪资</th></tr></thead><tbody><tr><td style="text-align:left">25</td><td style="text-align:left">60</td></tr><tr><td style="text-align:left">25</td><td style="text-align:left">400</td></tr><tr><td style="text-align:left">30</td><td style="text-align:left">260</td></tr><tr><td style="text-align:left">45</td><td style="text-align:left">60</td></tr><tr><td style="text-align:left">45</td><td style="text-align:left">350</td></tr><tr><td style="text-align:left">50</td><td style="text-align:left">75</td></tr><tr><td style="text-align:left">50</td><td style="text-align:left">100</td></tr><tr><td style="text-align:left">50</td><td style="text-align:left">120</td></tr><tr><td style="text-align:left">50</td><td style="text-align:left">275</td></tr><tr><td style="text-align:left">60</td><td style="text-align:left">260</td></tr><tr><td style="text-align:left">70</td><td style="text-align:left">110</td></tr><tr><td style="text-align:left">85</td><td style="text-align:left">140</td></tr></tbody></table>
+<p>我们为字段年龄建立位图索引：</p>
+<table><thead><tr><th style="text-align:left">年龄</th><th style="text-align:left">位图</th></tr></thead><tbody><tr><td style="text-align:left">25</td><td style="text-align:left">110000000000</td></tr><tr><td style="text-align:left">30</td><td style="text-align:left">001000000000</td></tr><tr><td style="text-align:left">45</td><td style="text-align:left">000110000000</td></tr><tr><td style="text-align:left">50</td><td style="text-align:left">000001111000</td></tr><tr><td style="text-align:left">60</td><td style="text-align:left">000000000100</td></tr><tr><td style="text-align:left">70</td><td style="text-align:left">000000000010</td></tr><tr><td style="text-align:left">80</td><td style="text-align:left">000000000001</td></tr></tbody></table>
+<p>现在为薪水字段建立位图索引</p>
+<table><thead><tr><th style="text-align:left">薪水</th><th style="text-align:left">位图</th></tr></thead><tbody><tr><td style="text-align:left">60</td><td style="text-align:left">100100000000</td></tr><tr><td style="text-align:left">400</td><td style="text-align:left">010000000000</td></tr><tr><td style="text-align:left">260</td><td style="text-align:left">001000000100</td></tr><tr><td style="text-align:left">350</td><td style="text-align:left">000010000000</td></tr><tr><td style="text-align:left">75</td><td style="text-align:left">000001000000</td></tr><tr><td style="text-align:left">100</td><td style="text-align:left">000000100000</td></tr><tr><td style="text-align:left">120</td><td style="text-align:left">000000010000</td></tr><tr><td style="text-align:left">275</td><td style="text-align:left">000000001000</td></tr><tr><td style="text-align:left">110</td><td style="text-align:left">000000000010</td></tr><tr><td style="text-align:left">140</td><td style="text-align:left">000000000001</td></tr></tbody></table>
+<p>我们以上述为基础，找出年龄在 <code>45~55</code>且薪水范围在<code>100~200</code>之间记录。首先找到范围内的年龄向量，并对它们进行按位或操作得到一个新的向量：</p>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">000110000000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">|</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000001111000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">=</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000111111000</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>就得到符合年龄的记录。
+然后找到符合薪水的向量，同样对他们进行按位或操作得到一个新向量：</p>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">000000100000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">|</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000010000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">|</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000000010</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">|</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000000001</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">=</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000110011</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>现在我们对上面的两个新向量进行按位与来求交集：</p>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">000111111000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">&amp;</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000110011</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">=</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">000000110000</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>也就得出第7个和第8个记录是符合约束条件的。</p>
+<blockquote>
+<p>使用位图向量求交集时用按位与，并集用按位或！！！</p>
+</blockquote>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="位图索引的管理">位图索引的管理<a href="#位图索引的管理" class="hash-link" aria-label="位图索引的管理的直接链接" title="位图索引的管理的直接链接">​</a></h4>
+<p>位图索引相关的三个问题：</p>
+<ul>
+<li>1、 <strong>查找位向量</strong>：当想要查找一个给定值的位向量，或者给定范围内的值对应的多个位向量时，我们如何有效地找到它们；</li>
+</ul>
+<p>把位向量看成记录，它们的键是对应于该位向量的字段值。然后任何辅助索引技术都可以使我们有效地按值找到它们的位向量。
+我们存储位向量时，把他们当做可变长记录。这是因为随着数据文件中记录的增加，它们一般会增长。</p>
+<ul>
+<li>2、 <strong>查找记录</strong>：当我们已经选择好回答查询查询的记录集时，我们如何有效地检索记录；</li>
+</ul>
+<p>我们可在数据文件上创建辅助索引（稠密索引，无序，桶），它的索引键是记录号。</p>
+<ul>
+<li>3、 <strong>更新位图索引</strong>： 当出现插入或者删除时，如何调整给定字段的位图索引；</li>
+</ul>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="位图压缩">位图压缩<a href="#位图压缩" class="hash-link" aria-label="位图压缩的直接链接" title="位图压缩的直接链接">​</a></h3>
+<p>位图的压缩和解压方法旨在减少存储空间，同时允许快速查询操作。常用的压缩算法有运行长度编码（RLE，Run-Length Encoding）、字节填充编码（BBC，Byte-aligned Bitmap Code,）、字节填充二进制编码（WBC，Word-Aligned Binary Code）和基于词的压缩（Word-Aligned Hybrid, WAH）等。</p>
+<blockquote>
+<p>本质上，计算机中的所有数据都是以二进制形式存储和处理的，因此数据压缩技术理论上对所有类型的数据都是适用的。数据压缩的主要目标是减少数据的冗余，从而减少存储空间或传输时间。解压缩过程则是将压缩的数据还原为其原始形式。</p>
+<p><strong>无损压缩</strong>：原始数据可以完全恢复，没有任何信息损失</p>
+<ul>
+<li>
+<p>运行长度编码（Run-Length Encoding, RLE）：压缩连续重复的元素。</p>
+</li>
+<li>
+<p>哈夫曼编码（Huffman Coding）：根据数据出现的频率生成前缀码，频率高的数据使用较短的编码。</p>
+</li>
+<li>
+<p>算术编码（Arithmetic Coding）：将整个消息编码为一个数值区间，频率高的符号对应较短的区间。</p>
+</li>
+<li>
+<p>Lempel-Ziv-Welch（LZW）：通过构建字典来压缩数据流，常用于GIF和PNG格式。</p>
+</li>
+</ul>
+<p><strong>有损压缩</strong>：允许一定的信息丢失，通常用于多媒体文件（图像、音频、视频）。</p>
+<ul>
+<li>JPEG：对图像进行有损压缩，通过离散余弦变换（DCT）去除人眼不敏感的信息。</li>
+<li>MP3：对音频进行有损压缩，通过心理声学模型去除人耳不敏感的声音。</li>
+</ul>
+</blockquote>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="运行长度编码">运行 长度编码<a href="#运行长度编码" class="hash-link" aria-label="运行长度编码的直接链接" title="运行长度编码的直接链接">​</a></h4>
+<p>将位图按照连续的0和连续的1的数量进行分段，然后用数字表示这些分段，以(连续0的长度,连续1的长度)为格式存储。解码也按此格式解码。分段长度编码步骤：</p>
+<ol>
+<li><strong>扫描位图</strong>：从头到尾扫描位图，识别连续0和1的段。</li>
+<li><strong>记录长度</strong>：记录每段连续0和1的长度，并成对存储。</li>
+</ol>
+<p>比如：<code>10001111100111100</code>，扫描位图为：</p>
+<p><code>1</code> -&gt; 0个0, 1个1</p>
+<p><code>000</code> -&gt; 3个0</p>
+<p><code>11111</code> -&gt; 5个1</p>
+<p><code>00</code> -&gt; 2个0</p>
+<p><code>1111</code> -&gt; 4个1</p>
+<p><code>00</code> -&gt; 2个0</p>
+<p>依次记录每段连续0和1的长度，并成对存储：</p>
+<ul>
+<li>第1段：0个0, 1个1 -&gt; <code>(0, 1)</code></li>
+<li>第2段：3个0 -&gt; <code>(3)</code></li>
+<li>第3段：5个1 -&gt; <code>(5)</code></li>
+<li>第4段：2个0 -&gt; <code>(2)</code></li>
+<li>第5段：4个1 -&gt; <code>(4)</code></li>
+<li>第6段：2个0 -&gt; <code>(2)</code></li>
+</ul>
+<p>编码：对每个分段内的连续0和1进行编码，记录每段连续0和1的长度：</p>
+<ul>
+<li>分段1：<code>00001111</code> -&gt; <code>4,4</code> （4个连续0，4个连续1）</li>
+<li>分段2：<code>00000000</code> -&gt; <code>8,0</code> （8个连续0，0个连续1）</li>
+<li>分段3：<code>11111111</code> -&gt; <code>0,8</code> （0个连续0，8个连续1）</li>
+<li>分段4：<code>0000</code> -&gt; <code>4,0</code> （4个连续0，0个连续1）</li>
+</ul>
+<p>合并成一个列表，依次记录：</p>
+<ul>
+<li><code>0, 1, 3, 5, 2, 4, 2</code></li>
+</ul>
+<p>解码过程就是反过来。</p>
+<p><strong>优点</strong></p>
+<ol>
+<li>高效压缩：对于稀疏位图，可以显著减少存储空间，因为它有效地利用了连续0或1的长度信息。</li>
+<li>快速解码：解码过程相对简单，只需读取编码对并生成相应的位图段。</li>
+</ol>
+<p><strong>缺点</strong></p>
+<ol>
+<li>适用性有限：对于不太稀疏的位图，分段长度编码的压缩效果可能不如其他压缩方法。</li>
+</ol>
+<blockquote>
+<p>比如：上面的例子<code>10001111100111100</code>压缩出来二进制是<code>0、1、11、101、10、100、10</code>，算上分隔符，效率就太低了</p>
+</blockquote>
+<ol start="2">
+<li>复杂性增加：在某些情况下，处理和维护多个连续段的编码结果可能会增加复杂性。</li>
+</ol>
+<p><strong>可以估算其压缩率，就是比如 <code>00000000</code>这些位数是2的n次方表示数字，变成了其长度的n；也就是一个将一个数字N的二进制长度空间变成了log2N + m的二进制长度空间，m就是增加的额外格式的空间。压缩率大约就是：(log2N + m)/N。</strong></p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="字节填充编码bbc">字节填充编码BBC<a href="#字节填充编码bbc" class="hash-link" aria-label="字节填充编码BBC的直接链接" title="字节填充编码BBC的直接链接">​</a></h4>
+<p>字节填充编码就是将字节进行拆分，增加前缀，当都是0或者都是1时，就通过前缀来识别不存储实际的字符，而当存在有0又有1时才存储实际的字符。</p>
+<p><strong>压缩过程</strong></p>
+<ol>
+<li><strong>初始化</strong>：将位图数据按字节读取，并初始化压缩数据的存储结构。</li>
+<li><strong>分块处理</strong>：将位图数据划分为若干字节块，每个块包含8位（1字节），<strong>字节块的长度是固定的，长度通常都是8位1字节，如果有很多长度相同的可以增加分割的长度这样能用更少的字符来表示，但增加分块的长度也增加了有1又有0的概率</strong>。</li>
+<li><strong>编码块</strong>：</li>
+</ol>
+<ul>
+<li>对每个字节块进行编码：</li>
+<li>如果字节块全为0或全为1， 则将其编码为特殊的控制字节，以表示这些字节块是全0或全1。</li>
+<li>如果字节块中有混合的0和1，则将其直接作为数据字节存储，并添加一个前缀字节来指示这是一个数据字节。</li>
+<li>使用前缀字节来指示数据块的类型：</li>
+<li><code>0x00</code> 表示后续字节块全为0。</li>
+<li><code>0xFF</code> 表示后续字节块全为1。</li>
+<li>其他值则表示后续的字节是一个数据字节，需要直接存储。</li>
+</ul>
+<ol start="4">
+<li><strong>压缩结果</strong>：将处理过的字节块序列组合在一起，形成最终的压缩数据。</li>
+</ol>
+<p><strong>解压缩过程</strong></p>
+<ol>
+<li><strong>初始化</strong>：将压缩数据按字节读取，并初始化解压缩数据的存储结构。</li>
+<li><strong>分块解码</strong>：按顺序读取压缩数据的每个字节块，根据前缀字节来判断如何解码：</li>
+</ol>
+<ul>
+<li>如果前缀字节是 <code>0x00</code>，则将对应的字节块解码为全0的字节块。</li>
+<li>如果前缀字节是 <code>0xFF</code>，则将对应的字节块解码为全1的字节块。</li>
+<li>如果前缀字节是其他值，则将其作为数据字节块直接存储到解压缩结果中。</li>
+</ul>
+<ol start="3">
+<li><strong>解压缩结果</strong>：将解码后的字节块序列组合在一起，形成最终的解压缩数据。</li>
+</ol>
+<p><strong>示例：</strong></p>
+<p>一个简单的位图数据：</p>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">11001100 11001100 00000000 11111111 11001100 11001100</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>压缩过程如下：</p>
+<ol>
+<li>将数据划分为字节块：</li>
+</ol>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">00000000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11111111</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11001100</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<ol start="2">
+<li>编码每个字节块：</li>
+</ol>
+<ul>
+<li><code>11001100</code> 不全是0或1，作为数据字节存储，并添加前缀字节 <code>0x01</code>。</li>
+<li><code>11001100</code> 同上。</li>
+<li><code>00000000</code> 全是0，使用前缀字节 <code>0x00</code> 表示。</li>
+<li><code>11111111</code> 全是1，使用前缀字节 <code>0xFF</code> 表示。</li>
+<li><code>11001100</code> 同上。</li>
+<li><code>11001100</code> 同上。</li>
+</ul>
+<ol start="3">
+<li>压缩结果：</li>
+</ol>
+<div class="language-less codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-less codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">0x01 11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x01 11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x00</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0xFF</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x01 11001100</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0x01 11001100</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p>解压缩就是反过来。</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="字对齐二进制压缩wbc">字对齐二进制压缩（WBC）<a href="#字对齐二进制压缩wbc" class="hash-link" aria-label="字对齐二进制压缩（WBC）的直接链接" title="字对齐二进制压缩（WBC）的直接链接">​</a></h4>
+<p>和BBC的压缩方式是一样的，两者的差别就是BBC按字节（8位）进行分块，WBC按字（通常是32位或64位）进行分块。</p>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="基于词的压缩wah">基于词的压缩WAH<a href="#基于词的压缩wah" class="hash-link" aria-label="基于词的压缩WAH的直接链接" title="基于词的压缩WAH的直接链接">​</a></h4>
+<p>就是将位图进行切分（一般是按照32位或者64位），然后如果对全0或者全1的数据块进行编码，将后续的全0或者全1的数据块都一起压缩到一个32的数据块中。如果是有0也有1的数据则不做压缩，但因为压缩完是32位，那数据库实际只有31位。</p>
+<p><strong>示例：</strong></p>
+<p>假设我们有如下位图数据（32位）：</p>
+<div class="language-scss codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-scss codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">00000000000000000000000000000000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">00000000000000000000000000000000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11111111111111111111111111111111</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11111111111111111111111111111111</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">00000000000000000000000000000000</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11001100110011001100110011001100</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="分块处理">分块处理<a href="#分块处理" class="hash-link" aria-label="分块处理的直接链接" title="分块处理的直接链接">​</a></h4>
+<p>将位图数据划分为字块（假设每个字块31位）：</p>
+<div class="language-scss codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-scss codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">0000000000000000000000000000000 (31位)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0000000000000000000000000000000 (31位)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">1111111111111111111111111111111 (31位)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">1111111111111111111111111111111 (31位)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0000000000000000000000000000000 (31位)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">1100110011001100110011001100110 (31位)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p><strong>编码块：</strong></p>
+<ol>
+<li>全0字块（前两块）：</li>
+</ol>
+<ul>
+<li>编码为填充字：<code>1</code>（最高位，表示填充字） + <code>0</code>（表示全0） + <code>01</code>（连续2个全0块）</li>
+<li>填充字：<code>10000000000000000000000000000010</code></li>
+</ul>
+<ol start="2">
+<li>全1字块（接下来的两块）：</li>
+</ol>
+<ul>
+<li>编码为填充字：<code>1</code>（最高位，表示填充字） + <code>1</code>（表示全1） + <code>01</code>（连续2个全1块）</li>
+<li>填充字：<code>11000000000000000000000000000010</code></li>
+</ul>
+<ol start="3">
+<li>混合字块：</li>
+</ol>
+<ul>
+<li>保持原样，并在最高位加<code>0</code>表示这是一个数据字块。</li>
+<li><code>0000000000000000000000000000000</code> → <code>0000000000000000000000000000000</code></li>
+<li><code>1100110011001100110011001100110</code> → <code>01100110011001100110011001100110</code></li>
+</ul>
+<p>压缩后的数据为：</p>
+<div class="language-scss codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-scss codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token plain">10000000000000000000000000000010 (填充字，全0，连续2块)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">11000000000000000000000000000010 (填充字，全1，连续2块)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">0000000000000000000000000000000  (数据字块)</span><br></span><span class="token-line" style="color:#393A34"><span class="token plain">01100110011001100110011001100110 (数据字块)</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<p><strong>注意：上面数据块中，数据块<code>11001100110011001100110011001100</code> 在分块中处理成了<code>1100110011001100110011001100110 (31位)</code>少了一个0，是因为wah是动态划分的，没有展示全；WAH 算法会将这些情况编码为填充字，而且填充字的长度可以根据需要动态调整。但基本的逻辑就是这样。</strong></p></div><footer class="theme-doc-footer docusaurus-mt-lg"><div class="row margin-top--sm theme-doc-footer-edit-meta-row"><div class="col"><a href="https://github.com/Swagger-Ranger/analysis-project/docs/JavaDocs/DSA/data-structure-位图.mdx" target="_blank" rel="noopener noreferrer" class="theme-edit-this-page"><svg fill="currentColor" height="20" width="20" viewBox="0 0 40 40" class="iconEdit_Z9Sw" aria-hidden="true"><g><path d="m34.5 11.7l-3 3.1-6.3-6.3 3.1-3q0.5-0.5 1.2-0.5t1.1 0.5l3.9 3.9q0.5 0.4 0.5 1.1t-0.5 1.2z m-29.5 17.1l18.4-18.5 6.3 6.3-18.4 18.4h-6.3v-6.2z"></path></g></svg>编辑此页</a></div><div class="col lastUpdated_JAkA"></div></div></footer></article><nav class="pagination-nav docusaurus-mt-lg" aria-label="文件选项卡"><a class="pagination-nav__link pagination-nav__link--prev" href="/analysis-project/docs/JavaDocs/DSA/data-structure-哈希"><div class="pagination-nav__sublabel">上一页</div><div class="pagination-nav__label">data-structure-哈希</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/analysis-project/docs/JavaDocs/DSA/data-structure-多维数据索引"><div class="pagination-nav__sublabel">下一页</div><div class="pagination-nav__label">data-structure-多维数据索引</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#位图" class="table-of-contents__link toc-highlight">位图</a></li><li><a href="#位图索引" class="table-of-contents__link toc-highlight">位图索引</a><ul><li><a href="#基本概念" class="table-of-contents__link toc-highlight">基本概念</a></li><li><a href="#简单示例" class="table-of-contents__link toc-highlight">简单示例</a></li><li><a href="#位的存储空间" class="table-of-contents__link toc-highlight">位的存储空间</a></li><li><a href="#应用示例" class="table-of-contents__link toc-highlight">应用示例</a></li><li><a href="#位图索引的管理" class="table-of-contents__link toc-highlight">位图索引的管理</a></li></ul></li><li><a href="#位图压缩" class="table-of-contents__link toc-highlight">位图压缩</a><ul><li><a href="#运行长度编码" class="table-of-contents__link toc-highlight">运行长度编码</a></li><li><a href="#字节填充编码bbc" class="table-of-contents__link toc-highlight">字节填充编码BBC</a></li><li><a href="#字对齐二进制压缩wbc" class="table-of-contents__link toc-highlight">字对齐二进制压缩（WBC）</a></li><li><a href="#基于词的压缩wah" class="table-of-contents__link toc-highlight">基于词的压缩WAH</a></li><li><a href="#分块处理" class="table-of-contents__link toc-highlight">分块处理</a></li></ul></li></ul></div></div></div></div></main></div></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 Analysis Project, author liufei32@outlook.com</div></div></div></footer></div>
+</body>
+</html>
