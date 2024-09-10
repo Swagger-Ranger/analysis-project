@@ -5,11 +5,11 @@
 <meta name="generator" content="Docusaurus v3.5.2">
 <title data-rh="true">Java optimizing | Analysis Project</title><meta data-rh="true" name="viewport" content="width=device-width,initial-scale=1"><meta data-rh="true" name="twitter:card" content="summary_large_image"><meta data-rh="true" property="og:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" name="twitter:image" content="https://Swagger-Ranger.github.io/analysis-project/img/docusaurus-social-card.jpg"><meta data-rh="true" property="og:url" content="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing"><meta data-rh="true" property="og:locale" content="zh_Hans"><meta data-rh="true" name="docusaurus_locale" content="zh-Hans"><meta data-rh="true" name="docsearch:language" content="zh-Hans"><meta data-rh="true" name="docusaurus_version" content="current"><meta data-rh="true" name="docusaurus_tag" content="docs-default-current"><meta data-rh="true" name="docsearch:version" content="current"><meta data-rh="true" name="docsearch:docusaurus_tag" content="docs-default-current"><meta data-rh="true" property="og:title" content="Java optimizing | Analysis Project"><meta data-rh="true" name="description" content="Java optimizing就是Java的优化手册。"><meta data-rh="true" property="og:description" content="Java optimizing就是Java的优化手册。"><link data-rh="true" rel="icon" href="/analysis-project/img/apachecassandra-color.svg"><link data-rh="true" rel="canonical" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing" hreflang="zh-Hans"><link data-rh="true" rel="alternate" href="https://Swagger-Ranger.github.io/analysis-project/docs/DevOps/JavaOptimizing" hreflang="x-default"><link rel="alternate" type="application/rss+xml" href="/analysis-project/blog/rss.xml" title="Analysis Project RSS Feed">
 <link rel="alternate" type="application/atom+xml" href="/analysis-project/blog/atom.xml" title="Analysis Project Atom Feed"><link rel="stylesheet" href="/analysis-project/assets/css/styles.460af289.css">
-<script src="/analysis-project/assets/js/runtime~main.581244b0.js" defer="defer"></script>
-<script src="/analysis-project/assets/js/main.331849e2.js" defer="defer"></script>
+<script src="/analysis-project/assets/js/runtime~main.8c7a6baf.js" defer="defer"></script>
+<script src="/analysis-project/assets/js/main.34cc3d81.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
-<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/analysis-project/"><div class="navbar__logo"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/analysis-project/docs/AnalysisProject/Analysis Project是什么">All for analysis</a><a class="navbar__item navbar__link" href="/analysis-project/docs/coreMiddleware/concurrentFramework/Disruptor">Middlewares</a><a class="navbar__item navbar__link" href="/analysis-project/docs/category/juc">Codes</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/analysis-project/docs/DevOps/JavaOptimizing">DevOps</a><a class="navbar__item navbar__link" href="/analysis-project/blog">Blog</a></div><div class="navbar__items navbar__items--right"><a class="navbar__item navbar__link" href="/analysis-project/about">关于作者</a><a href="https://github.com/Swagger-Ranger/analysis-project" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="切换浅色/暗黑模式（当前为浅色模式）" aria-label="切换浅色/暗黑模式（当前为浅色模式）" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/analysis-project/docs/DevOps/JavaOptimizing">Java optimizing</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Linux系统探测工具">Linux系统探测工具</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/JVM数据分析">JVM数据分析</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Harbor手册">Harbor</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/容器中的日志">容器中的日志</a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="页面路径"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="主页面" class="breadcrumbs__link" href="/analysis-project/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">Java optimizing</span><meta itemprop="position" content="1"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>Java optimizing</h1></header><p>Java optimizing就是Java的优化手册。</p>
+<script>!function(){function t(t){document.documentElement.setAttribute("data-theme",t)}var e=function(){try{return new URLSearchParams(window.location.search).get("docusaurus-theme")}catch(t){}}()||function(){try{return window.localStorage.getItem("theme")}catch(t){}}();t(null!==e?e:"light")}(),function(){try{const n=new URLSearchParams(window.location.search).entries();for(var[t,e]of n)if(t.startsWith("docusaurus-data-")){var a=t.replace("docusaurus-data-","data-");document.documentElement.setAttribute(a,e)}}catch(t){}}()</script><div id="__docusaurus"><div role="region" aria-label="跳到主要内容"><a class="skipToContent_fXgn" href="#__docusaurus_skipToContent_fallback">跳到主要内容</a></div><nav aria-label="主导航" class="navbar navbar--fixed-top"><div class="navbar__inner"><div class="navbar__items"><button aria-label="切换导航栏" aria-expanded="false" class="navbar__toggle clean-btn" type="button"><svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path stroke="currentColor" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M4 7h22M4 15h22M4 23h22"></path></svg></button><a class="navbar__brand" href="/analysis-project/"><div class="navbar__logo"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--light_NVdE"><img src="/analysis-project/img/apachecassandra-color.svg" alt="My Site Logo" class="themedComponent_mlkZ themedComponent--dark_xIcU"></div><b class="navbar__title text--truncate"></b></a><a class="navbar__item navbar__link" href="/analysis-project/docs/projectDesign/whatIs">All for analysis</a><a class="navbar__item navbar__link" href="/analysis-project/docs/middleware/disruptor">Middlewares</a><a class="navbar__item navbar__link" href="/analysis-project/docs/category/juc">Codes</a><a aria-current="page" class="navbar__item navbar__link navbar__link--active" href="/analysis-project/docs/DevOps/JavaOptimizing">DevOps</a><a class="navbar__item navbar__link" href="/analysis-project/blog">Blog</a></div><div class="navbar__items navbar__items--right"><a class="navbar__item navbar__link" href="/analysis-project/about">关于作者</a><a href="https://github.com/Swagger-Ranger/analysis-project" target="_blank" rel="noopener noreferrer" class="navbar__item navbar__link">GitHub<svg width="13.5" height="13.5" aria-hidden="true" viewBox="0 0 24 24" class="iconExternalLink_nPIU"><path fill="currentColor" d="M21 13v10h-21v-19h12v2h-10v15h17v-8h2zm3-12h-10.988l4.035 4-6.977 7.07 2.828 2.828 6.977-7.07 4.125 4.172v-11z"></path></svg></a><div class="toggle_vylO colorModeToggle_DEke"><button class="clean-btn toggleButton_gllP toggleButtonDisabled_aARS" type="button" disabled="" title="切换浅色/暗黑模式（当前为浅色模式）" aria-label="切换浅色/暗黑模式（当前为浅色模式）" aria-live="polite"><svg viewBox="0 0 24 24" width="24" height="24" class="lightToggleIcon_pyhR"><path fill="currentColor" d="M12,9c1.65,0,3,1.35,3,3s-1.35,3-3,3s-3-1.35-3-3S10.35,9,12,9 M12,7c-2.76,0-5,2.24-5,5s2.24,5,5,5s5-2.24,5-5 S14.76,7,12,7L12,7z M2,13l2,0c0.55,0,1-0.45,1-1s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S1.45,13,2,13z M20,13l2,0c0.55,0,1-0.45,1-1 s-0.45-1-1-1l-2,0c-0.55,0-1,0.45-1,1S19.45,13,20,13z M11,2v2c0,0.55,0.45,1,1,1s1-0.45,1-1V2c0-0.55-0.45-1-1-1S11,1.45,11,2z M11,20v2c0,0.55,0.45,1,1,1s1-0.45,1-1v-2c0-0.55-0.45-1-1-1C11.45,19,11,19.45,11,20z M5.99,4.58c-0.39-0.39-1.03-0.39-1.41,0 c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0s0.39-1.03,0-1.41L5.99,4.58z M18.36,16.95 c-0.39-0.39-1.03-0.39-1.41,0c-0.39,0.39-0.39,1.03,0,1.41l1.06,1.06c0.39,0.39,1.03,0.39,1.41,0c0.39-0.39,0.39-1.03,0-1.41 L18.36,16.95z M19.42,5.99c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06c-0.39,0.39-0.39,1.03,0,1.41 s1.03,0.39,1.41,0L19.42,5.99z M7.05,18.36c0.39-0.39,0.39-1.03,0-1.41c-0.39-0.39-1.03-0.39-1.41,0l-1.06,1.06 c-0.39,0.39-0.39,1.03,0,1.41s1.03,0.39,1.41,0L7.05,18.36z"></path></svg><svg viewBox="0 0 24 24" width="24" height="24" class="darkToggleIcon_wfgR"><path fill="currentColor" d="M9.37,5.51C9.19,6.15,9.1,6.82,9.1,7.5c0,4.08,3.32,7.4,7.4,7.4c0.68,0,1.35-0.09,1.99-0.27C17.45,17.19,14.93,19,12,19 c-3.86,0-7-3.14-7-7C5,9.07,6.81,6.55,9.37,5.51z M12,3c-4.97,0-9,4.03-9,9s4.03,9,9,9s9-4.03,9-9c0-0.46-0.04-0.92-0.1-1.36 c-0.98,1.37-2.58,2.26-4.4,2.26c-2.98,0-5.4-2.42-5.4-5.4c0-1.81,0.89-3.42,2.26-4.4C12.92,3.04,12.46,3,12,3L12,3z"></path></svg></button></div><div class="navbarSearchContainer_Bca1"></div></div></div><div role="presentation" class="navbar-sidebar__backdrop"></div></nav><div id="__docusaurus_skipToContent_fallback" class="main-wrapper mainWrapper_z2l0"><div class="docsWrapper_hBAB"><button aria-label="回到顶部" class="clean-btn theme-back-to-top-button backToTopButton_sjWU" type="button"></button><div class="docRoot_UBD9"><aside class="theme-doc-sidebar-container docSidebarContainer_YfHR"><div class="sidebarViewport_aRkj"><div class="sidebar_njMd"><nav aria-label="文档侧边栏" class="menu thin-scrollbar menu_SIkG"><ul class="theme-doc-sidebar-menu menu__list"><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link menu__link--active" aria-current="page" href="/analysis-project/docs/DevOps/JavaOptimizing">Java optimizing</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Linux系统探测工具">Linux系统探测工具</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/JVM数据分析">JVM数据分析</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/Harbor手册">Harbor</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/容器中的日志">容器中的日志</a></li><li class="theme-doc-sidebar-item-link theme-doc-sidebar-item-link-level-1 menu__list-item"><a class="menu__link" href="/analysis-project/docs/DevOps/空白环境Jenkins流水线搭建">空白环境Jenkins流水线搭建</a></li></ul></nav></div></div></aside><main class="docMainContainer_TBSr"><div class="container padding-top--md padding-bottom--lg"><div class="row"><div class="col docItemCol_VOVn"><div class="docItemContainer_Djhp"><article><nav class="theme-doc-breadcrumbs breadcrumbsContainer_Z_bl" aria-label="页面路径"><ul class="breadcrumbs" itemscope="" itemtype="https://schema.org/BreadcrumbList"><li class="breadcrumbs__item"><a aria-label="主页面" class="breadcrumbs__link" href="/analysis-project/"><svg viewBox="0 0 24 24" class="breadcrumbHomeIcon_YNFT"><path d="M10 19v-5h4v5c0 .55.45 1 1 1h3c.55 0 1-.45 1-1v-7h1.7c.46 0 .68-.57.33-.87L12.67 3.6c-.38-.34-.96-.34-1.34 0l-8.36 7.53c-.34.3-.13.87.33.87H5v7c0 .55.45 1 1 1h3c.55 0 1-.45 1-1z" fill="currentColor"></path></svg></a></li><li itemscope="" itemprop="itemListElement" itemtype="https://schema.org/ListItem" class="breadcrumbs__item breadcrumbs__item--active"><span class="breadcrumbs__link" itemprop="name">Java optimizing</span><meta itemprop="position" content="1"></li></ul></nav><div class="tocCollapsible_ETCw theme-doc-toc-mobile tocMobile_ITEo"><button type="button" class="clean-btn tocCollapsibleButton_TO0P">本页总览</button></div><div class="theme-doc-markdown markdown"><header><h1>Java optimizing</h1></header><p>Java optimizing就是Java的优化手册。</p>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="理论">理论<a href="#理论" class="hash-link" aria-label="理论的直接链接" title="理论的直接链接">​</a></h2>
 <p>理论知识是很重要的，每次听别人说什么JVM调优，感觉就跟搞宗教迷信一样，感觉都没有弄清楚为什么，其实还是要搞清楚原理才行，理由至少有两点：</p>
 <ol>
@@ -37,7 +37,7 @@
 <li>﻿New total enecution time（加速后系统执行总时间）为<code>T&#x27;</code></li>
 <li>﻿系统中并行代码块（指能够通过并行计算加速的代码块）原来执行时间为<code>t</code></li>
 <li>﻿系统中并行代码块（指能够通过并行计算加速的代码块）加速后执行时间为<code>t&#x27;</code></li>
-<li>﻿系统中串行代码块（指不能通过并行计算加速的代码块）执行时间为<code>tn</code></li>
+<li>﻿系统中串行代 码块（指不能通过并行计算加速的代码块）执行时间为<code>tn</code></li>
 <li>﻿<code>Fraction enhanced</code> 为<code>f</code></li>
 <li>﻿<code>Speedup enhanced</code> 为 <code>s&#x27;</code></li>
 </ul>
@@ -55,7 +55,7 @@
 <p><strong>W（平均在系统中的时间）</strong>：这是客户从进入系统到离开系统所花费的平均时间。这包括等待时间和服务时间。</p>
 </blockquote>
 <p>该定律将延迟、并发性和吞吐量联系起来：对于给定的请求处理持续时间 (即延迟)，应用程序同时处理的请求数 (即并发性) 必须与到达率 (即吞吐量) 成比例增长。例如，假设平均延迟为 50 毫秒的应用程序通过并发处理 10 个请求实现了每秒 200 个请求的吞吐量*（每个线程每秒处理20个请求，10个线程就是200个请求的吞吐量）*。为了使该应用程序扩展到每秒 2000 个请求的吞吐量，它将需要并发处理 100 个请求。如果每个请求在请求持续时间内都在一个线程中处理，那么为了使应用程序跟上，线程数必须随着吞吐量的增长而增长。</p>
-<p><strong>即系统中物体的平均数量等于物体离开系统的平均速率和物体在系统中平均停留时间的乘积。这个定律其实就在要求处理量和需求量保持一致的情况下，系统中需要维持多大的并行处理数量。指出了，完全并发请求中，要达到响应的吞吐量需要的线程数量。</strong></p>
+<p><strong>即系统中物体的平均数量等于物体离开系统的平均速率和物体在系统中平均停留时间的乘积。这个定律其实就在要求处理量和需求量保持一致的情况下，系统 中需要维持多大的并行处理数量。指出了，完全并发请求中，要达到响应的吞吐量需要的线程数量。</strong></p>
 <blockquote>
 <p><strong>在Java线程池中，如何确认需要多少个线程和队列大小</strong></p>
 <p>要解决这个问题，首先要知道任务的类型：</p>
@@ -73,7 +73,7 @@
 </li>
 </ul>
 </blockquote>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="应用高性能的定义">应用高性能的定义<a href="#应用高性能的定义" class="hash-link" aria-label="应用高性能的定义的直接链接" title="应用高性能的定义的 直接链接">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="应用高性能的定义">应用高性能的定义<a href="#应用高性能的定义" class="hash-link" aria-label="应用高性能的定义的直接链接" title="应用高性能的定义的直接链接">​</a></h3>
 <p>性能良好的应用程序，一个定义就是能有效地利用系统资源，这包括 CPU 利用率、内存、网络或 I/O 带宽。而如果一个应用程序导致一个或多个资源的使用达到极限，那就是出现了性能问题。</p>
 <blockquote>
 <p>任何性能诊断的第一步就是要识别出哪种资源的使用达到了极限。如果不处理资源短缺问题，就无法调优适当的性能指标——要么增加可用资源，要么提高使用效率。</p>
@@ -95,7 +95,7 @@
 </ol>
 <p>当系统从用户态切换到内核态时，需要保存当前进程的上下文（如寄存器、程序计数器等），并且加载新的上下文来执行内核代码。这个过程涉及多次寄存器的保存与恢复，可能还需要刷新 CPU 缓存、TLB等</p>
 <blockquote>
-<p>TLB (Translation Lookaside Buffer后备缓冲) 是操作系统中的一种缓存机制，用于加速虚拟地址到物理 地址的转换过程。在现代计算机系统中，内存管理通常采用<strong>虚拟内存</strong>的方式。虚拟内存允许程序使用比实际物理内存更大的地址空间，并且为每个进程提供独立的地址空间，从而提高了系统的安全性和稳定性。</p>
+<p>TLB (Translation Lookaside Buffer后备缓冲) 是操作系统中的一种缓存机制，用于加速虚拟地址到物理地址的转换过程。在现代计算机系统中，内存管理通常采用<strong>虚拟内存</strong>的方式。虚拟内存允许程序使用比实际物理内存更大的地址空间，并且为每个进程提供独立的地址空间，从而提高了系统的安全性和稳定性。</p>
 <p>虚拟地址需要通过页表（Page Table）转换成物理地址，而这个转换过程是非常频繁的。如果每次内存访问都要查找页表，会导致严重的性能瓶颈。</p>
 <p>为了加速虚拟地址到物理地址的转换过程，处理器中引入了 TLB。TLB 是一种专门的缓存，存储了最近使用的虚拟地址到物理地址的映射。</p>
 </blockquote>
@@ -113,7 +113,7 @@
 内核态切换通常会导致 CPU 缓存中的数据失效，因为内核态和用户态的代码和数据一般位于不同的内存区域。这意味着在切换后，CPU 可能需要重新加载数据和指令，从而降低缓存命中率，增加内存访问的时间。</p>
 </li>
 </ol>
-<h4 class="anchor anchorWithStickyNavbar_LWe7" id="上下文切换会导致大量的系统成本">上下文切换会导致大量的系统成本<a href="#上下文切换会导致大量的系统成本" class="hash-link" aria-label="上下文切换会导致大量的系统成本的直接链接" title="上下文切换会导致大量的系统成本的直接链接">​</a></h4>
+<h4 class="anchor anchorWithStickyNavbar_LWe7" id="上下文切换会导 致大量的系统成本">上下文切换会导致大量的系统成本<a href="#上下文切换会导致大量的系统成本" class="hash-link" aria-label="上下文切换会导致大量的系统成本的直接链接" title="上下文切换会导致大量的系统成本的直接链接">​</a></h4>
 <p>上下文切换是指 CPU 将处理从一个线程或进程切换到另一个线程或进程的过程。它涉及保存当前线程或进程的状态（如寄存器、程序计数器等），并恢复即将运行的线程或进程的状态。上下文切换可以发生在以下几种场景中：</p>
 <ol>
 <li><strong>线程或进程的阻塞</strong>：比如等待 I/O 操作完成。</li>
@@ -124,7 +124,7 @@
 <p>无论是用户线程之间的上下文切换，还是从用户模式进入内核模式(有时称为模式切换)， 都是一个成本很高的操作。后一种情况尤为重要，因为用户线程在其时间片中途可能需要 切换到内核模式以便执行某些功能，这种切换将强制清空指令和其他高速缓存，因为用户空间代码所访问的内存区域与内核空间通常没有任何交叉。</p>
 </blockquote>
 <p><strong>Java中会导致用户态切换或上下文切换的操作</strong></p>
-<table><thead><tr><th><strong>操作类别</strong></th><th><strong>操作描述</strong></th><th><strong>内核态切换</strong></th><th><strong>上下文切换</strong></th></tr></thead><tbody><tr><td><strong>I/O 操作</strong></td><td>文件读写 (<code>FileInputStream</code>, <code>FileOutputStream</code>, <code>FileReader</code>, <code>FileWriter</code> 等)，操作系统介入来访问磁盘，因此会导致内核态切换</td><td>是</td><td>否</td></tr><tr><td></td><td>网络操作 (<code>Socket</code>, <code>ServerSocket</code>, <code>DatagramSocket</code>)，底层需要调用操作系统的网络栈，这会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>标准输入输出 (<code>System.in</code>, <code>System.out</code>)，涉及底层 I/O 操作，同样会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>线程管理</strong></td><td>线程创建与销毁 (<code>new Thread().start()</code>)，Java 虚拟机需要与操作系统交互以管理线程资源，这涉及内核态切换。并且会涉及线程的上下文切换</td><td>是</td><td>是</td></tr><tr><td></td><td>线程同步 (<code>synchronized</code>, <code>Lock</code>, <code>ReentrantLock</code>)，当线程需要等待锁或被唤醒时，操作系统可能会介入，这时也会发生内核态切换，因为有时需要内核来仲裁。</td><td>可能</td><td>是</td></tr><tr><td></td><td>线程睡眠与等待 (<code>Thread.sleep()</code>, <code>Object.wait()</code>)，使线程进入睡眠或等待状态，操作系统需要将当前线程挂起，这需要从用户态切换到内核态。</td><td>是</td><td>是</td></tr><tr><td><strong>系统调用</strong></td><td>执行系统命令 (<code>Runtime.getRuntime().exec()</code>)，执行系统命令时，会导致内核态切换，因为 Java 需要通过操作系统来启动新的进程。</td><td>是</td><td>否</td></tr><tr><td></td><td>垃圾回收 (<code>System.gc()</code>)，垃圾回收的触发机制是由 JVM 管理的，但在某些情况下，JVM 可能需要与操作系统交互来释放内存资源，这可能导致内核态切换。</td><td>可能</td><td>否</td></tr><tr><td><strong>中断处理</strong></td><td>硬件中断处理，Java 的中断处理大多是用户态的逻辑，但当涉及到线程调度或 I/O 完成时，底层操作系统会介入处理硬件中断，这会导致内核态切换。</td><td>是</td><td>是</td></tr><tr><td><strong>内存管理</strong></td><td>内存映射文件 (<code>MappedByteBuffer</code>)，涉及操作系统的内存映射功能，这会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>直接内存分配 (<code>ByteBuffer.allocateDirect()</code>)，分配直接内存时，JVM 会调用操作系统的底层功能来分配非堆内存，这也会导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>进程管理</strong></td><td>进程间通信 (<code>ProcessBuilder</code>)，通过 <code>ProcessBuilder</code> 启动子进程，或者与子进程进行通信时，涉及操作系统的进程管理，导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>锁竞争</strong></td><td>线程竞争锁时需要阻塞等待，当多个线程竞争某个锁时，如果一个线程需要阻塞等待锁释放，操作系统将会介入调度，这种情况下会导致内核态切换。</td><td>是</td><td>是</td></tr></tbody></table>
+<table><thead><tr><th><strong>操作类别</strong></th><th><strong>操作描述</strong></th><th><strong>内核态切换</strong></th><th><strong>上下文切换</strong></th></tr></thead><tbody><tr><td><strong>I/O 操作</strong></td><td>文件读写 (<code>FileInputStream</code>, <code>FileOutputStream</code>, <code>FileReader</code>, <code>FileWriter</code> 等)，操作系统介入来访问磁盘，因此会导致内核态切换</td><td>是</td><td>否</td></tr><tr><td></td><td>网络操作 (<code>Socket</code>, <code>ServerSocket</code>, <code>DatagramSocket</code>)，底  层需要调用操作系统的网络栈，这会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>标准输入输出 (<code>System.in</code>, <code>System.out</code>)，涉及底层 I/O 操作，同样会触发内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>线程管理</strong></td><td>线程创建与销毁 (<code>new Thread().start()</code>)，Java 虚拟机需要与操作系统交互以管理线程资源，这涉及内核态切换。并且会涉及线程的上下文切换</td><td>是</td><td>是</td></tr><tr><td></td><td>线程同步 (<code>synchronized</code>, <code>Lock</code>, <code>ReentrantLock</code>)，当线程需要等待锁或被唤醒时，操作系统可能会介入，这时也会发生内核态切换，因为有时需要内核来仲裁。</td><td>可能</td><td>是</td></tr><tr><td></td><td>线程睡眠与等待 (<code>Thread.sleep()</code>, <code>Object.wait()</code>)，使线程进入睡眠或等待状态，操作系统需要将当前线程挂起，这需要从用户态切换到内核态。</td><td>是</td><td>是</td></tr><tr><td><strong>系统调用</strong></td><td>执行系统命令 (<code>Runtime.getRuntime().exec()</code>)，执行系统命令时，会导致内核态切换，因为 Java 需要通过操作系统来启动新的进程。</td><td>是</td><td>否</td></tr><tr><td></td><td>垃圾回收 (<code>System.gc()</code>)，垃圾回收的触发机制是由 JVM 管理的，但在某些情况下，JVM 可能需要与操作系统交互来释放内存资源，这可能导致内核态切换。</td><td>可能</td><td>否</td></tr><tr><td><strong>中断处理</strong></td><td>硬件中断处理，Java 的中断处理大多是用户态的逻辑，但当涉及到线程调度或 I/O 完成时，底层操作系统会介入处理硬件中断，这会导致内核态切换。</td><td>是</td><td>是</td></tr><tr><td><strong>内存管理</strong></td><td>内存映射文件 (<code>MappedByteBuffer</code>)，涉及操作系统的内存映射功能，这会触 发内核态切换。</td><td>是</td><td>否</td></tr><tr><td></td><td>直接内存分配 (<code>ByteBuffer.allocateDirect()</code>)，分配直接内存时，JVM 会调用操作系统的底层功能来分配非堆内存，这也会导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>进程管理</strong></td><td>进程间通信 (<code>ProcessBuilder</code>)，通过 <code>ProcessBuilder</code> 启动子进程，或者与子进程进行通信时，涉及操作系统的进程管理，导致内核态切换。</td><td>是</td><td>否</td></tr><tr><td><strong>锁竞争</strong></td><td>线程竞争锁时需要阻塞等待，当多个线程竞争某个锁时，如果一个线程需要阻塞等待锁释放，操作系统将会介入调度，这种情况下会导致内核态切换。</td><td>是</td><td>是</td></tr></tbody></table>
 <p>一旦Java中有这些操作，则意味着性能的损耗，此时就需要衡量这些操作是否有必要，以及是否有优化的空间。</p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="对象分配率">对象分配率<a href="#对象分配率" class="hash-link" aria-label="对象分配率的直接链接" title="对象分配率的直接链接">​</a></h3>
 <p><strong>Java 性能的关键主题之一是应用程序对对象分配率的敏感性。</strong></p>
@@ -132,8 +132,8 @@
 <p>对象分配率（Object Allocation Rate）：指应用程序在运行时创建新对象的速度和频率。在 Java 中，对象的创建是通过 <code>new</code> 关键字或者其他方式（如反射、序列化等）来进行的。</p>
 <p>对象分配对性能的影响：</p>
 <ol>
-<li><strong>内存管理开销</strong>：Java 使用垃圾回收机制（Garbage Collection, GC）来自动管理内存。频繁创建对象会导致频繁的垃圾回收操作。虽然现代 JVM（Java Virtual Machine）有高效的垃圾回收算法，但高对象分配率仍然会增加垃圾回收的频率和开销，从而影响应用性能。</li>
-<li><strong>年轻代GC压力</strong>：Java 内存管理通常会将新创建的对象分配到年  轻代（Young Generation）内存中。如果年轻代内存填满，垃圾回收器将执行 Minor GC 来回收内存。高对象分配率会导致年轻代频繁被填满，从而导致频繁的 Minor GC，这会导致应用程序停顿，影响响应时间和吞吐量。</li>
+<li><strong>内存管理开销</strong>：Java 使用垃圾回收机制（Garbage Collection, GC）来自动管理内存。频繁创建对象会导致频繁的垃圾回收操作。虽然现代 JVM（Java Virtual Machine）有 高效的垃圾回收算法，但高对象分配率仍然会增加垃圾回收的频率和开销，从而影响应用性能。</li>
+<li><strong>年轻代GC压力</strong>：Java 内存管理通常会将新创建的对象分配到年轻代（Young Generation）内存中。如果年轻代内存填满，垃圾回收器将执行 Minor GC 来回收内存。高对象分配率会导致年轻代频繁被填满，从而导致频繁的 Minor GC，这会导致应用程序停顿，影响响应时间和吞吐量。</li>
 <li><strong>老年代GC影响</strong>：如果对象在年轻代中存活时间较长，它们会被移动到老年代（Old Generation）内存中。频繁的对象分配和晋升可能会增加老年代的内存压力，导致 Full GC 的频率增加。Full GC 是较为昂贵的垃圾回收操作，会导致更长的停顿时间。</li>
 <li><strong>内存碎片化</strong>：频繁的对象分配和释放可能导致内存碎片化，增加内存管理的复杂性和开销，进一步影响性能。</li>
 </ol>
@@ -145,7 +145,7 @@
 <li><strong>监控和调优GC</strong>：通过监控工具（如JVisualVM、JProfiler等）观察应用程序的GC行为，调整JVM参数（如堆大小、GC算法等）以优化垃圾回收性能。</li>
 </ol>
 <h2 class="anchor anchorWithStickyNavbar_LWe7" id="实战">实战<a href="#实战" class="hash-link" aria-label="实战的直接链接" title="实战的直接链接">​</a></h2>
-<h3 class="anchor anchorWithStickyNavbar_LWe7" id="操作系统维度">操作系统维度<a href="#操作系统维度" class="hash-link" aria-label="操作系统维  度的直接链接" title="操作系统维度的直接链接">​</a></h3>
+<h3 class="anchor anchorWithStickyNavbar_LWe7" id="操作系统维度">操作系统维度<a href="#操作系统维度" class="hash-link" aria-label="操作系统维度的直接链接" title="操作系统维度的直接链接">​</a></h3>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="系统监控命令">系统监控命令<a href="#系统监控命令" class="hash-link" aria-label="系统监控命令的直接链接" title="系统监控命令的直接链接">​</a></h4>
 <p>见 <a href="/analysis-project/docs/DevOps/Linux系统探测工具">Linux系统探测工具</a></p>
 <h3 class="anchor anchorWithStickyNavbar_LWe7" id="jvm维度">JVM维度<a href="#jvm维度" class="hash-link" aria-label="JVM维度的直接链接" title="JVM维度的直接链接">​</a></h3>
@@ -167,7 +167,7 @@
 <p>然后基于这种jvm对象生命周期的分布状态，而作的两个分代假设和一个推导假设：</p>
 <ul>
 <li>1)弱分代假说(<code>Weak Generational Hypothesis</code>):绝大多数对象都是朝生夕灭的。</li>
-<li>2)强分代假说(<code>Strong Generational Hypothesis</code>):熬过 越多次垃圾收集过程的对象就越难以消亡。</li>
+<li>2)强分代假说(<code>Strong Generational Hypothesis</code>):熬过越多次垃圾收集过程的对象就越难以消亡。</li>
 </ul>
 <blockquote>
 <p>这两个分代假说共同奠定了多款常用的垃圾收集器的一致的设计原则:收集器应该将 Java堆划分出不同的区域，然后将回收对象依据其年龄(年龄即对象熬过垃圾收集过程的次数)分配到不同的区域之中存储。显而易见，如果一个区域中大多数对象都是朝生夕灭，难以熬过垃圾收集过程的话，那么把它们集中放在一起，每次回收时只关注如何保留少量存活而不是去标记那些大量将要被回收的对象，就能以较低代价回收到大量的空间; 如果剩下的都是难以消亡的对象，那把它们集中放在一块，虚拟机便可以使用较低的频率 来回收这个区域，这就同时兼顾了垃圾收集的时间开销和内存的空间有效利用。</p>
@@ -178,7 +178,7 @@
 <li>3)跨代引用假说(Intergenerational Reference Hypothesis):跨代引用相对于同代引 用来说仅占极少数。--<em>因为存在互相引用关系的两个对象，是应该倾向于同时生存或者同时消亡的</em></li>
 </ul>
 <blockquote>
-<p>依据这条进一步推导的假说，我们就不应再为了少量的跨代引用去扫描整个老年代，也不必浪费空间专门记录每一个对象是否存在及存在哪些跨代引用，只需在新生代上建立一个全局的数据结构(该结构被称为“记忆集”，<code>Remembered Set</code>)，这个结构把老年代划分成若干小块，标识出老年代的哪一块内存会存在跨代引用。此后当发生<code>Minor GC</code>时，只有包含了 跨代引用的小块内存里的对象才会被加入到<code>GC Roots</code>进行扫描。虽然这种方法需要在对象 改变引用关系(如将自己或者某个属性赋值)时维护记录数据的正确性，会增加一些运行 时的开销，但比起收集时扫描整个老年代来说仍然是划算的。</p>
+<p>依据这条进一步推导的假说，我们就不应再为了少量  的跨代引用去扫描整个老年代，也不必浪费空间专门记录每一个对象是否存在及存在哪些跨代引用，只需在新生代上建立一个全局的数据结构(该结构被称为“记忆集”，<code>Remembered Set</code>)，这个结构把老年代划分成若干小块，标识出老年代的哪一块内存会存在跨代引用。此后当发生<code>Minor GC</code>时，只有包含了 跨代引用的小块内存里的对象才会被加入到<code>GC Roots</code>进行扫描。虽然这种方法需要在对象 改变引用关系(如将自己或者某个属性赋值)时维护记录数据的正确性，会增加一些运行 时的开销，但比起收集时扫描整个老年代来说仍然是划算的。</p>
 </blockquote>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="gc的大致流程">gc的大致流程<a href="#gc的大致流程" class="hash-link" aria-label="gc的大致流程的直接链接" title="gc的大致流程的直接链接">​</a></h5>
 <p>然后gc算法，Java 的垃圾收集依赖于一个叫**标记和清除(mark and sweep)<strong>的算法，并且使用了一个叫</strong>已分配对象链表(allocated object list)**的链表结构来保存指向每个已经分配但尚未回收的对象的指针。</p>
@@ -200,7 +200,7 @@
 <p>a. 回收堆中内存，将其放回空闲链表。</p>
 <p>b. 从已分配链表中移除该对象。</p>
 <p>现在我们就把这个过程中的一些细节理清楚</p>
-<h5 class="anchor anchorWithStickyNavbar_LWe7" id="已分配对象链表allocated-object-list">已分配对象链表(allocated object list)<a href="#已分配对象链表allocated-object-list" class="hash-link" aria-label="已分配对象链表(allocated object list)的直接链接" title="已分配对象链表(allocated object list)的直接链接">​</a></h5>
+<h5 class="anchor anchorWithStickyNavbar_LWe7" id="已分配对象链表allocated-object-list">已分配对象链表(allocated object list)<a href="#已分配对象链表allocated-object-list" class="hash-link" aria-label="已分配 对象链表(allocated object list)的直接链接" title="已分配对象链表(allocated object list)的直接链接">​</a></h5>
 <p>AOL是一个包含所有已经被分配但尚未被垃圾收集器回收的对象的链表，JVM内部维护的一种数据结构，用来跟踪当前正在使用的对象，帮助JVM跟踪哪些对象已经被分配。JVM使用这个链表来了解有哪些对象在堆上，从而决定什么时候需要触发垃圾收集，或者在垃圾收集过程中哪些对象需要被回收。</p>
 <p>AOL通常包含堆内存中所有正在使用的对象。这些对象在程序中可能会被GC根对象直接或间接引用，也可能没有被任何GC根引用。</p>
 <p>在基于标记清除的gc算法中，如果AOL确实存在并在GC中被使用，则gc的开始阶段其被用来清除对象标记，因为JVM需要确保所有对象的标记位（通常是存储在对象的头部或与对象关联的元数据中）处于干净的状态以只标记当前可达的对象，清空标记位就是为了确保这一点；并且避免上一轮GC中遗留的标记导致某些对象被错误地识别为存活对象，进而导致对象无法被回收而发生内存泄漏。</p>
@@ -208,7 +208,7 @@
 <p>AOL是用来跟踪管理对象的，在某些JVM实现中，可能没有明确的AOL数据结构，而是使用其他方式管理对象，比如通过内存区域（如新生代、老年代）和对象头部的元数据来实现标记和清除。在这些情况下，标记位的清空仍然是标记-清除算法的一部分，但它们不是通过AOL来进行，而是通过遍历堆内存或使用其他优化结构来完成。</p>
 </blockquote>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="gc根">gc根<a href="#gc根" class="hash-link" aria-label="gc根的直接链接" title="gc根的直接链接">​</a></h5>
-<p>从GC根开始，寻找活跃对象。这里涉及对活跃对象的判定，而判断是否一个对象为活跃，现在使用的就是可达性分析的算法*（当然还有别的算法，比如引用计数，当一个对象的引用计数为0时，即是可回收的对象，实现简单但这种方法弊端太多：比如难以解决循环引用的问题、难以准确处理引用在并发环境下的准确计数 问题）*。</p>
+<p>从GC根开始，寻找活跃对象。这里涉及对活跃对象的判定，而判断是否一个对象为活跃，现在使用的就是可达性分析的算法*（当然还有别的算法 ，比如引用计数，当一个对象的引用计数为0时，即是可回收的对象，实现简单但这种方法弊端太多：比如难以解决循环引用的问题、难以准确处理引用在并发环境下的准确计数问题）*。</p>
 <p>如下图，从GC根开始通过引用去搜索，搜索过程所走过的路径称为“引用链”(Reference Chain)， 如果某个对象到GC Roots间没有任何引用链相连，或者用图论的话来说就是从GC Roots到 这个对象不可达时，则证明此对象是不可能再被使用的。</p>
 <div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-1.png" alt="image" style="max-width:50%;height:auto;display:block;margin:0 auto"></div>
 <p>在Jvm里面，固定可作为GC Roots的对象包括以下几种:</p>
@@ -245,7 +245,7 @@
 <p>在 JVM 中，OopMap（Object-Oriented Pointer Map）是一个用于优化垃圾回收和安全点（Safepoint）处理的重要数据结构。它记录了在特定字节码指令执行时，栈帧中哪些位置保存的是对象引用（即 OOP：Ordinary Object Pointer），哪些位置保存的是非引用数据（如整数、浮点数等）。OopMap设计目的就是为了帮助垃圾回收器在安全点处高效地识别和标记存活对象。</p>
 <p>比如：<em>上图：String.hashCode()方法编译后的本地代码，在0x026eb7a9处的call指令有OopMap记录，它指明了EBX寄存器和栈 中偏移量为16的内存区域中各有一个普通对象指针(Ordinary Object Pointer，OOP)的引 用，有效范围为从call指令开始直到0x026eb730(指令流的起始位置)+142(OopMap记 录的偏移量)=0x026eb7be，即hlt指令为止。</em></p>
 </blockquote>
-<p><code>OopMap</code> 是在方法的初始编译（通常是解释执行时）和 <code>JIT</code> 编译（即时编译器）时生成的。它与每个方法或代码段的上下文相关联，记录了在特定时刻（通常是安全点）栈帧中哪些局部变量、操作数栈、以及寄存器中保存的是对象引用。这个信息在 JIT 编译时尤其详细，因为即时编译器会生成机器码，并嵌入 OopMap 以便在运行时使用。也就是无论是解释执行还是 JIT 编译，JVM 都会在编译过程中生成 <code>OopMap</code>。只是对于解释执行，<code>OopMap</code> 通常较为简单，而在 <code>JIT</code>编译时，由于涉及优化和编译后的本地代码，<code>OopMap</code> 会更加复杂。</p>
+<p><code>OopMap</code> 是在方法的初始编译（通常是解释执行时）和 <code>JIT</code> 编译（即时编译器）时生成的。它与每个方法或代码段的上下文相关联，记录了在特定时刻（通常是安全点）栈帧中哪些局部变量、操作数栈、以及寄存器中保存的是对象引用。这个信息在 JIT 编译时尤其详细，因为即时编译器会生成机器码  ，并嵌入 OopMap 以便在运行时使用。也就是无论是解释执行还是 JIT 编译，JVM 都会在编译过程中生成 <code>OopMap</code>。只是对于解释执行，<code>OopMap</code> 通常较为简单，而在 <code>JIT</code>编译时，由于涉及优化和编译后的本地代码，<code>OopMap</code> 会更加复杂。</p>
 <p>**<code>OopMap</code> 的整个思想就是，通过在编译时就直接插入引用信息数据来避免在实际运行中时去搜索对象，即用静态生成的OopMap 来规避在运行时去搜索大量的对象引用，来极大的提高gc时标记对象的效率。**所以每当 JVM 进入一个安全点，并触发垃圾回收时，OopMap 就会被用来快速、准确地标记哪些对象在当前栈帧或寄存器中被引用。</p>
 <p>但这里还有细节，就是反射这种在运行时生产的对象，要如何处理<code>OopMap</code>，以及在<code>AOP</code>中是如何嵌入<code>OopMap</code>的？</p>
 <ul>
@@ -256,7 +256,7 @@
 <p>运行时 OopMap 生成：如果 AOP 是在编译时通过工具（如 AspectJ）织入切面逻辑，生成的字节码将与正常的字节码没有区别。这些字节码在 JVM 中的执行路径是固定的，JVM 会根据这些固定的路径生成相应的 OopMap。  而运行时织入的 AOP（如使用 JDK 动态代理或 CGLIB），切面逻辑会在运行时生成代理类或增强的字节码。这些动态生成的字节码在第一次执行时，可能通过解释执行或 JIT 编译来生成 OopMap，JIT 编译器会识别出这些动态生成的字节码，并为其生成 OopMap。</p>
 </li>
 </ul>
-<p>在 JVM 中，每个安全点都有相应的 OopMap。OopMap 描述了线程在该安全点处的栈帧状态，特别是哪些位置保存着对象引用。JVM 在到达安 全点时，会使用 OopMap 来快速识别和处理对象引用。</p>
+<p>在 JVM 中，每个安全点都有相应的 OopMap。OopMap 描述了线程在该安全点处的栈帧状态，特别是哪些位置保存着对象引用。JVM 在到达安全点时，会使用 OopMap 来快速识别和处理对象引用。</p>
 <p>总结就是：OopMap 是由 JVM 编译器在编译字节码时生成的。编译器在每个可能成为安全点的指令位置，都会生成一张 OopMap，这张表记录了当前栈帧中哪些位置保存的是对象引用。一旦类加载动作完成的时候，HotSpot就会把对象内什么偏移量上是什么 类型的数据计算出来，在即时编译过程中，也会在特定的位置记录下栈里和寄存器里哪些位置是引用。这样收集器在扫描时就可以直接得知这些信息了，并不需要真正一个不漏地从方法区等GC Roots开始查找。</p>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="安全点和安全区域">安全点和安全区域<a href="#安全点和安全区域" class="hash-link" aria-label="安全点和安全区域的直接链接" title="安全点和安全区域的直接链接">​</a></h5>
 <p>如果为每一条指令都生成对应的OopMap，那将会需要大量的额外存储空间，这样垃圾收集伴随而来的空间成本就会变得无法忍受的高昂。实际上HotSpot也的确没有为每条指令都生成OopMap，只是在“特定 的位置”记录了这些信息，这些位置被称为安全点(Safepoint)。</p>
@@ -287,7 +287,7 @@
 <p>抢先式中断(<code>Preemptive Suspension</code>)和主动式中断(<code>Voluntary Suspension</code>)，抢先式中断不需要线程的执行代码主动去配合，在垃圾收集发生时，系统 首先把所有用户线程全部中断，如果发现有用户线程中断的地方不在安全点上，就恢复这 条线程执行，让它一会再重新中断，直到跑到安全点上。现在几乎没有虚拟机实现采用抢 先式中断来暂停线程响应GC事件。</p>
 </li>
 <li>
-<p>主动式中断的思想是当垃圾收集需要中断线程的时候，不直接对线程操作，仅仅简单地设置一个标志位，各个线程执行过程时会不停地主动去轮询这个标志，一旦发现中断 标志为真时就自己在最近的安全点上主动中断挂起。轮询标志的地方和安全点是重合的， 另外还要加上所有创建对象和其他需要在Java堆上分配内存的地方，这是为了检查是否即 将要发生垃圾收集，避免没有足够内存分配新对象。</p>
+<p>主动式中断的思想是当垃圾收集需要中断线程的时候，不直接对线程操作，仅仅简单地设置一个标志位，各个线程执行过程时会不停地主动去轮询这个标志，一旦发现中断 标志 为真时就自己在最近的安全点上主动中断挂起。轮询标志的地方和安全点是重合的， 另外还要加上所有创建对象和其他需要在Java堆上分配内存的地方，这是为了检查是否即 将要发生垃圾收集，避免没有足够内存分配新对象。</p>
 </li>
 </ul>
 <p>这里因为轮询操作在代码中会频繁出现，HotSpot把轮询操作精简至只有一条汇编指令的程度，以保证它足够高效。</p>
@@ -308,14 +308,14 @@
 <p>具体来说，卡表是一种位图数据结构，记录堆内存中某些区域可能包含指向年轻代（Young Generation）对象的引用。卡表通过将堆内存划分为固定大小的卡页（通常是 512 字节或 1 KB），并为每个卡页在卡表中对应一个条目。当 JVM 发现某个老年代的对象引用了年轻代的对象时，它会将该对象所在的卡页标记为“脏”（即在卡表中将对应的条目标记为 1）。下图就是卡表与卡页的对应示意：</p>
 <div style="text-align:center;width:100%"><img src="/analysis-project/img/jvm/jvm-3.png" alt="image" style="max-width:32%;height:auto;display:block;margin:0 auto"></div>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="卡表的维护">卡表的维护<a href="#卡表的维护" class="hash-link" aria-label="卡表的维护的直接链接" title="卡表的维护的直接链接">​</a></h5>
-<p>然后为了保证卡表的有效和并发安全，卡表的维护主要依靠**写屏障（Write Barrier）**机制，以及在对象引用发生变化时的卡表更新。</p>
+<p>然后为了保证卡表的有效和并发安全  ，卡表的维护主要依靠**写屏障（Write Barrier）**机制，以及在对象引用发生变化时的卡表更新。</p>
 <blockquote>
 <p>写屏障是一种在对象引用发生变化时插入的额外指令，用于拦截并处理这种引用变化。</p>
 </blockquote>
-<div class="language-java codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-java codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token keyword" style="color:#00009f">void</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">oop_field_store</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">oop</span><span class="token operator" style="color:#393A34">*</span><span class="token plain"> field</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> oop new_value</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">// 引用字段赋值操作</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token operator" style="color:#393A34">*</span><span class="token plain">field </span><span class="token operator" style="color:#393A34">=</span><span class="token plain"> new_value</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token comment" style="color:#999988;font-style:italic">// 写后屏障，在这里完成卡表状态更新 post_write_barrier(field, new_value);</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
+<div class="language-java codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#393A34;--prism-background-color:#f6f8fa"><div class="codeBlockContent_biex"><pre tabindex="0" class="prism-code language-java codeBlock_bY9V thin-scrollbar" style="color:#393A34;background-color:#f6f8fa"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#393A34"><span class="token keyword" style="color:#00009f">void</span><span class="token plain"> </span><span class="token function" style="color:#d73a49">oop_field_store</span><span class="token punctuation" style="color:#393A34">(</span><span class="token plain">oop</span><span class="token operator" style="color:#393A34">*</span><span class="token plain"> field</span><span class="token punctuation" style="color:#393A34">,</span><span class="token plain"> oop new_value</span><span class="token punctuation" style="color:#393A34">)</span><span class="token plain"> </span><span class="token punctuation" style="color:#393A34">{</span><span class="token plain"> </span><span class="token comment" style="color:#999988;font-style:italic">// 引用字段赋值操作</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token operator" style="color:#393A34">*</span><span class="token plain">field </span><span class="token operator" style="color:#393A34">=</span><span class="token plain"> new_value</span><span class="token punctuation" style="color:#393A34">;</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token comment" style="color:#999988;font-style:italic">// 写后屏障，在这里完成卡表状态  更新 post_write_barrier(field, new_value);</span><span class="token plain"></span><br></span><span class="token-line" style="color:#393A34"><span class="token plain"></span><span class="token punctuation" style="color:#393A34">}</span><br></span></code></pre><div class="buttonGroup__atx"><button type="button" aria-label="复制代码到剪贴板" title="复制" class="clean-btn"><span class="copyButtonIcons_eSgA" aria-hidden="true"><svg viewBox="0 0 24 24" class="copyButtonIcon_y97N"><path fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path></svg><svg viewBox="0 0 24 24" class="copyButtonSuccessIcon_LjdS"><path fill="currentColor" d="M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z"></path></svg></span></button></div></div></div>
 <p>应用写屏障后，虚拟机就会为所有赋值操作生成相应的指令，<em>即这一过程是通过在字节码或机器码级别插入额外指令实现的</em>，一旦收集器在写屏障中增加了更新卡表操作，无论更新的是不是老年代对新生代对象的引用，每次只要对引用进行更新，就会产生额外的开销，不过这个开销与Minor GC时扫描整个老年代的代价相比 还是低得多的。</p>
 <p>同时卡表的更新是增量的，即如果一个卡页已经被标记为“脏”，再次发生引用更新时无需重复标记，这样可以减少不必要的写操作。</p>
-<p>同时因为卡表对应的是内存区域是否被更新，此时当多线程修改互相独立的变量时，如果这些 变量恰好共享同一个缓存行，就会彼此影响(写回、无效化或者同步)而导致性能降低， 这就是伪共享问题，即一个线程的修改导致了另一个线程的cpu缓存失效，导致缓存命中降低而影响性能。为了避免伪共享问题，一种简单的解决方案是不采用无条 件的写屏障，而是先检查卡表标记，只有当该卡表元素未被标记过时才将其标记为变脏，<em>在JDK 7之后，HotSpot虚拟机增加了一个新的参数-XX:+UseCondCardMark，用来决定是否开启卡表更新的条件判断。开启会增加一次额外判断的开销，但能够避免伪共享 问 题，两者各有性能损耗，是否打开要根据应用实际运行情况来进行测试权衡。</em></p>
+<p>同时因为卡表对应的是内存区域是否被更新，此时当多线程修改互相独立的变量时，如果这些 变量恰好共享同一个缓存行，就会彼此影响(写回、无效化或者同步)而导致性能降低， 这就是伪共享问题，即一个线程的修改导致了另一个线程的cpu缓存失效，导致缓存命中降低而影响性能。为了避免伪共享问题，一种简单的解决方案是不采用无条 件的写屏障，而是先检查卡表标记，只有当该卡表元素未被标记过时才 将其标记为变脏，<em>在JDK 7之后，HotSpot虚拟机增加了一个新的参数-XX:+UseCondCardMark，用来决定是否开启卡表更新的条件判断。开启会增加一次额外判断的开销，但能够避免伪共享 问题，两者各有性能损耗，是否打开要根据应用实际运行情况来进行测试权衡。</em></p>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="三色标记">三色标记<a href="#三色标记" class="hash-link" aria-label="三色标记的直接链接" title="三色标记的直接链接">​</a></h5>
 <p><strong>标记的并发修改</strong></p>
 <blockquote>
@@ -332,7 +332,7 @@
 <p>三色标记算法本身是设计用来避免回收存活对象的，三色标记是一个辅助标记对象存活的算法。</p>
 <p>先说三个颜色对应的含义和jvm对三种不同颜色状态的对象的处理：</p>
 <ul>
-<li><strong>白色（White）</strong>：对象还未被扫描，在垃圾回收的标记阶段，所有未被访问的对象最初都被认为是白 色的。</li>
+<li><strong>白色（White）</strong>：对象还未被扫描，在垃圾回收的标记阶段，所有未被访问的对象最初都被认为是白色的。</li>
 </ul>
 <p>如果某个对象在标记阶段结束后仍然是白色，那么它就被认为是不可达的，也就是垃圾，回收器会将其回收。</p>
 <ul>
@@ -364,7 +364,7 @@
 <p><strong>标记结束</strong>：当扫描阶段结束后，所有可达的对象将是黑色（或灰色，最终会转为黑色），所有仍为白色的对象就是不可达的对象，即可以被回收的对象。</p>
 </li>
 </ul>
-<p><strong>总结一下：也就是从gc 根开始，每个对象都是从白色--&gt; 灰色 --&gt; 黑色的标记过程，都是通过灰色对象一点点的扫描其引用推进对象的颜色标记，对象的颜色标记不可能直接从白色到黑色，最后指导没有灰色对象，只有白色和黑色对象，此时黑色对象保 留，白色对象回收。</strong></p>
+<p><strong>总结一下：也就是从gc 根开始，每个对象都是从白色--&gt; 灰色 --&gt; 黑色的 标记过程，都是通过灰色对象一点点的扫描其引用推进对象的颜色标记，对象的颜色标记不可能直接从白色到黑色，最后指导没有灰色对象，只有白色和黑色对象，此时黑色对象保留，白色对象回收。</strong></p>
 <p><strong>如何处理并发修改问题中对象消失问题</strong></p>
 <p>Wilson于1994年在理论上证明了，当且仅当以下两个条件同时满足时，会产生“对象消失”的问题，即原本应该是黑色的对象被误标为白色：</p>
 <ul>
@@ -384,7 +384,7 @@
 <li><strong>缺点</strong>：</li>
 <li>实现复杂：增量更新的实现较为复杂，特别是在高并发环境下，保证写屏障的性能是一个挑战。</li>
 <li>延迟增加：增量更新会增加一些额外的延迟，因为每次对象引用变化都需要立即更新卡表和进行标记。</li>
-<li>原始快照：破坏的是第二个条件，当灰色对象要删除指向白色对象的引用关系时，就将这个要删除的引用记录下来，在并发扫描结束之后，再将这些记录过的引用关系中的灰色对象为根， 重新扫描一次。这也可以简化理解为，无论引用关系删除与否，都会按照刚刚开始扫描那一刻的对象图快照来进行搜索。</li>
+<li>原始快 照：破坏的是第二个条件，当灰色对象要删除指向白色对象的引用关系时，就将这个要删除的引用记录下来，在并发扫描结束之后，再将这些记录过的引用关系中的灰色对象为根，重新扫描一次。这也可以简化理解为，无论引用关系删除与否，都会按照刚刚开始扫描那一刻的对象图快照来进行搜索。</li>
 <li><strong>优点</strong>：</li>
 <li>实现简单：SATB 的实现相对简单，因为它只需要在标记开始时捕获快照，不需要动态处理新增引用。</li>
 <li>一致性强：SATB 保证了垃圾回收过程中对象引用关系的整体一致性，不易出现遗漏。</li>
@@ -414,13 +414,13 @@
 </li>
 </ul>
 <p><strong>如何收集和为什么gc时会发生停顿</strong></p>
-<p>gc时会发生停顿是和其  采用的gc算法相关的，即当标记对象之后的具体如何回收操作，会面临一个选择，即：</p>
+<p>gc时会发生停顿是和其采用的gc算法相关的，即当标记对象之后的具体如何回收操作，会面临一个选择，即：</p>
 <ul>
 <li>就地清除留下内存碎片而让后续分配对象变得复杂；这就是标记-清除，其不考虑移动和整理存活对象的话，使得弥散于堆中的存活对象导致的空间碎片化，而这个问题就只能依赖更为复杂的内存分配器和内存访问器来解决。</li>
 <li>还是标记之后移动对象整理内存的碎片，这会让回收动作变得复杂，而且需要暂停其他线程，因为如果移动存活对象，尤其是在老年代这种每次回收都有大量对象存活区域，移动存活对象并更新所有引用这些对象的地方将会是一种极为负重的操作，而且这种对象移动操作必须全程暂停用户应用程序才能进行，像这样的停顿被最初的虚拟机设计者形象地描述为<code>“Stop The World”</code>。</li>
 </ul>
 <p>基于以上两点，是否移动对象都存在弊端，移动则内存回收时会更复杂，不移动则内存分配时会更复杂。从垃圾收集的停顿时间来看，不移动对象停顿时间会更短，甚至可以不需要停顿，但是从整个程序的吞吐量来看，移动对象会更划算。因为内存分配和访问相比垃圾收集频率要高得多，这部分的耗时增加， 总吞吐量仍然是下降的。</p>
-<p>基于上面的现实，jvm使用了基于标记整理的回收算法，就是导致其回收时会出现停顿的原因。<code>HotSpot</code>虚拟机里面关注吞吐量的<code>Parallel Scavenge</code>收集器是基于 标记-整理算法的，而关注延迟的<code>CMS</code>收集器则是基于标记-清除算法的，所以<code>CMS</code>是低停顿的*（<code>CMS</code>一样会停顿至少延迟更低，因为所有收集器在根节点枚举即确定从哪些对象开始搜索其引用链时，这一步骤时都是必须暂停用户线程的，因此毫无疑问根节点枚举与整理内存碎片一样会面临相  似的<code>“Stop The World”</code>的困扰）*。</p>
+<p>基于上面的现实，jvm使用了基于标记整理的回收算法，就是导致其回收时会出现停顿的原因。<code>HotSpot</code>虚拟机里面关注吞吐量的<code>Parallel Scavenge</code>收集器是基于 标记-整理算法的，而关注延迟的<code>CMS</code>收集器则是基于标记-清除算法的，所以<code>CMS</code>是低停顿的*（<code>CMS</code>一样会停顿至 少延迟更低，因为所有收集器在根节点枚举即确定从哪些对象开始搜索其引用链时，这一步骤时都是必须暂停用户线程的，因此毫无疑问根节点枚举与整理内存碎片一样会面临相似的<code>“Stop The World”</code>的困扰）*。</p>
 <p>所以这里有两个地方会导致停顿：</p>
 <ol>
 <li>根节点枚举</li>
@@ -529,7 +529,7 @@
 <p>Time since last: 从上一个安全点到当前安全点的时间间隔（以纳秒为单位）。例如，<code>10650416 ns</code> 表示自上一个安全点以来的时间。</p>
 </li>
 <li>
-<p>Reaching safepoint: 进入安全点所需的时间。表示达到安全点所需的时间（以纳秒为单位）。例如，<code>4917 ns</code>。</p>
+<p>Reaching safepoint: 进入安全点所需的时间。表示达到安全点所需的时间（  以纳秒为单位）。例如，<code>4917 ns</code>。</p>
 </li>
 <li>
 <p>Cleanup: 清理时间，即在安全点期间进行清理操作所需的时间（以纳秒为单位）。例如，<code>4792 ns</code>。</p>
@@ -547,10 +547,10 @@
 </ul>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="主流收集器对比">主流收集器对比<a href="#主流收集器对比" class="hash-link" aria-label="主流收集器对比的直接链接" title="主流收集器对比的直接链接">​</a></h5>
 <p>下面是几款主流垃圾收集器的对比表格。这个表格总结了它们的主要特点、适用场景和优缺点。</p>
-<table><thead><tr><th>特性</th><th>G1GC (Garbage-First GC)</th><th>Serial GC</th><th>Parallel GC (Throughput Collector)</th><th>CMS (Concurrent Mark-Sweep) GC</th><th>ZGC (Z Garbage Collector)</th><th>Shenandoah GC</th></tr></thead><tbody><tr><td><strong>目标</strong></td><td>适用于大内存应用，最小化 GC 停顿时间</td><td>适用于小型单线程应用</td><td>适用于多核机器，高吞吐量</td><td>适用于需要低延迟的应用</td><td>低延迟，高并发应用</td><td>低延迟，高并发应用</td></tr><tr><td><strong>主要特点</strong></td><td>- 分区堆，逐步回收 - 并行处理 - 可预测的 GC 停顿时间</td><td>- 单线程 - 简单实现</td><td>- 多线程 - 高吞吐量</td><td>- 并行和并发处理 - 低延迟</td><td>- 并发回收 - 低延迟 - 不停顿</td><td>- 并发回收 - 低延迟 - 不停顿</td></tr><tr><td><strong>堆划分</strong></td><td>年轻代、老年代，垃圾优先的分区堆</td><td>年轻代和老年代，单块堆</td><td>年轻代、老年代</td><td>年轻代、老年代</td><td>年轻代、老年代，分区堆</td><td>年轻代、老年代，分区堆</td></tr><tr><td><strong>GC  停顿时间</strong></td><td>可预测，通常较低</td><td>长时间，单线程</td><td>较低，但会受到 GC 暂停时间的影响</td><td>较低，但仍会有较长的 GC 停顿时间</td><td>极低，无停顿</td><td>极低，无停顿</td></tr><tr><td><strong>并发/并行</strong></td><td>并发与并行</td><td>单线程</td><td>并行</td><td>并发和并行</td><td>并发</td><td>并发</td></tr><tr><td><strong>优点</strong></td><td>- 适合大内存应用 - 可预测停顿 - 对新生代和老年代有良好支持</td><td>- 简单实现 - 对低延迟有良好支持</td><td>- 高吞吐量 - 支持多线程 - 实现简单</td><td>- 低延迟 - 并发回收</td><td>- 几乎无停顿 - 支持大内存 - 并发回收</td><td>- 几乎无停顿 - 对大内存支持良好 - 并发回收</td></tr><tr><td><strong>缺点</strong></td><td>- 配置复杂 - 高内存消耗</td><td>- 单线程 - 不适合大内存应用</td><td>- GC 停顿可能较长</td><td>- 较高的 GC 停顿时间 - 配置复杂</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td></tr></tbody></table>
+<table><thead><tr><th>特性</th><th>G1GC (Garbage-First GC)</th><th>Serial GC</th><th>Parallel GC (Throughput Collector)</th><th>CMS (Concurrent Mark-Sweep) GC</th><th>ZGC (Z Garbage Collector)</th><th>Shenandoah GC</th></tr></thead><tbody><tr><td><strong>目标</strong></td><td>适用于大内存应用，最小化 GC 停顿时间</td><td>适用于小型单线程应用</td><td>适用于多核机器，高吞吐量</td><td>适用于需要低延迟的应用</td><td>低延迟，高并发应用</td><td>低延迟，高并发应用</td></tr><tr><td><strong>主要特点</strong></td><td>- 分区堆，逐步回收 - 并行处理 - 可预测的 GC 停顿时间</td><td>- 单线程 - 简单实现</td><td>- 多线程 - 高吞吐量</td><td>- 并行和并发处理 - 低延迟</td><td>- 并发回收 - 低延迟 - 不停顿</td><td>- 并发回收 - 低延迟 - 不停顿</td></tr><tr><td><strong>堆划分</strong></td><td>年轻代、老年代，垃 圾优先的分区堆</td><td>年轻代和老年代，单块堆</td><td>年轻代、老年代</td><td>年轻代、老年代</td><td>年轻代、老年代，分区堆</td><td>年轻代、老年代，分区堆</td></tr><tr><td><strong>GC 停顿时间</strong></td><td>可预测，通常较低</td><td>长时间，单线程</td><td>较低，但会受到 GC 暂停时间的影响</td><td>较低，但仍会有较长的 GC 停顿时间</td><td>极低，无停顿</td><td>极低，无停顿</td></tr><tr><td><strong>并发/并行</strong></td><td>并发与并行</td><td>单线程</td><td>并行</td><td>并发和并行</td><td>并发</td><td>并发</td></tr><tr><td><strong>优点</strong></td><td>- 适合大内存应用 - 可预测停顿 - 对新生代和老年代有良好支持</td><td>- 简单实现 - 对低延迟有良好支持</td><td>- 高吞吐量 - 支持多线程 - 实现简单</td><td>- 低延迟 - 并发回收</td><td>- 几乎无停顿 - 支持大内存 - 并发回收</td><td>- 几乎无停顿 - 对大内存支持良好 - 并发回收</td></tr><tr><td><strong>缺点</strong></td><td>- 配置复杂 - 高内存消耗</td><td>- 单线程 - 不适合大内存应用</td><td>- GC 停顿可能较长</td><td>- 较高的 GC 停顿时间 - 配置复杂</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td><td>- 实现复杂 - 需要较新版本的 JVM 支持</td></tr></tbody></table>
 <h4 class="anchor anchorWithStickyNavbar_LWe7" id="jvm监测命令工具">JVM监测命令工具<a href="#jvm监测命令工具" class="hash-link" aria-label="JVM监测命令工具的直接链接" title="JVM监测命令工具的直接链接">​</a></h4>
 <p>这几个工具：<code>jps</code>、<code>jstat</code>、<code>jinfo</code>、<code>jmap</code> 和 <code>jstack</code> 总览如下：</p>
-<table><thead><tr><th><strong>命令</strong></th><th><strong>用途</strong></th><th><strong>主要功能</strong></th><th><strong>常用选项</strong></th></tr></thead><tbody><tr><td><code>jps</code></td><td>查看 Java 进程</td><td>显示正在运行的 Java 进程及其 PID 和简要信息</td><td><code>-l</code> 显示完全限定的类名，<code>-v</code> 显示 JVM 参数，<code>-m</code> 显示传递给主类的参数</td></tr><tr><td><code>jstat</code></td><td>查  看JVM 性能统计监控</td><td>用于监控 JVM 的垃圾回收、内存使用和其他性能统计信息</td><td><code>-gc</code> 显示垃圾收集相关信息，<code>-gcutil</code> 显示内存区域的垃圾收集使用率，<code>-class</code> 显示类加载统计信息</td></tr><tr><td><code>jinfo</code></td><td>显示和更改 JVM 配置参数</td><td>查看 JVM 配置参数（如系统属性、命令行参数等），并在某些情况下动态更改</td><td><code>-sysprops</code> 显示系统属性，<code>-flags</code> 显示 JVM 参数，<code>-flag &lt;name&gt;</code> 显示或设置特定 JVM 参数</td></tr><tr><td><code>jmap</code></td><td>内存映像（heap dump）生成和分析</td><td>获取 JVM 中的堆转储、内存使用统计信息、对象分布等</td><td><code>-dump</code> 生成堆转储，<code>-heap</code> 显示类加载，<code>-histo</code> 显示堆中对象统计</td></tr><tr><td><code>jstack</code></td><td>Java 线程的堆栈跟踪</td><td>用于诊断线程问题，生成所有线程的堆栈跟踪</td><td><code>-l</code> 显示额外的锁信息</td></tr></tbody></table>
+<table><thead><tr><th><strong>命令</strong></th><th><strong>用途</strong></th><th><strong>主要功能</strong></th><th><strong>常用选项</strong></th></tr></thead><tbody><tr><td><code>jps</code></td><td>查看 Java 进程</td><td>显示正 在运行的 Java 进程及其 PID 和简要信息</td><td><code>-l</code> 显示完全限定的类名，<code>-v</code> 显示 JVM 参数，<code>-m</code> 显示传递给主类的参数</td></tr><tr><td><code>jstat</code></td><td>查看JVM 性能统计监控</td><td>用于监控 JVM 的垃圾回收、内存使用和其他性能统计信息</td><td><code>-gc</code> 显示垃圾收集相关信息，<code>-gcutil</code> 显示内存区域的垃圾收集使用率，<code>-class</code> 显示类加载统计信息</td></tr><tr><td><code>jinfo</code></td><td>显示和更改 JVM 配置参数</td><td>查看 JVM 配置参数（如系统属性、命令行参数等），并在某些情况下动态更改</td><td><code>-sysprops</code> 显示系统属性，<code>-flags</code> 显示 JVM 参数，<code>-flag &lt;name&gt;</code> 显示或设置特定 JVM 参数</td></tr><tr><td><code>jmap</code></td><td>内存映像（heap dump）生成和分析</td><td>获取 JVM 中的堆转储、内存使用统计信息、对象分布等</td><td><code>-dump</code> 生成堆转储，<code>-heap</code> 显示类加载，<code>-histo</code> 显示堆中对象统计</td></tr><tr><td><code>jstack</code></td><td>Java 线程的堆栈跟踪</td><td>用于诊断线程问题，生成所有线程的堆栈跟踪</td><td><code>-l</code> 显示额外的锁信息</td></tr></tbody></table>
 <h5 class="anchor anchorWithStickyNavbar_LWe7" id="jps">jps<a href="#jps" class="hash-link" aria-label="jps的直接链接" title="jps的直接链接">​</a></h5>
 <p><code>jps</code>(Java Process Status) 是 Java 提供的一个实用命令工具。它用于显示当前用户运行的所有 Java 进程的相关信息。这个工具类似于 Unix 系统中的 <code>ps</code> 命令，但专门针对 Java 进程。</p>
 <p>命令：<code>jps [options] [hostid]</code></p>
@@ -559,7 +559,7 @@
 <p><strong><code>-q</code></strong>: 只输出 Java 进程 ID（PID），不显示类名、JAR 文件名或参数。</p>
 </li>
 <li>
-<p><strong><code>-m</code></strong>: 显示传递给 main 方法的参数。</p>
+<p><strong><code>-m</code></strong>: 显示传递给 main 方  法的参数。</p>
 </li>
 <li>
 <p><strong><code>-l</code></strong>: 输出完全限定的类名或 JAR 文件路径。</p>
@@ -696,7 +696,7 @@
 </ul>
 <p><strong>垃圾回收统计 (Garbage Collection Stats)</strong></p>
 <ul>
-<li><strong>YGC (Young Generation GC Count)</strong>: 新生代垃圾回收次数。值  为 <code>3</code> 次。</li>
+<li><strong>YGC (Young Generation GC Count)</strong>: 新生代垃圾回收次数。值为 <code>3</code> 次。</li>
 <li><strong>FGC (Full GC Count)</strong>: 老年代垃圾回收次数 (Full GC)。值为 <code>0</code> 次。</li>
 <li><strong>CGC (Total GC Count)</strong>: 垃圾回收总次数。值为 <code>2</code> 次。</li>
 </ul>
@@ -815,7 +815,7 @@
 <p><strong>性能瓶颈分析</strong>： 通过查看哪些方法或代码片段占用了大量的 CPU 时间，可以帮助确定性能瓶颈。</p>
 </li>
 <li>
-<p><strong>线程泄漏检测</strong>： 如果应用程序中  存在线程泄漏（即某些线程没有被正确终止），<code>jstack</code> 可以帮助识别这种情况。</p>
+<p><strong>线程泄漏检测</strong>： 如果应用程序中存在线程泄漏（即某些线程没有被正确终止），<code>jstack</code> 可以帮助识别这种情况。</p>
 </li>
 </ul>
 <p>语法：<code>jstack [options] &lt;pid&gt;</code></p>

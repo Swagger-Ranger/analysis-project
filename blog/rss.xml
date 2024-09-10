@@ -9,51 +9,32 @@
         <generator>https://github.com/jpmonette/feed</generator>
         <language>zh-Hans</language>
         <item>
-            <title><![CDATA[first Post]]></title>
+            <title><![CDATA[书单]]></title>
             <link>https://Swagger-Ranger.github.io/analysis-project/blog/mdx-blog-post</link>
             <guid>https://Swagger-Ranger.github.io/analysis-project/blog/mdx-blog-post</guid>
             <pubDate>Wed, 14 Aug 2024 00:00:00 GMT</pubDate>
-            <description><![CDATA[推荐书单]]></description>
-            <content:encoded><![CDATA[<p>推荐书单
-这些书单都是我自己阅读过的，对我有很大帮助，不少书甚至是直接帮助我打通任督二脉，哈哈哈哈
-《a》</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>提示</div><div class="admonitionContent_BuS1"><p>Use the power of React to create interactive blog posts.</p></div></div>]]></content:encoded>
-            <category>Docusaurus</category>
-        </item>
-        <item>
-            <title><![CDATA[Welcome]]></title>
-            <link>https://Swagger-Ranger.github.io/analysis-project/blog/welcome</link>
-            <guid>https://Swagger-Ranger.github.io/analysis-project/blog/welcome</guid>
-            <pubDate>Thu, 26 Aug 2021 00:00:00 GMT</pubDate>
-            <description><![CDATA[Docusaurus blogging features are powered by the blog plugin.]]></description>
-            <content:encoded><![CDATA[<p><a href="https://docusaurus.io/docs/blog" target="_blank" rel="noopener noreferrer">Docusaurus blogging features</a> are powered by the <a href="https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-content-blog" target="_blank" rel="noopener noreferrer">blog plugin</a>.</p>
-<p>Here are a few tips you might find useful.</p>
-<p>Simply add Markdown files (or folders) to the <code>blog</code> directory.</p>
-<p>Regular blog authors can be added to <code>authors.yml</code>.</p>
-<p>The blog post date can be extracted from filenames, such as:</p>
+            <description><![CDATA[一些书]]></description>
+            <content:encoded><![CDATA[<p>一些书</p>
 <ul>
-<li><code>2019-05-30-welcome.md</code></li>
-<li><code>2019-05-30-welcome/index.md</code></li>
+<li><a href="https://book.douban.com/subject/35492898/" target="_blank" rel="noopener noreferrer">《凤凰架构》</a></li>
+<li><a href="https://book.douban.com/subject/30329536/" target="_blank" rel="noopener noreferrer">《数据密集型应用系统设计》</a></li>
+<li><a href="https://book.douban.com/subject/34907497/" target="_blank" rel="noopener noreferrer">《深入理解Java虚拟机：JVM高级特性与最佳实践》</a></li>
+<li><a href="https://book.douban.com/subject/24708143/" target="_blank" rel="noopener noreferrer">《MySQL技术内幕》</a></li>
+<li><a href="https://book.douban.com/subject/27665114/" target="_blank" rel="noopener noreferrer">《Kafka权威指南》</a></li>
+<li><a href="https://book.douban.com/subject/35258148/" target="_blank" rel="noopener noreferrer">《Java性能优化实践：JVM调优策略、工具与技巧》</a></li>
+<li><a href="https://book.douban.com/subject/35013531/" target="_blank" rel="noopener noreferrer">《Java并发实现原理：JDK源码剖析》</a></li>
+<li><a href="https://book.douban.com/subject/30172800/" target="_blank" rel="noopener noreferrer">《MySQL 王者晋级之路》</a></li>
+<li><a href="https://book.douban.com/subject/6440615/" target="_blank" rel="noopener noreferrer">《Lucene实战》</a></li>
+<li><a href="https://book.douban.com/subject/26974299/" target="_blank" rel="noopener noreferrer">《Neo4j 实战》</a></li>
+<li><a href="https://book.douban.com/subject/26831072/" target="_blank" rel="noopener noreferrer">《图数据库》</a></li>
+<li><a href="https://book.douban.com/subject/19952400/" target="_blank" rel="noopener noreferrer">《算法（第4版）》</a></li>
+<li><a href="https://book.douban.com/subject/26772632/" target="_blank" rel="noopener noreferrer">《Java 8实战》</a></li>
+<li><a href="https://book.douban.com/subject/30412517/" target="_blank" rel="noopener noreferrer">《Effective Java中文版》</a></li>
+<li>。。。</li>
 </ul>
-<p>A blog post folder can be convenient to co-locate blog post images:</p>
-<p><img decoding="async" loading="lazy" alt="Docusaurus Plushie" src="https://swagger-ranger.github.io/analysis-project/assets/images/docusaurus-plushie-banner-a60f7593abca1e3eef26a9afa244e4fb.jpeg" width="1500" height="500" class="img_ev3q"></p>
-<p>The blog supports tags as well!</p>
-<p><strong>And if you don't want a blog</strong>: just delete this directory, and use <code>blog: false</code> in your Docusaurus config.</p>]]></content:encoded>
-            <category>Facebook</category>
-            <category>Hello</category>
-            <category>Docusaurus</category>
-        </item>
-        <item>
-            <title><![CDATA[MDX Blog Post]]></title>
-            <link>https://Swagger-Ranger.github.io/analysis-project/blog/mdx-blog-post</link>
-            <guid>https://Swagger-Ranger.github.io/analysis-project/blog/mdx-blog-post</guid>
-            <pubDate>Sun, 01 Aug 2021 00:00:00 GMT</pubDate>
-            <description><![CDATA[Blog posts support Docusaurus Markdown features, such as MDX.]]></description>
-            <content:encoded><![CDATA[<p>推荐书单
-这些书单都是我自己阅读过的，对我有很大帮助，不少书甚至是直接帮助我打通任督二脉，哈哈哈哈
-《a》</p>
-<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>提示</div><div class="admonitionContent_BuS1"><p>Use the power of React to create interactive blog posts.</p></div></div>]]></content:encoded>
-            <category>Docusaurus</category>
+<div class="theme-admonition theme-admonition-tip admonition_xJq3 alert alert--success"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 12 16"><path fill-rule="evenodd" d="M6.5 0C3.48 0 1 2.19 1 5c0 .92.55 2.25 1 3 1.34 2.25 1.78 2.78 2 4v1h5v-1c.22-1.22.66-1.75 2-4 .45-.75 1-2.08 1-3 0-2.81-2.48-5-5.5-5zm3.64 7.48c-.25.44-.47.8-.67 1.11-.86 1.41-1.25 2.06-1.45 3.23-.02.05-.02.11-.02.17H5c0-.06 0-.13-.02-.17-.2-1.17-.59-1.83-1.45-3.23-.2-.31-.42-.67-.67-1.11C2.44 6.78 2 5.65 2 5c0-2.2 2.02-4 4.5-4 1.22 0 2.36.42 3.22 1.19C10.55 2.94 11 3.94 11 5c0 .66-.44 1.78-.86 2.48zM4 14h5c-.23 1.14-1.3 2-2.5 2s-2.27-.86-2.5-2z"></path></svg></span>提示</div><div class="admonitionContent_BuS1"><p>这些是我最近读完而且觉得值得去读的一些书。</p><p>其实真的要搞清楚一些东西，还是得读书和论文。如果是想系统的搞明白就读书，如果是想看看最新的发展和最有见地的内容就读论文，而同样要搞清楚具体怎么实现的就得去读源码</p></div></div>
+]]></content:encoded>
+            <category>books</category>
         </item>
     </channel>
 </rss>

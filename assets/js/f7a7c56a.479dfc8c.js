@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkanalytic_project=self.webpackChunkanalytic_project||[]).push([[3509],{8721:a=>{a.exports=JSON.parse('{"tags":[{"label":"books","permalink":"/analysis-project/blog/tags/books","count":1}]}')}}]);
