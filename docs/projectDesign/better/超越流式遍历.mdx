@@ -3,13 +3,14 @@ title: 超越流式遍历
 sidebar_position: 1
 toc_min_heading_level: 2
 toc_max_heading_level: 5
+slug: /projectDesign/beyondStream
 ---
 
 ### 流式系统的硬伤
 
 [//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-6.png" alt="image" style="zoom:32%;" />)
 <div style={{ textAlign: 'center', width: '100%' }}>
-    <img src="/analysis-project/img/analysis-project/ana-6.png" alt="image" style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }} />
+    <img src="/analysis-project/img/analysis-project/ana-6.png" alt="image" style={{ maxWidth: '90%', height: 'auto', display: 'block', margin: '0 auto' }} />
 </div>
 
 上一个文章中的流式系统设计，虽然被实战证明过能运行良好，但其存在设计上的硬伤，让它并不能成为一个优秀的分析系统。因为本质上其就是用流式遍历的方式来处理数据，所有任务都是转化为对数据的遍历处理，无论是实时的数据还是历史的数据，都是转化为数据流去一条条过滤。其至少在如下方面存在硬伤：
@@ -19,7 +20,7 @@ toc_max_heading_level: 5
 - **流式遍历实际上效率很差，任务增加总是需要更多的资源**，可以从图中看到，每个消息都会去过每个任务，消息数量和任务数量的乘积就是整个系统的工作量，也就是当消息数据很多时，随便增加一两个任务就可能让整个系统无法处理完消息。增加线程thread或者cpu核心而增加的处理能力和任务增加带来的任务增量是同一个量级的，现实中不可能资源的增加赶得上任务的增加的。所以当数据量到了处理能力的瓶颈时，解决起来就很不经济。
 
 [//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-7.png" alt="image" style="zoom:50%;" />)
-<div style={{ textAlign: 'center', width: '100%' }}>
+<div style={{ textAlign: 'center', width: '90%' }}>
     <img src="/analysis-project/img/analysis-project/ana-7.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
 </div>
 
@@ -36,7 +37,7 @@ toc_max_heading_level: 5
 
 [//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-9.png" alt="image" style="zoom:50%;" />)
 <div style={{ textAlign: 'center', width: '100%' }}>
-    <img src="/analysis-project/img/analysis-project/ana-9.png" alt="image" style={{ maxWidth: '100%', height: 'auto', display: 'block', margin: '0 auto' }} />
+    <img src="/analysis-project/img/analysis-project/ana-9.png" alt="image" style={{ maxWidth: '90%', height: 'auto', display: 'block', margin: '0 auto' }} />
 </div>
 
 #### 效率对比
@@ -55,7 +56,7 @@ toc_max_heading_level: 5
 
 [//]: # (<img src="/Users/liufei/docs/typora笔记/images/analysis-project/ana-0.png" alt="imag" style="zoom:42%;" />)
 <div style={{ textAlign: 'center', width: '100%' }}>
-    <img src="/analysis-project/img/analysis-project/ana-0.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+    <img src="/analysis-project/img/analysis-project/ana-0.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
 </div>
 
 [desmos函数软件](https://www.desmos.com/calculator)

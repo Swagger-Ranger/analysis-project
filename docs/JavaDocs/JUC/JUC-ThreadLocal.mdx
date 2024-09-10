@@ -3,6 +3,7 @@ title: ThreadLocal
 sidebar_position: 1
 toc_min_heading_level: 2
 toc_max_heading_level: 5
+slug: /codes/threadLocal
 ---
 
 ### ThreadLocal的设计结构
@@ -106,11 +107,7 @@ int h = key.threadLocalHashCode & (len - 1);
 
 `ThreadLocal`中的哈希魔数就是`1640531527`(十六进制为`0x61c88647`)。这个魔数是斐波那契数列`F(n) = F(n-1) + F(n-2)`，函数的解。
 
-这个问题的本质就是在问：
-
-> 为什么斐波那契数列的解乘以带符号位的32位int，获取的数值在2的n次幂长度数组中取模会有更好的分布？
->
-> 附：chatgpt的回答好坏，很大程度上取决于问题的好坏，当我问：为什么使用0x61c88647魔数在ThreadLocal能减少哈希冲突，有更好的散列？，这个问题的回答深度远远不如上面问题的回答深度。
+这个问题的本质就是在问：为什么斐波那契数列的解乘以带符号位的32位int，获取的数值在2的n次幂长度数组中取模会有更好的分布？
 
 原因在于在哈希函数设计中，通常使用乘法散列法 (Multiplicative Hashing) 来获得较好的散列分布。具体的做法是选择一个合适的常数 A(即魔数)，使得对哈希表的大小取模后，输入值能够均匀分布。这种方法的基本思路来源于「乘法哈希」的概念。而这个常数就是黄金分割点即斐波那契数列的解。
 
@@ -127,13 +124,24 @@ int h = key.threadLocalHashCode & (len - 1);
 </div>
 
 其中`ϕ≈1.618`，将斐波那契数列与乘法散列法结合，称为"斐波那契数列散列"，公式如下：
-$$
-\text{hash}(x) = (x \times C) \mod 2^n
-$$
+
+[//]: # ($$)
+[//]: # (\text{hash}&#40;x&#41; = &#40;x \times C&#41; \mod 2^n)
+[//]: # ($$)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-threadlocal-formula-1.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
 其中C是与黄金比例相关的一个常数即就是一个乘法散列的魔数，通常C的值通过如下公式来计算得到：
-$$
-C = \frac{\phi - 1}{2} \times 2^n
-$$
+
+[//]: # ($$)
+[//]: # (C = \frac{\phi - 1}{2} \times 2^n)
+[//]: # ($$)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/juc/juc-threadlocal-formula-2.png" alt="image" style={{ maxWidth: '39%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
 > 现在我们来求解这个C：
 >
 > 因为黄金分割ϕ≈1.618(这个数字怎么推算的，我就不写了)，并且在32位int中，n=32，上图中公式可以简化为：c=0.618*2^(31)，而`1640531527`正好是带符号位的计算值，去掉首位的符号位就是31位，正好就是常量`int HASH_INCREMENT = 0x61c88647`。
