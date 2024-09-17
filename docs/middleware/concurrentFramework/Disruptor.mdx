@@ -1910,19 +1910,74 @@ public final class SingleProducerSequencer extends SingleProducerSequencerFields
 }
 
 ```
+这里分析一下，核心方法就是其中的`next`方法，中实际只是增加了写的内存屏障来保证写的顺序，实际没有推进游标，只是更新了自己的缓存值`nextValue`，这样消费者是还不能读取到未准备的数据的，但是保证了写入的正确性，因为单线程，只要按照顺序更新，当后面更新逻辑必然是前面的更新已经执行完成，只要顺序是保证的，那结果就一定是对的，这就是为什么要加`cursor.setVolatile(nextValue);`的原因
+
+```java
+// doStore就是是否要加入缓存屏障，在单线程的情况下nextValue始终是一致的，只有自己会修改，而调用setVolatile，是为了使用其方法中的内存屏障代码
+// 也就是这里并没有去推进游标
+cursor.setVolatile(nextValue);
+...
+this.nextValue = nextSequence;
+return nextSequence;
+```
+
+而消费者读取到值，则是要通过publish去获取，这里才更新游标`cursor.set(sequence);`，然后去唤醒阻塞的消费者。
+
+```java
+public void publish(final long sequence)
+    {
+        cursor.set(sequence);
+        waitStrategy.signalAllWhenBlocking();
+    }
+```
+
+因为消费者的逻辑都是通过在`com.lmax.disruptor.BatchEventProcessor#processEvents`中去处理的，其不断的`while (true)`去通过`waitFor`来获取最新可以的槽位数据。
+这就是单生产者的协调。
+
+
 
 #### 多生产者
 
-**多生产者相对单生产者要复杂一点，但这也是`Disruptor`实现非常非常吊的地方**，消费者中每个`Sequence`是只有一个线程在访问的，而生产者是有多个的，会产生对Sequence的争用和数据覆盖的问题，但Disruptor依然可以不使用用锁或者别的同步策略就能实现并发安全。其本质还是通过缓存可见性和内存屏障来保证以及原子性操作，并通过额外的数据位运算来校验数据可用性，来达到高效的线程并发安全。
+**多生产者相对单生产者要复杂一点，但这也是`Disruptor`实现非常非常吊的地方**，消费者中每个`Sequence`是只有一个线程在访问的，
+
+而生产者是有多个的。
 
 > Disruptor之所以这样设计一个消费者一个Sequence和多个生产者一个Sequence，我理解：不需要通过多消费者来争用Sequence，要多线程提高并行效率可以自己多线程比如线程池或者forkjoin处理，并且消费者本身也是自己能控制的，而生产者往往是自己不能处控制的，常常要需要依赖外部数据源。
 
-具体的实现如下：
+多生产者的协调，这里有两个问题是需要理解清楚的：
 
-**首先推进`sequence`都是一样的，不管哪个生产者要写入数据都是通过`next`或者`tryNext`去申请槽位移动游标，但难点在于多个生产者具体写数据时如何不相互覆盖，即写数据时确认对应的槽位是可以写的，这个问题在快速写入数据到数组以至于又绕回到相同的位置时就必然要遇到数据覆盖的问题。而单生产者不存在是因为有一个游标在控制**
+1. 生产者之间如何协调，各自写各自的数据到对应的槽位，不相互影响
+2. 多个生产者在同时写入，而Disruptor都是按游标不断推进读取的，此时如何保证消费者读取到的数据都是正确的
 
-**`Disruptor`在处理这个问题时，通过维护一个和`bufferSize`同等大小的数组`availableBuffer`，来记录其元素是否可以被修改，并通过位计算来快速判断出要填写数据的位置和对应位置的数据是否可以修改**
+**多生产者的写入：**
 
+多生产者协调多线程写入的数据，是通过在next申请槽位时确定的，也就是next方法中推进cursor是并发安全的，只要申请了槽位，则每个槽位写的数据都是相互独立的，所以可以避免数据相互覆盖的问题。
+
+**消费者安全读取多生产者写入：**
+
+```java
+@Override
+    public long getHighestPublishedSequence(final long lowerBound, final long availableSequence)
+    {
+        for (long sequence = lowerBound; sequence <= availableSequence; sequence++)
+        {
+            // 这里多生产者必须调用isAvailable来判断写入的数据是否就绪
+            if (!isAvailable(sequence))
+            {
+                return sequence - 1;
+            }
+        }
+        return availableSequence;
+    }
+```
+
+而要保证消费者读取到安全的数据则需要额外的机制。就是增加一个和`bufferSize`同等大小的数组`availableBuffer`，在publish时去将数组对应槽位设置为可用来保证数据的安全读取，同时在整个`com.lmax.disruptor.BatchEventProcessor#processEvents`处理逻辑中，通过`getHighestPublishedSequence`方法多生产者就无缝嵌入了其保证的逻辑在里面调用`isAvailable(sequence)`就是在检查数据是否可用。
+
+
+
+`availableBuffer`具体的实现原理如下：
+
+**`Disruptor`在处理这个问题时，通过维护一个和`bufferSize`同等大小的数组`availableBuffer`，来记录其元素是否可以被安全读取，并通过位计算来快速判断出要读取数据的位置和对应位置的数据是否准备就绪**
 ```Java
 private final int[] availableBuffer;
 // 计算RingBuffer索引的掩码值。构造其中赋值 bufferSize -1，bufferSize为2的幂，则bufferSize -1就是有效位全是1
