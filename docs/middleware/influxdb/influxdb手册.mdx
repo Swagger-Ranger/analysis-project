@@ -5,4 +5,1074 @@ toc_min_heading_level: 2
 toc_max_heading_level: 5
 ---
 
-influxdb 手册
+本文基于[InfluxDB OSS v2](https://docs.influxdata.com/influxdb/v2/)官方文档，系个人的阅读笔记和个人理解。
+
+## 版本信息
+
+InfluxDB OSS (Open Source Software) 是 InfluxDB 的开源版本。它是单节点部署，适用于开发者、个人项目和小规模应用。如果是集群部署则需要使用InfluxDB Enterprise：闭源收费，或者InfluxDB Cluster：自己管理的InfluxDB Enterprise k8s云原生版本，InfluxDB Cloud：InfluxData 提供的云托管版本。除了InfluxDB OSS 其他的版本都是不开源且收费的。
+
+如果InfluxDB OSS 想要部署集群：
+
+1. 备份已有的InfluxDB OSS 数据 `influxd backup -portable /path/to/backup` ，然后安装InfluxDB的集群收费版本将数据迁移过去。这个主要是要注意数据平滑迁移的问题：
+
+**双写机制**：在迁移过程中，可以将数据同时写入旧的InfluxDB OSS实例和新的InfluxDB 集群中，确保数据的一致性和完整性。
+
+**逐步切换读请求**：迁移完成后，逐步将读请求从旧实例切换到新的集群，确保系统的稳定性。
+
+**验证数据一致性**：迁移完成后，验证新集群中的数据是否完整和一致，确保没有数据丢失或错误。
+
+2. 使用第三方解决方案
+
+1. **使用开源工具如Kapacitor和Telegraf**：
+
+- 使用Telegraf收集数据，并将数据写入多个InfluxDB OSS实例中。
+
+- 使用Kapacitor来处理数据的实时流和告警功能。
+
+2. **自建负载均衡和数据分片机制**：
+
+- 可以在应用层自定义数据分片和负载均衡策略，将数据写入不同的InfluxDB OSS实例。
+- 需要额外开发和维护代码来管理数据的读写和协调。
+
+
+
+## 安装部署
+
+环境信息：centos7.9
+
+### 安装
+
+[下载](https://download.influxdata.com/influxdb/releases/influxdb2-2.7.6-1.x86_64.rpm)
+
+```sh
+yum install influxdb2-2.7.6-1.x86_64.rpm
+
+## 启动influxdb服务
+service influxdb start
+
+## 查看服务状态
+service influxdb status
+```
+
+### 调整启动参数
+
+1. 编辑`/etc/default/influxdb2`服务配置文件以将配置指令分配给influxd命令行标志 - 例如，添加一行或多`<ENV_VARIABLE_NAME>=<COMMAND_LINE_FLAG>`行如下内容：
+
+> ARG1="--http-bind-address :8087"
+> ARG2="--storage-wal-fsync-delay=15m"
+
+
+
+2. 编辑`/lib/systemd/system/influxdb.service`文件以将变量传递给ExecStart值：
+> ExecStart=/usr/bin/influxd $ARG1 $ARG2
+
+
+### influx ui
+
+安装好之后，通过 `http://<influxdb_host>:8086` 就能够访问influx 提供的ui界面。
+
+```yaml
+#输入密码用户之后，生成API token
+#liufei  Lf123456
+
+#Wftn6R5gqz23mMBBHNi1MD48uNYmX4KvYRxBJcifW3uPR8wI6Z-NgyDDEWRbLysnrFA809cVHu496sF-N6pvwA==
+#Wftn6R5gqz23mMBBHNi1MD48uNYmX4KvYRxBJcifW3uPR8wI6Z-NgyDDEWRbLysnrFA809cVHu496sF-N6pvwA==
+```
+
+
+
+### Influx cli
+
+```markdown
+### 下载
+wget https://dl.influxdata.com/influxdb/releases/influxdb2-client-2.3.0-linux-amd64.tar.gz
+
+### 解压
+tar xvzf path/to/influxdb2-client-latest-linux-amd64.tar.gz
+
+### 配置环境变量
+`echo $PATH`
+> [root@influxdb influxdb2-client-2.3.0-linux-amd64]# echo $PATH
+> /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+### 将解压的influx命令行工具，拷贝到对应目录下
+cp path/to/influx /usr/local/bin/
+
+### 测试命令行工具
+`influx version`
+> [root@influxdb influxdb2-client-2.3.0-linux-amd64]# influx version
+> Influx CLI 2.3.0 (git: 88ba346) build_date: 2022-04-06T19:30:53Z
+```
+
+#### cli命令
+
+`influx` 直接就能输出influx有的命令内容
+
+```bash
+[root@influxdb influxdb2-client-2.3.0-linux-amd64]# influx
+NAME:
+   influx - Influx Client
+
+USAGE:
+   influx [command]
+
+COMMANDS:
+   version              Print the influx CLI version
+   write                Write points to InfluxDB
+   ...
+
+GLOBAL OPTIONS:
+   --help, -h  show help
+```
+
+通过`influx [command] help`  就能查询命令详细用法
+
+
+
+**示例：创建一个配置作为全局的访问token**
+
+```sh
+influx config create --config-name onboarding \
+    --host-url "http://192.168.1.198:8086" \
+    --org "test0" \
+    --token "qivXuqFNfILmCjlMq-bQ4mXyLQXTDignFqFagc7DQkqxWps880UPtnZZsoHwIjT7uN1J0MaAavsZjGk2xqLk4g==" \
+    --active
+
+ ## --active: 将此配置设为活动配置，意味着后续的 InfluxDB CLI 操作将默认使用该配置
+```
+
+因为在flux cli中访问资源，必须要指定组织和token，上一个命令就是创建token并设置为默认。比如
+
+```sh
+[root@influxdb sampleData]# influx bucket ls --org test0 --token Wftn6R5gqz23mMBBHNi1MD48uNYmX4KvYRxBJcifW3uPR8wI6Z-NgyDDEWRbLysnrFA809cVHu496sF-N6pvwA==
+ID                      Name            Retention       Shard group duration    Organization ID         Schema Type
+b20b25c61bbeae97        _monitoring     168h0m0s        24h0m0s                 b8c302eb7f930bdf        implicit
+58f00b1d7016d660        _tasks          72h0m0s         24h0m0s                 b8c302eb7f930bdf        implicit
+e1fa6a9ba4b0f0d3        test0           infinite        168h0m0s                b8c302eb7f930bdf        implicit
+```
+
+`test0`和`Wftn6R5gqz23mMBBHNi1MD48uNYmX4KvYRxBJcifW3uPR8wI6Z-NgyDDEWRbLysnrFA809cVHu496sF-N6pvwA==` 是我安装时用户密码初始化的组织和生成的token。当没有指定token时就无法访问bucket资源，所以就必须手动输入org和token。
+
+- **Organization(org)** 表示一个逻辑分组，用于将用户、存储桶（buckets）、仪表板和其他资源组织在一起。一个 InfluxDB 实例可以包含多个组织，每个组织可以有自己的用户和资源。你可以隔离和管理不同团队或项目的数据和用户，不同组织中的资源是相互隔离的，用户只能访问他们所属组织的资源。
+- **Token** 是用于身份验证和授权的密钥。在 InfluxDB 中，每个操作都需要通过令牌进行身份验证，以确保只有授权用户才能执行操作。
+
+
+
+
+
+### docker部署
+
+```sh
+docker pull influxdb:2.7.10
+
+docker run -d --name influxdb -p 8086:8086 \
+  -v "$PWD/data:/var/lib/influxdb2" \
+  -v "$PWD/config:/etc/influxdb2" \
+  -e DOCKER_INFLUXDB_INIT_MODE=setup \
+  -e DOCKER_INFLUXDB_INIT_USERNAME=liufei \
+  -e DOCKER_INFLUXDB_INIT_PASSWORD=Lf123456 \
+  -e DOCKER_INFLUXDB_INIT_ORG=liufeiOrg \
+  -e DOCKER_INFLUXDB_INIT_BUCKET=startBucket \
+  influxdb:2.7.10
+```
+
+## Influx核心概念
+
+**InfluxDB不同于Sql**
+
+在InfluxDB中，一切的数据都标记了时间，并且不需要提前定义数据格式。
+
+InfluxDB是针对时间序列数据进行了优化的数据库。这些数据通常来自分布式传感器组，来自大型网站的点击数据或金融交易列表等。这个数据有一个共同之处在于它只看一个点没什么用。一个读者说，在星期二UTC时间为12:38:35时根据他的电脑CPU利用率为12％，这个很难得出什么结论。只有跟其他的series结合并可视化时，它变得更加有用**这就是influxdb关注的是数据集合，而不是单个的数据行或者值，这也就是为什么influxdb 不是一个带了时间列的关系型数据库**。随着时间的推移开始显现的趋势，是我们从这些数据里真正想要看到的。另外，时间序列数据通常是一次写入，很少更新。
+
+结果是，由于优先考虑create和read数据的性能而不是update和delete，InfluxDB不是一个完整的CRUD数据库，更像是一个CR-ud。
+
+### data elements
+
+[参考文档](https://docs.influxdata.com/influxdb/v2/reference/key-concepts/data-elements/)
+
+- **Timestamp** : InfluxDB 中存储的所有数据都有一个`_time`存储时间戳的列。在磁盘上，时间戳以纪元纳秒格式存储。InfluxDB 格式化时间戳以[RFC3339](https://docs.influxdata.com/influxdb/v2/reference/glossary/#rfc3339-timestamp) UTC 显示与数据相关的日期和时间。写入数据时，时间戳精度非常重要。
+
+- 非必填，如果未提供时间戳，InfluxDB 将使用其主机的系统时间 (UTC)。
+
+- **Measurement**: 测量名称是字符串，区分大小写，充当标签、字段和时间戳的容器，一个measurement相当于mysql中的一张表，但不同于mysql需要提前定义表结构，influxdb不需要提前定义measurement。
+
+- **Fields**
+
+- 必填，一行数据中至少包含一个field
+
+- Field key: 字段键是一个字符串，代表字段的名称
+
+- Field value : 字段值表示关联字段的值。字段值可以是 *[浮点型](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#float)|[整数](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#integer)| [UInteger](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#uinteger) |[字符串](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#string)|[布尔值](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#boolean)*。
+
+- Field set: 字段集是与时间戳关联的字段键值对的集合。
+
+**InfluxDB 数据中字段是必需的，并且未索引。过滤字段值的查询必须扫描所有字段值以匹配查询条件。因此，对标签的查询比对字段的查询性能更高**
+
+- **Tags** ：标签包括标签键`Tag key`和标签值`Tag value`，以字符串和元数据形式存储。
+
+- 非必填
+
+- 标签键值都是字符串
+
+- 键值关系用`=`操作数表示。多个标签键值对以逗号分隔。 *标签键和标签值区分大小写*
+- *标签值不能为空；如果标签为空，则标签集中直接不要包含此标签*
+
+**标签是非必填的。不需要在数据结构中添加标签，但最好包含标签，由于 InfluxDB 会索引标签，因此查询引擎无需扫描存储桶中的每条记录来查找标签值。**
+
+- **Series**:
+
+- series key： a unique combination of measurement and tag set。一个measurement和一个标签集合的组合。
+
+| measurement | tag set                             |
+    | ----------- | ----------------------------------- |
+| census      | location=klamath,scientist=anderson |
+| census      | location=portland,scientist=mullen  |
+
+- series: A *series* includes timestamps and field values for a given series key。一个series key和一组时间以及对应field value的集合
+
+```sh
+census,location=klamath,scientist=anderson
+2019-08-18T00:00:00Z 23
+2019-08-18T00:06:00Z 28
+    ```
+
+**注意：series是不按field组合的，即当有多个field的列时也是不影响influxdb实际存储和聚合处理，Series仍然不变。**
+
+```sh
+# 多个field不影响series的组合
+census,location=klamath,scientist=anderson
+2019-08-18T00:00:00Z 23 "a" false
+2019-08-18T00:06:00Z 28 "b" true
+    ```
+
+**注意：当一个measurement中某个tag只有部分数据有时，influxdb在处理时会将这些数据点分配到不同的 series。这是因为 series key 是由 measurement 名称和所有非空 tag 组合而成的。因此，不同的 tag 组合会导致不同的 series key，从而创建不同的 series。此处和mysql的查询条件不同，当tag1=value1的series的数据中是不包含其他任何tag的数据，（只有一个tag查询条件时，就如同mysql中默认都加上了[and other column is null...]的条件），即InfluxDB在查询时针对单个最细粒度的series进行操作，而无法直接在一个查询中对多个series进行聚合操作。要类似mysql那样，只能通过执行多个查询来获取不同series的数据，然后在客户端进行进一步的处理和聚合。**
+
+**tag的值会影响series的数量，但field不管是字段数量还是值的数量都不会影响series的数量**
+
+- Series 是一个很重要的概念，同时过多的series组合会导致很多问题，参考：[Resolve high series cardinality](https://docs.influxdata.com/influxdb/v2/write-data/best-practices/resolve-high-cardinality/)
+
+- **Point**: A **point** includes the series key, a field value, and a timestamp–for example
+
+在InfluxDB中，point表示单个数据记录，类似于SQL数据库表中的行。 每个point：
+
+- 由一个measurement、一个tag set、一个field key、一个field value和一个timestamp组成。
+- 由series和timestamp唯一标识。
+
+> 2019-08-18T00:00:00Z census ants 30 portland mullen
+  >
+  > 注意，**一个point中允许包含多个field和field value**
+
+- **[Bucket](https://docs.influxdata.com/influxdb/v2/reference/key-concepts/data-elements/#bucket)** : 所有 InfluxDB 数据都存储在 bucket 中。bucket结合了数据库和保留期的概念。bucket 属于组织
+
+> **注意：**Bucket 是 InfluxDB 2.x 中的数据存储单位，类似于 InfluxDB 1.x 中的 **数据库（database）** 和 **保留策略（retention policy）** 的结合体。它用于存储时间序列数据，并且为存储在其中的数据提供了数据的保留时长（retention period）。即你可以为每个 bucket 设置数据的保存时间，超出时间的数据会自动删除。并且每个 bucket 可以包含多个 **measurement**，即不同类型的数据表。
+  >
+  > 单个 InfluxDB 2.7 OSS 实例支持在所有组织中主动写入或查询大约 20 个存储桶。超过这个数量可能会对性能产生不利影响
+
+- **[Organization](https://docs.influxdata.com/influxdb/v2/reference/key-concepts/data-elements/#organization) : **组织是一组**[用户](https://docs.influxdata.com/influxdb/v2/admin/users/)**的工作区。所有[仪表板](https://docs.influxdata.com/influxdb/v2/visualize-data/dashboards/)、[任务](https://docs.influxdata.com/influxdb/v2/process-data/)、存储桶和用户都属于一个组织，通过Org的概念，可以将不同的用户、Bucket（数据库）、Token（访问令牌）、Dashboard（仪表盘）等资源分配给特定的组织。这样，可以避免不同用户或团队之间的数据冲突，并且能够进行更好的权限管理。并且在 InfluxDB 中，API Token 和权限（读、写等）都是与特定的 Org 绑定的。每个 Token 都属于某个 Org，并且只对该 Org 中的资源（如 Bucket、Dashboard 等）有效。
+
+
+
+### influxdb数据格式补充
+
+[参考文档](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#naming-restrictions)
+
+influxdb数据格式在上面的字段定义中，做了定义，下面再做一些补充。
+
+- InfluxDB 使用`Line protocol`写入数据。它是一种基于文本的格式，提供数据点的测量值、标签集、字段集和时间戳。
+
+```scss
+// Syntax
+<measurement>[,<tag_key>=<tag_value>[,<tag_key>=<tag_value>]] <field_key>=<field_value>[,<field_key>=<field_value>] [<timestamp>]
+
+// Example
+myMeasurement,tag1=value1,tag2=value2 fieldKey="fieldValue",fieldKey1="fieldValue1" 1556813561098000000
+```
+
+- **数据行由换行符`\n`分隔，数据行里面的标签或字段值中不能有换行符**
+
+- Measurement names, tag keys, and field keys 不能包含下划线 `_`。 `_` namespace is reserved for InfluxDB system use。
+- 空格严格要求，`Line protocol`规定了 InfluxDB 如何解释数据点，**第一个未转义的空格**将测量值和标签集与字段集分隔开。**第二个未转义的空格**将字段集与时间戳分隔开。
+
+- 时间戳。默认精度为纳秒 ( `ns`)。纳秒，一秒的十亿分之一（1 ns = 10^-9 s）。毫秒，一秒的千分之一（1 ms = 10^-3 s）。范围：`-9223372036854775806`-`9223372036854775806`
+- `#`行首解释为注释字符，并忽略所有后续字符，直到下一个换行符`\n`。
+- 数据由测量名称、标签集和时间戳唯一标识。如果采集的数据具有相同的测量、标签集和时间戳，但具有不同的字段集，**则该字段集将成为旧字段集和新字段集的并集**，而且”any conflicts favor the new field set.“
+
+
+
+### [InfluxDB 设计原则](https://docs.influxdata.com/influxdb/v2/reference/key-concepts/design-principles/#time-ordered-data)
+
+#### 1、按时间升序写入
+
+为了提高性能，数据按时间升序写入。主要的原因如下：
+
+**顺序写入优化磁盘性能**:
+
+- **磁盘顺序写入**：磁盘在进行顺序写入时性能最佳。顺序写入能够最大化写入带宽，减少寻道时间和写入延迟。
+- **降低碎片化**：时间升序写入使数据在磁盘上按时间顺序存储，减少了数据的碎片化，有助于提高读写性能和磁盘利用率。*注：磁盘碎片化是指数据在磁盘上的存储位置变得不连续，导致读写操作需要更多的磁盘寻道时间。碎片化会降低磁盘的读写效率，特别是在机械硬盘（HDD）上表现尤为明显*
+
+**压缩效率**:
+
+- **时间序列数据压缩**：时间升序写入的数据通常具有较高的相关性和相似性，这有助于实现更高效的压缩。压缩算法可以更有效地处理连续和递增的数据，从而减少存储空间占用。
+
+**索引管理**:
+
+- **索引构建效率**：在时间序列数据库中，索引通常基于时间戳构建。时间升序写入使索引能够按顺序构建和更新，避免了频繁的索引重组，提高了索引管理的效率。
+- **查询优化**：时间升序写入使得时间范围查询可以更高效地定位和读取数据块，因为数据按时间顺序存储，可以快速跳过不相关的数据块。
+
+**缓存和内存管理**:
+
+- **写入缓存命中率**：时间升序写入可以提高写入缓存的命中率，因为相邻的时间数据往往会一起写入。这减少了写入缓存的刷新频率，提高了写入性能。
+- **减少随机写入的开销**：随机写入会导致内存和缓存频繁刷新和替换，增加了内存和缓存管理的开销。顺序写入减少了这种开销，从而提高了整体性能。
+
+
+
+#### 2、严格的更新和删除权限
+
+为了提高查询和写入性能，InfluxDB 严格限制**更新**和**删除**权限。时间序列数据主要是从未更新的新数据。删除通常只会影响未写入的数据，并且永远不会发生有争议的更新-*（我理解就是influxdb不考虑并发安全的问题）*。
+
+更新和删除数据，会显著的影响influxdb的性能，原因如下：
+
+**更新的实际处理过程**
+
+- 标记旧数据：InfluxDB设计上，数据是不可变的，更新实际上是添加新数据点并将旧数据点标记为无效。这导致在物理存储上同一数据记录会有多个版本，旧版本虽然被标记为无效，但仍然占用存储空间。
+- 追加新数据：每次更新操作实际上都是在数据块的末尾添加新的数据，原始数据并不会被覆盖或移动，这导致数据在物理存储上的分布变得不连续。
+
+**删除的实际处理过程**
+
+- 标记删除：数据被删除时，通常只是标记为删除而不会立即物理删除。随着时间推移，这些标记删除的数据点会分布在各个数据块中，形成碎片。标记会影响查询性能，因为查询需要过滤掉标记为删除的数据。
+- 垃圾回收：垃圾回收机制会定期扫描和清理这些标记为删除的数据。清理操作会导致数据块的重新组织，但仍然可能留下零散的空白区域，导致碎片化。同时定期的垃圾回收进程会扫描和清理标记为删除的数据，释放存储空间。这一过程可能会消耗大量的I/O资源和CPU时间，影响其他正常的读写操作。
+- **索引重建**：删除操作需要更新索引结构，确保删除的数据点不会出现在查询结果中。频繁的删除操作会导致索引重建和维护的开销增加，影响整体查询性能。
+
+
+
+#### 3、读写查询优先而不是强一致性
+
+InfluxDB 优先处理读写请求，而不是强一致性。执行查询时，InfluxDB 会返回结果。任何影响查询数据的事务都会随后处理，以确保数据最终一致。因此，如果提取率很高（每毫秒多次写入），查询结果可能不包含最新数据。
+
+
+
+#### 4、无模式设计（Schemaless design）
+
+InfluxDB 使用无模式设计来更好地管理不连续数据。时间序列数据通常是短暂的，这意味着数据会出现几个小时，然后就消失了。例如，一个新主机启动并报告一段时间，然后关闭。
+
+数据库不需要预定义的模式来存储数据。这种设计具有高度的灵活性和动态性，允许用户随时插入数据而不需要提前定义数据的结构。
+
+- **动态列**:在InfluxDB中，fields和tags不需要提前定义。每个数据点可以有不同的fields和tags，这使得用户可以根据需要动态地添加新的列（fields和tags）。
+
+- **自动创建**:当写入新数据点时，如果指定的measurement、field或tag不存在，InfluxDB会自动创建它们。这简化了数据写入操作，无需在数据库级别进行任何前期配置。
+
+- **灵活的数据模型**:数据模型非常灵活，可以随着数据的变化而变化。不同的measurement可以有不同的tags和fields，甚至在同一个measurement中，不同的数据点也可以有不同的fields和tags。
+
+例如，在InfluxDB中，你可以直接写入如下两个数据点，即使它们的fields和tags不同：
+
+```tex
+weather,location=us-midwest temperature=82,humidity=71 1465839830100400200
+weather,location=us-east,season=winter temperature=30 1465839830100400201
+```
+
+- 第一个数据点包含了`temperature`和`humidity`两个fields，并且只有一个`location` tag。
+- 第二个数据点包含了`temperature` field，有两个tags：`location`和`season`。
+
+这两个数据点都属于`weather` measurement，但它们的结构不同。InfluxDB能够自动处理这种差异，无需用户进行任何额外的配置。
+
+
+
+#### 5、数据集胜过单个数据（Datasets over individual points）
+
+由于数据集比单个点更重要，因此 InfluxDB 实现了强大的工具来聚合数据并处理大型数据集。点通过时间戳和系列进行区分，因此没有传统意义上的 ID。
+
+
+
+#### 6、重复数据
+
+为了简化冲突解决并提高写入性能，InfluxDB 假设多次发送的数据是重复数据。相同的点不会被存储两次。如果为某个点提交了新的字段值，InfluxDB 会使用最新的字段值更新该点。
+
+[duplicate-points](https://docs.influxdata.com/influxdb/v2/write-data/best-practices/duplicate-points/)
+
+**influxdb的数据去重策略**
+
+> A point is uniquely identified by the measurement name, tag set, and timestamp. If you submit line protocol with the same measurement, tag set, and timestamp, but with a different field set, the field set becomes the union of the old field set and the new field set, where any conflicts favor the new field set.
+
+这个关于重复数据的[Duplicate points](https://docs.influxdata.com/influxdb/v2/reference/syntax/line-protocol/#duplicate-points) 的描述，需要再举个例子：
+
+假设有以下数据点：
+
+```plaintext
+weather,location=us-midwest temperature=82 1465839830100400200
+```
+
+如果提交以下数据点：
+
+```plaintext
+weather,location=us-midwest humidity=71 1465839830100400200
+```
+
+最终的结果将是：
+
+```plaintext
+weather,location=us-midwest temperature=82,humidity=71 1465839830100400200
+```
+
+这里将字段集合做了合并
+
+但是，如果提交以下数据点：
+
+```plaintext
+weather,location=us-midwest temperature=85 1465839830100400200
+```
+
+最终的结果将是：
+
+```plaintext
+weather,location=us-midwest temperature=85 1465839830100400200
+```
+
+因为新的 temperature 值（85）覆盖了旧的值（82）。这里新的值覆盖了旧的值，**注意无论时间戳是历史时间还是当前时间，InfluxDB 都会采用相同的处理策略。**当提交具有相同 measurement 名称、tag set 和时间戳的数据点时，新的 field set 将与现有的 field set 合并，并且新数据中的 field 值将覆盖旧数据中的同名 field 值。
+
+具体来说，无论时间戳是否是历史时间，处理流程如下：
+
+1. **相同 measurement 名称、tag set 和时间戳**：判断新提交的数据点是否与已有数据点的 measurement 名称、tag set 和时间戳相同。
+2. **合并 field set**：将新数据点的 field set 与已有数据点的 field set 合并。
+3. **冲突处理**：在合并过程中，任何 field 名称冲突都将以新数据点的 field 值为准，覆盖已有数据点的同名 field 值。
+
+
+
+
+
+### TSM/TSI
+
+InfluxDB [data elements](https://docs.influxdata.com/influxdb/v2/reference/key-concepts/data-elements/) are stored in **time-structured merge tree (TSM)** and **time series index (TSI)** files to efficiently compact stored data.
+
+在InfluxDB 2.0及其之后的版本中，底层的数据存储格式仍然是TSM（Time-Structured Merge Tree）。TSM 文件格式是 InfluxDB 存储时序数据的主要方式，它通过高效的时间序列数据存储和检索来实现高性能和高压缩率。
+
+#### 存储模型
+
+tsm在整体上类似于类似于LSM (Log structured merge tree) ，可以说就是针对时间序列优化的LSM结构。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/learn-lsm-tree-read.png" alt="img" style="zoom:67%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/learn-lsm-tree-read.png" alt="image" style={{ maxWidth: '60%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+也包含如下结构
+
+- **WAL（write Ahead Log)**
+
+插入数据时先顺序写入 WAL 文件中保证数据的持久化，再写入内存中 MemTable 中。日志文件都是顺序写，速度很快。当程序挂掉重启时，可以从 WAL 文件中重新恢复内存中的 MemTable。
+
+- **MemTable**
+
+MemTable 对应的就是 WAL 文件，是该文件内容在内存中的存储结构，通常用 SkipList 来实现。MemTable 提供了 k-v 数据的写入、删除以及读取的操作接口。其内部将 k-v 对按照 key 值有序存储，这样方便之后快速序列化到 SSTable 文件中，仍然保持数据的有序性。
+
+
+
+- **Immutable Memtable**
+
+就是在内存中只读的 MemTable，由于内存是有限的，通常我们会设置一个阈值，一般是2m，当 MemTable 占用的内存达到阀值后就自动转换为 Immutable Memtable，Immutable Memtable 和 MemTable 的区别就是它是只读的，系统此时会生成新的 MemTable 供写操作继续写入。使用 Immutable Memtable，就是为了避免将 MemTable 中的内容序列化到磁盘中时会阻塞写操作。
+
+- **SSTable(Sorted String Table)**
+
+SSTable 就是 MemTable 中的数据在磁盘上的有序存储，其内部数据是根据 key 从小到大排列的。通常为了加快查找的速度，需要在 SSTable 中加入数据索引，可以快读定位到指定的 k-v 数据。
+
+
+
+
+
+series结构如下：
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/tsm-structure.png" alt="img" style="zoom:90%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/tsm-structure.png" alt="image" style={{ maxWidth: '80%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+**即这里TSM首先是根据 Series Key 来分组和排序，然后在每个 Series Key 内按时间戳排序数据点**。
+
+> 内存中实际上就是一个`Map<SeriesKey, List<Timestamp|field value>>`，Map中一个SeriesKey对应一个List，List中存储时间线数据。数据进来之后根据 measurement+ tags组合成SeriesKey，再将`Timestamp|Value`组合值写入时间线数据List中，即每个 series 存储了相同 measurement 和 tags 组合下的 fields 数据。内存中的数据flush的文件后，同样会将同一个SeriesKey中的时间线数据写入同一个Block块内。
+>
+> 注意上图中的，**每个SeriesKey都是唯一的组合，代表一个独立的时间序列**。比如，`Series Key(measurement="cpu", tagA="server1", tagB="region1")`是不会包含`Series Key(measurement="cpu", tagA="server1", tagB="region1", tagC="datacenter1")`的数据的，它们是两个不同的时间序列，彼此互不包含。
+
+
+
+#### 文件系统的布局
+
+[reference](https://docs.influxdata.com/influxdb/v2/reference/internals/file-system-layout/)
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/influxdb-tsi-file.png" alt="img" style="zoom:40%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/influxdb-tsi-file.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+基于TSI的InfluxDB索引组织图（如上所示）。其中db（数据库）、rp（存储策略）、shard、Index在文件组织下都是以目录形式表现，TSI使用了分区策略，所以在Index文件夹下是0~7共计8个partition文件夹（*索引的分区数量默认是8，数量可以配置的，并且是固定的不会随着数据量的增加而改变。series 的分区数量通常也与 index 的分区数量一致。这样设计是为了确保数据的高效管理和查询性能。*），partition文件夹则是TSI文件与它的WAL（TSL）。
+**什么是shard：**
+
+Shard 是 InfluxDB 用来存储特定时间范围内数据的基本存储单元。每个 shard 包含了一个时间范围内的所有数据。时间范围由 shard duration（分片持续时间）决定。这个持续时间可以根据数据库的存储需求进行配置。默认情况下，对于 "autogen" `retention policy`（保留策略），shard duration 通常是 7 天。
+
+每个 shard 被存储为一个独立的文件，包含了所有属于该时间范围的数据。Shard 文件使用 TSM（Time-Structured Merge）树格式，这是一种高效的时序数据存储格式。
+
+**什么是shard group**：
+
+Shard Group 是一个逻辑概念，而 Shard 则在文件系统中有实际对应的文件夹。并且`shard duration`和`shardGroupDuration`基本是一致的。`shardGroupDuration`是根据`retention policy`的`duration`计算得来，不过也可以在创建`retention policy`指定。
+
+在 InfluxDB 中，`autogen`（ `autogen` 是默认的保留策略）目录下的数字文件夹代表 Shard ID，每个文件夹是一个独立的 Shard。多个 Shard 组成一个 Shard Group，通过 Shard Group Duration 来决定每个 Shard Group 覆盖的时间范围。
+
+**shard id：**
+
+在 InfluxDB 中，每个 shard 都有一个全局唯一的 ID（shard ID）,在整个 InfluxDB 集群中是唯一的。无论数据是在哪个数据库、在哪个保留策略中，这个 ID 都不会重复。当执行数据查询、删除或其它操作时，系统会通过 shard ID 定位到对应的 shard。并且shard ID 通常是递增的，每当创建一个新的 shard 时，都会分配一个比之前所有 shard ID 都大的新 ID。一旦分配后就不会改变，且 shard 中的数据可以不断更新。
+
+**为什么要设计shard：**
+
+`shard`其实就是`TSM`存储引擎的具体实现，数据的写入、更新、删除等操作会在对应的 shard 中进行处理和实现。数据的查询、聚合、压缩等功能也都在 shard 中具体实现。并且使用 shard 分片技术，可以有效地管理大量的时间序列数据，并确保数据按时间顺序存储和高效查询。**shard的数量是不固定的**，随着时间的推移，当前时间的数据会被动态地写入到相应的 shard 中。这也就是为什么`retention policy`对应的是`shardGroupDuration`，而不是shard。InfluxDB 根据数据的写入和时间范围的设置动态创建和管理 shard。每个 shard 负责存储一定时间范围内的数据。当新的数据写入到 InfluxDB 时，系统会根据配置的策略（*比如：当时间范围超过预设的阈值时，当一个 shard 过大时，为避免单个 shard 过大而影响系统性能和数据管理的效率*）判断是否需要创建新的 shard 来存储这些数据。旧的 shard 在达到设定的数据保留期限后，可能会被删除或者进行归档处理，以释放空间或保留历史数据。动态管理 shard 可以有效地控制每个 shard 的大小和数据量，保持系统的性能和查询效率。
+
+
+
+#### 数据模型
+
+上面说了InfluxDB 的数据文件是如何组织的，下面说一下具体的数据模型，其元数据是 tag-field 模型，下面是两张influxdb的统计数据示例：
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/influxdb-data.png" alt="img" style="zoom:67%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/influxdb-data.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/tsm-data-structure.png" alt="img" style="zoom:80%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/tsm-data-structure.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- Measurement：类似SQL中表的概念
+- Tags：维度列
+- 上图中location和scientist分别是表中的两个Tag Key，其中location对应的维度值Tag Values为`｛1, 2｝`，scientist对应的维度值Tag Values为`{langstroth, perpetual}`，两者的组合TagSet有四种：
+- 在InfluxDB中，表中Tags组合会被作为记录的主键，因此主键并不唯一，比如上表中第一行和第三行记录的主键都为’location=1,scientist=langstroth’。所有时序查询最终都会基于主键查询之后再经过时间戳过滤完成。
+
+- Fields：数值列。数值列存放用户的时序数据。
+- Point：类似SQL中一行记录，而并不是一个点。
+
+
+
+> 注意：在 InfluxDB 中field是不作索引的 ，并且当一个数据点包含多个 field 时，这些 field 是作为一个整体存储在一起的。一个数据点包含 measurement、tags、fields 和 timestamp，并作为一个单元存储在 TSM 文件中。
+
+
+
+#### field的内部处理
+
+在 InfluxDB 中，是允许多个field字段的，在处理多个字段（fields）时，influxdb会在内部维护一个元数据存储结构，记录每个 measurement 下所有字段的名称和数据类型，这些元数据使得 InfluxDB 能够知道每个 measurement 包含的字段以及它们的数据类型。
+
+**元数据结构**：InfluxDB 使用内部元数据存储结构，通常是树状或映射结构，记录每个 measurement 包含的字段及其类型。例如：`measurement -> fields` 这样的映射。
+
+**查询优化**：在查询解析阶段，通过元数据快速了解字段的存在性和类型，避免不必要的数据块读取和类型转换。利用元数据结构，InfluxDB 能够高效地定位和过滤数据点，提高查询性能。
+
+**元数据管理：**
+
+- 当写入数据时，如果在一个已有的时间序列中新增了一个字段，InfluxDB会将这个字段的数据添加到相应的时间序列中。InfluxDB会自动更新其元数据以包含新的字段。新的字段会与已有的字段一起存储在同一个时间序列中。
+- 一旦一个 field key 在某个 measurement 中被定义并写入了数据，所有后续写入到同一 measurement 的相同 field key 的数据点，必须保持数据类型一致。
+- 如果尝试写入的数据类型与已有类型不一致，InfluxDB 将拒绝该数据点的写入，并返回错误。这一机制确保了数据的类型一致性和查询的准确性。例如，如果 `cpu` measurement 中的 `usage` 字段被定义为 `float` 类型，那么所有后续写入 `cpu` measurement 的数据点中，`usage` 字段都必须是 `float` 类型。如果尝试写入的数据点包含的字段类型与已有的字段类型不一致，InfluxDB 将拒绝写入，并返回错误。
+
+
+
+#### 检索优化
+
+influxdb针对查询是做了很多设计和优化的
+
+**有序存储**：
+
+InfluxDB 的时间序列数据是按时间戳有序存储的，这有助于高效地进行时间范围查询。并且在 InfluxDB 中，数据的更新、删除（更新和删除都是写入新的记录，而不是改变原来的记录，删除就是增加数据删除标记，而不是实际删除记录）和添加操作在操作时都是顺序写入的，首先写入 WAL 文件，然后更新到 MemTable，最终写入 TSM 文件。最后后台的合并过程（Compaction）会将这些操作整合到历史时间段的文件中。换句话说，不管后续对历史时间段数据的添加和修改，都不会改变influxdb存储按时间戳排序的文件结构。
+
+**稀疏索引**：
+
+稀疏索引在 TSM (Time-Structured Merge) 文件中用于快速定位数据块。这些索引条目不会为每条数据点创建索引，而是为特定的时间段或关键点创建索引。通过稀疏索引，InfluxDB 可以快速确定所需数据点所在的数据块的范围。
+
+**布隆过滤器**：布隆过滤器是一种空间效率高的概率数据结构，用于测试一个元素是否属于一个集合。在 InfluxDB 中，布隆过滤器用于判断特定的 key 是否存在于某个 TSM 文件中。布隆过滤器能够快速排除某些不包含所查询 key 的数据块，从而减少不必要的磁盘读取操作。
+
+> **注意：influxdb中的布隆过滤器，只会针对Tag 和 Measurement ，而不会针对field**
+
+**倒排索引：**
+
+如果单纯的这种结构其实是不支持多维度查找的，多维度查询influxdb是通过内部实现了倒排索引机制，即实现了tag到SeriesKey的映射关系，如果用户想根据某个tag查找的话，首先根据tag在倒排索引中找到对应的SeriesKey，再根据SeriesKey定位具体的时间线数据。
+
+> **注意：influxdb中的倒排索引，也是只会针对Tag 和 Measurement ，而不会针对field**
+
+**field查询优化：**
+
+field是未做索引的，但field在查询时influxdb也作了优化。主要是通过元数据信息来实现的。
+
+- 字段存在性检查：通过查询元数据，InfluxDB能够快速确定查询中引用的字段是否存在。这避免了在实际数据块中搜索不存在的字段，从而节省了I/O操作。
+
+- 字段类型检查和转换：字段的类型信息（例如整数、浮点数、字符串等）也存储在元数据中。在查询解析阶段，InfluxDB可以通过元数据确定字段的类型，从而在查询执行时避免不必要的类型转换。
+
+```sql
+SELECT MEAN(usage_user) FROM cpu WHERE host='serverA' AND region='us_west'
+  ```
+
+在执行上述查询时，InfluxDB会通过元数据确认`usage_user`是一个数值类型字段，从而可以直接进行聚合计算。
+
+- 数据块内过滤：在读取数据块后，InfluxDB仍需在数据块内进行过滤。利用元数据中的字段信息，可以快速跳过不相关的数据字段，只处理查询涉及的字段。
+
+- 数据写回：数据写回可以视为一种结果缓存的机制。通过将计算或查询的结果写回到数据库中，InfluxDB能够在后续查询中直接使用这些预计算的结果，而不必每次都重新进行复杂的计算和数据处理。这种机制可以显著提高查询性能和响应速度，特别是在处理频繁查询或复杂计算的场景中。
+
+
+
+
+
+
+
+#### 与 LSM的区别
+
+LSM Tree和 TSM Tree 都是为了高效处理大规模数据写入而设计的存储结构，只是LSM Tree 是一种通用的存储结构，适用于多种应用场景，而 TSM Tree 则是专门为时间序列数据优化的存储结构，特别适合需要高效处理和查询时间序列数据的应用。两者的整体架构和存储结构都比较类似。
+
+**相同点**
+
+1. 不可变数据结构：都使用不可变的数据结构。数据一旦写入磁盘，就不会被修改，而是通过合并生成新的文件。这种设计简化了并发控制，并提高了写入性能。
+2. 写入路径：数据首先写入内存中的数据结构（如memtable或缓存），然后批量写入磁盘，生成有序的文件（如SSTable或TSM文件）。这种批量写入方式优化了写性能并减少了随机I/O操作。
+3. 分层存储和合并：数据存储在多个文件中，这些文件按照一定规则进行分层和合并。后台进程负责合并较小的文件，生成新的、更大的文件，以减少文件数量和提高查询性能。
+4. 高效索引：两者都使用索引结构（如布隆过滤器和稀疏索引）来加速查询，减少不必要的磁盘读取。
+
+**TSM的特定优化**
+
+1. 数据排序：LSM Tree的数据通常按键排序，而TSM Tree的数据按时间戳排序，专门优化了时间序列数据的存储和查询。这使得TSM在处理时间范围查询和顺序写入时特别高效。
+2. 时间片管理：TSM Tree使用时间片来组织数据，每个时间片的数据存储在一个TSM文件中。这种设计进一步优化了时间范围查询的性能，并且有助于时间序列数据的压缩。
+3. 数据压缩：TSM文件格式专门设计了多种数据压缩技术，以减少存储空间。这些压缩技术可以更好地处理时间序列数据的特性，如数据点的稀疏性和重复性。
+4. 版本控制：TSM支持对同一数据点的多个版本进行存储和管理，通过时间戳进行区分。这在时间序列数据场景中非常有用，因为同一个数据点可能会在不同时间被多次写入。
+
+
+## 最佳实践
+
+### schema design
+
+[reference](https://docs.influxdata.com/influxdb/v2/write-data/best-practices/schema-design/)
+
+- 每个Measurement都是一个描述模式的简单名称。
+- 键在模式中不会重复。即tag key和field key不能重复，如果标签和字段的名称相同，则查询结果可能无法预测。
+- key不使用保留关键字或特殊字符
+- 使用标签tag来提升查询性能，因为tag会索引，所以将许多数据点所共有的元数据存储为标签可以提升查询性能
+- 使用字段field存储数字数据
+- 使用字段field存储唯一或高度可变的数据。
+- Measurements and keys不要包含数据，使用tag value和field value存储数据
+- 保存key的简单，不要使用多字段拼接来命名key
+
+
+
+### high series cardinality
+
+先解释一下什么是high series cardinality，首先series的定义是a unique combination of measurement and tag set，所以我理解high series cardinality就是tag set中tag的值不相同的数量太多，导致tag set的排列组合太多。high series cardinality会导致内存飙升和读写效率下降。
+
+[官方文档](https://docs.influxdata.com/influxdb/v2/write-data/best-practices/resolve-high-cardinality/)中开头就是一句：
+
+> If reads and writes to InfluxDB have started to slow down, high [series cardinality](https://docs.influxdata.com/influxdb/v2/reference/glossary/#series-cardinality) (too many series) may be causing memory issues.
+
+**高基数系列的原因**
+
+- 标签值的多样性：如果某个标签的可能取值非常多，比如用户ID、设备ID等，这会导致生成大量唯一的标签组合。
+- 标签组合的数量：标签的数量和每个标签的取值范围决定了可能的标签组合数。如果有多个标签，并且每个标签都有很多可能的取值，这会导致非常多的唯一组合。
+
+**高基数系列的影响**
+
+- 内存使用增加：每个唯一的标签组合都会创建一个新的时间序列，需要在内存中维护元数据。
+- 查询性能下降：高基数标签会导致查询需要处理更多的时间序列，增加查询时间。
+- 存储效率降低：高基数时间序列会增加存储需求，导致磁盘使用效率降低。
+- 数据管理复杂度增加：数据清理、归档等操作变得更加复杂。
+
+**优化建议**
+
+为了减少高基数系列对系统的影响，可以考虑以下优化策略：
+
+- 减少标签基数：**将高基数标签tag转换为字段field，如果它们不是频繁用于查询和过滤。即增加数据的处理量来减少查询的复杂度。**
+
+- 标签聚合：合并或简化标签值，减少唯一组合数量。
+
+​		例如，将 `measurement,tag1=a,tag2=b,tag3=c` 减少成 `measurement,tag1=a,tag2=b`。减少标签的数量或者简化标签的值，可以显著降低唯一组合的数量，从而降低系统的负载。
+
+- 分片存储：根据时间或其他低基数标签进行分片，分散存储负载。
+
+
+
+## Flux
+
+InfluxQL和Flux的区别
+
+> **InfluxQL**: InfluxDB 早期的查询语言，语法类似于 SQL，允许用户执行查询、聚合、过滤、和操作时间序列数据。它的语法比较简单和熟悉。但它的功能相对有限，特别是在数据处理、复杂分析和跨数据源的查询方面。
+>
+> **Flux**:  InfluxDB 2.x 引入的一种新的查询语言。相比 InfluxQL，Flux 是一种更强大和灵活的语言，允许用户编写更加复杂的查询、进行多维度分析、数据处理和跨多个数据源的操作。Flux 是类似于函数式编程的查询语言，支持更多的数据转换和自定义逻辑。它还支持从 InfluxDB、Prometheus 和其他数据源中检索数据。
+>
+> Flux 是未来的主推方向，支持更多功能。
+
+
+
+### Flux使用
+
+首先需要安装flux的命令行界面，我的是Mac，操作系统不同安装命令就不一样
+
+```sh
+brew install influxdb-cli
+```
+
+然后执行，`influx query '{flux语句}'`，如下所示：
+
+```sh
+influx query 'from(bucket:"startBucket") |> range(start:-30m)'
+Result: _result
+Table: keys: [_start, _stop, _field, _measurement, device_id, location]
+                   _start:time                      _stop:time           _field:string     _measurement:string        device_id:string         location:string                      _time:time                  _value:float
+------------------------------  ------------------------------  ----------------------  ----------------------  ----------------------  ----------------------  ------------------------------  ----------------------------
+2024-09-13T02:32:14.286925799Z  2024-09-13T03:02:14.286925799Z                humidity             sensor_data                   12347                cn-south  2024-09-13T02:42:53.131000000Z                          44.8
+Table: keys: [_start, _stop, _field, _measurement, device_id, location]
+                   _start:time                      _stop:time           _field:string     _measurement:string        device_id:string         location:string                      _time:time                  _value:float
+------------------------------  ------------------------------  ----------------------  ----------------------  ----------------------  ----------------------  ------------------------------  ----------------------------
+2024-09-13T02:32:14.286925799Z  2024-09-13T03:02:14.286925799Z             temperature             sensor_data                   12347                cn-south  2024-09-13T02:42:53.131000000Z                          24.8
+```
+
+### Flux数据模型
+
+[Flux文档](https://docs.influxdata.com/flux/v0/)
+
+[influx中使用Flux](https://docs.influxdata.com/influxdb/v2/query-data/get-started/query-influxdb/)
+
+这个文档里面讲的Flux的查询模型和用法，讲的太好了，虽然是英文的。
+
+
+
+#### 语法first sight
+
+```sh
+# 从influxdb中查询
+from(bucket: "example-bucket")
+    |> range(start: -1d)
+    |> filter(fn: (r) => r._measurement == "example-measurement")
+    |> mean()
+    |> yield(name: "_results")
+
+# 从csv文件中查询
+import "csv"
+
+csv.from(file: "path/to/example/data.csv")
+    |> range(start: -1d)
+    |> filter(fn: (r) => r._measurement == "example-measurement")
+    |> mean()
+    |> yield(name: "_results")
+
+# 从数据库查询
+import "sql"
+
+sql.from(
+    driverName: "postgres",
+    dataSourceName: "postgresql://user:password@localhost",
+    query: "SELECT * FROM TestTable",
+)
+    |> filter(fn: (r) => r.UserID == "123ABC456DEF")
+    |> mean(column: "purchase_total")
+    |> yield(name: "_results")
+```
+
+- [`from()`](https://docs.influxdata.com/flux/v0/stdlib/influxdata/influxdb/from/) to retrieve data from the data source.
+- [Pipe-forward operator (`|>`)](https://docs.influxdata.com/flux/v0/get-started/syntax-basics/#pipe-forward-operator) to send the output of each function to the next function as input.
+- [`range()`](https://docs.influxdata.com/flux/v0/stdlib/universe/range/), [`filter()`](https://docs.influxdata.com/flux/v0/stdlib/universe/filter/), or both to filter data based on column values.
+- [`mean()`](https://docs.influxdata.com/flux/v0/stdlib/universe/mean/) to calculate the average of values returned from the data source.
+- [`yield()`](https://docs.influxdata.com/flux/v0/stdlib/universe/yield/) to yield results to the user.
+
+
+
+#### 数据源概念
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/influx/flux-0.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/flux-0.png" alt="image" style={{ maxWidth: '36%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+
+flux中的概念都是抽象概念，influx的存储层和查询层是分开的，之所以flux能查询influx，是influx组件提供了对其语法的解析和底层数据的检索支持。而flux不仅仅是给influx提供查询语法，它是一个通用的查询语言。其中flux得数据源对象包含如下对象：
+
+- [Stream of tables](https://docs.influxdata.com/flux/v0/get-started/data-model/#stream-of-tables)
+- [Table](https://docs.influxdata.com/flux/v0/get-started/data-model/#table)：A **table** is a collection of [columns](https://docs.influxdata.com/flux/v0/get-started/data-model/#column) partitioned by [group key](https://docs.influxdata.com/flux/v0/get-started/data-model/#group-key)，即table和mysql的表不一样，这里的table是group key的列组合
+- [Column](https://docs.influxdata.com/flux/v0/get-started/data-model/#column)
+- [Row](https://docs.influxdata.com/flux/v0/get-started/data-model/#row)
+- [Group key](https://docs.influxdata.com/flux/v0/get-started/data-model/#group-key)：Group key定义使用哪些列对表流中的表进行分组，即**group key 是一个抽象的概念，定义了数据聚合和统计的分组维度，即根据哪些列（字段、标签等）对数据进行分组，它决定了如何将数据拆分成不同的组，每个组可以单独进行进一步的处理或分析，并且每个group key只能定义一个_field。**
+
+> `Group key`不同于`InfluxDB` 的 `Series Key`，Group key更加灵活和广泛，能够适应不同的数据源，它可以包含 fields。 `Series Key`则是influxdb的存储所以单位，不包含fields。A group key can be represented by an array of column labels.，如下示例：
+>
+> ```sh
+> [_measurement: "production", facility: "us-midwest", _field: "apq"]
+> [_measurement: "production", facility: "eu-central", _field: "apq"]
+> ```
+>
+> Group key是个抽象的概念，实际flux语句不能这么写，并且在flux语句中定义数据源，可以不定义measurement，只定义bucket，measurement在filter中定义
+
+#### 保留字段
+
+**Flux** 中，带有下划线（_）的字段通常是保留字段，这些字段有特定的用途和含义
+
+	1.	**_measurement**：指示数据的测量（measurement）名称。它与 **InfluxDB** 的 measurement 概念对应，用于标识数据所属的测量。
+	1.	**_field**：这是 Flux 中一个非常重要的保留字段。它指代数据中的字段名。字段（field）是时间序列数据的实际值，如温度、湿度等。在 Flux 查询中，_field 可以用来进行数据的选择、聚合等操作。
+	1.	**_value**：表示字段的值。在数据表中，字段的值是实际的数值或字符串。这个字段通常用于指定和检索数据的具体值。
+	4.	**_time**：表示时间戳。时间戳用于标记数据的时间点，是时间序列数据的核心部分。
+	 - **_start**：表示时间范围的开始时间。
+	 - **_stop**：表示时间范围的结束时间。
+
+**_measurement**、**_field** 和 **_time** 是时间序列数据的核心字段，而 **_value** 通常是字段的实际值。
+
+```sh
+## InfluxDB 数据点：
+measurement: sensor_data
+tags:
+  location: "office"
+  device: "sensor1"
+fields:
+  temperature: 22.5
+  humidity: 55.0
+time: 2024-09-12T12:00:00Z
+```
+
+```sql
+# flux查询语句
+from(bucket: "sensor_bucket")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == "sensor_data")
+  |> filter(fn: (r) => r._field == "temperature")  // Filtering by field
+  |> filter(fn: (r) => r.location == "office")  // Filtering by tag
+  |> mean()
+```
+
+**注意：`filter(fn: (r) => r._field == "temperature"`) 语句用于筛选数据点中指定字段的记录，而不是过滤值。具体来说，这个过滤操作是根据字段的名称（field key）来筛选数据点。**
+
+**多字段多过滤值的语法，多个字段（temperature 和 humidity），在数据处理时，实际上这些字段可以看作是多个 group key 的组成部分。每个字段会生成一个独立的数据组，尽管它们可能共享某些相同的标签。**
+
+```sh
+from(bucket: "sensor_bucket")
+  |> range(start: -1h)
+  |> filter(fn: (r) => r._measurement == "sensor_data")
+  |> filter(fn: (r) => r._field == "temperature" or r._field == "humidity")
+  |> filter(fn: (r) =>
+    (r._field == "temperature" and r._value > 20) or
+    (r._field == "humidity" and r._value < 50)
+  )
+```
+
+#### Table的转化处理
+
+**在 Flux 中，数据以 table 的形式存储和处理。每个 table 是一个包含多个行的集合，其中的每一行代表一个数据记录。table 可以看作是数据在特定 group key 下的集合，每个 table 对应一个 group key，也就是每个table也只有一个field，包含了所有具有相同 group key 值的数据记录。如果不显式地定义 group()，Flux会为不同的 field 分配到各自的 table。**
+
+并且flux在处理表的转化时，各个表是独立处理的，*At its core, Flux operates on tables. Flux [transformations](https://docs.influxdata.com/flux/v0/function-types/#transformations) take a stream of tables as input, but operate on each table individually.*。比如如下图所示：
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/influx/flux-1.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/influx/flux-1.png" alt="image" style={{ maxWidth: '36%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+如果要自定义group，则使用`group()`函数来处理，这里的`mode`是模式，"by" 表示按照指定的列进行分组。还有其他模式，如 "default" 和 "except"
+
+```sh
+data
+    |> group(columns: ["foo", "bar"], mode: "by")
+```
+
+比如：
+
+```sh
+data
+  |> group(columns: ["_time", "_measurement", "loc", "sensorID", "_field", "_value"])
+```
+
+上面的columns中每个都可以去掉，而当每去掉一个columns时，group的结果都不一样。在文档中给出了数据的[示例](https://docs.influxdata.com/flux/v0/get-started/data-model/#table-grouping-example)。
+
+> 当然也可以不定义 **group()** 的查询，如果不使用 group()，Flux 查询会将数据视为一个整体，不进行任何分组。这意味着所有数据将被作为一个单一的组处理，查询结果会是一个单一的 table，其中包含了所有的数据记录。
+
+
+
+### 语法规则
+
+The majority of basic Flux queries include the following steps:
+
+- [Source](https://docs.influxdata.com/flux/v0/get-started/query-basics/#source)
+- [Filter](https://docs.influxdata.com/flux/v0/get-started/query-basics/#filter)
+- [Shape](https://docs.influxdata.com/flux/v0/get-started/query-basics/#shape-data)
+- [Process](https://docs.influxdata.com/flux/v0/get-started/query-basics/#process)
+
+```js
+from(bucket: "example-bucket")              // ── Source
+    |> range(start: -1d)                    // ── Filter on time
+    |> filter(fn: (r) => r._field == "foo") // ── Filter on column values
+    |> group(columns: ["sensorID"])         // ── Shape
+    |> mean()                               // ── Process
+```
+
+
+
+### Java client
+
+写入数据
+
+```java
+package org.liufei.junit5.test.influxdbJava;
+
+import com.influxdb.annotations.Column;
+import com.influxdb.annotations.Measurement;
+import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.InfluxDBClientFactory;
+import com.influxdb.client.WriteApiBlocking;
+import com.influxdb.client.domain.WritePrecision;
+import com.influxdb.client.write.Point;
+
+import java.time.Instant;
+
+/**
+ * @author liufei
+ **/
+public class InfluxDB2ExampleWrite {
+
+    private static final String TOKEN  = "RAf5PzC_ncP9F-bnZt77BgiidkIqv3oJrZB4cuAO5sBwS-wUClqN01zJzj3kGh9nUxGmAE2BqecXCuFyhtRA5w==";
+    private static final String BUCKET = "jobBucket";
+    private static final String ORG    = "liufeiOrg";
+
+    private static InfluxDBClient createClient() {
+        return InfluxDBClientFactory.create("http://localhost:8086", TOKEN.toCharArray());
+    }
+
+    public static void main(final String[] args) {
+//        writeLineProtocol();
+//        writeDataPoint();
+        writePOJO();
+    }
+
+    // Line Protocol
+    private static void writeLineProtocol() {
+
+        // 自动关闭流，InfluxDBClient实现了AutoCloseable接口，所以能这么写
+        try (InfluxDBClient client = createClient()) {
+            String data = "job,location=cd,education=bac salary=16,bonus=13";
+            WriteApiBlocking writeApi = client.getWriteApiBlocking();
+            writeApi.writeRecord(BUCKET, ORG, WritePrecision.NS, data);
+        }
+
+
+    }
+
+    // DataPoint
+    private static void writeDataPoint() {
+
+        try (InfluxDBClient client = createClient()) {
+            Point point = Point
+                    .measurement("job")
+                    .addTag("location", "cd")
+                    .addTag("education", "master")
+                    .addField("salary", 23.1)
+                    .addField("bonus", 15.1)
+                    .time(Instant.now(), WritePrecision.NS);
+
+            WriteApiBlocking writeApi = client.getWriteApiBlocking();
+            writeApi.writePoint(BUCKET, ORG, point);
+        }
+    }
+
+    // DataPoint
+    private static void writePOJO() {
+        try (InfluxDBClient client = createClient()) {
+            Job mem = new Job();
+            mem.location = "cd";
+            mem.education = "master";
+            mem.bonus = 15f;
+            mem.salary = -2f;// 可以提交负数
+//            mem.time = Instant.now();
+            mem.time = Instant.ofEpochMilli(1726312539920L);// 也可以提交历史时间
+
+            WriteApiBlocking writeApi = client.getWriteApiBlocking();
+            writeApi.writeMeasurement(BUCKET, ORG, WritePrecision.NS, mem);
+        }
+
+    }
+
+    // Measurement名称要写对
+    @Measurement(name = "job")
+    public static class Job {
+        @Column(tag = true)
+        String  location;
+        @Column(tag = true)
+        String  education;
+        @Column
+        Float   salary;
+        @Column
+        Float   bonus;
+        @Column(timestamp = true)
+        Instant time;
+    }
+}
+```
+
+读取数据
+
+```java
+package org.liufei.junit5.test.influxdbJava;
+
+import com.influxdb.annotations.Column;
+import com.influxdb.annotations.Measurement;
+import com.influxdb.client.InfluxDBClient;
+import com.influxdb.client.InfluxDBClientFactory;
+import com.influxdb.client.WriteApiBlocking;
+import com.influxdb.client.domain.WritePrecision;
+import com.influxdb.client.write.Point;
+import com.influxdb.query.FluxRecord;
+import com.influxdb.query.FluxTable;
+
+import java.time.Instant;
+import java.util.List;
+
+/**
+ * @author liufei
+ **/
+public class InfluxDB2ExampleRead {
+
+    private static final String TOKEN  = "RAf5PzC_ncP9F-bnZt77BgiidkIqv3oJrZB4cuAO5sBwS-wUClqN01zJzj3kGh9nUxGmAE2BqecXCuFyhtRA5w==";
+    private static final String BUCKET = "jobBucket";
+    private static final String ORG    = "liufeiOrg";
+
+    private static InfluxDBClient createClient() {
+        return InfluxDBClientFactory.create("http://localhost:8086", TOKEN.toCharArray());
+    }
+
+    public static void main(final String[] args) {
+        read();
+    }
+
+    private static void read() {
+
+        String query = """
+                from(bucket: "jobBucket")
+                  |> range(start: -3h, stop: -0h)
+                  |> filter(fn: (r) => r["_measurement"] == "job")
+                  |> filter(fn: (r) => r["_field"] == "salary" or r["_field"] == "bonus")
+                  |> aggregateWindow(every: 30m, fn: mean, createEmpty: false)
+                  |> yield(name: "mean")
+                """;
+        List<FluxTable> tables;
+        try (InfluxDBClient client = createClient()) {
+            tables = client.getQueryApi().query(query, ORG);
+        }
+
+        // 返回格式就是FluxTable和FluxRecord，对应的就是influx中的数据点record和列组合table
+        for (FluxTable table : tables) {
+            for (FluxRecord record : table.getRecords()) {
+                System.out.println(
+                        record.getMeasurement()
+                                .concat("--")
+                                .concat(record.getField())
+                                .concat("--")
+                                .concat(record.getStart().toString())
+                                .concat("--")
+                                .concat(record.getValues().get("_value").toString()));
+            }
+        }
+    }
+
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
