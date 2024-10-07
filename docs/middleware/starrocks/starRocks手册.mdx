@@ -1,0 +1,423 @@
+---
+title: starRocks手册
+sidebar_position: 7
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+[文档地址](https://docs.starrocks.io/zh/docs/introduction/what_is_starrocks/)
+
+### 为什么需要StarRocks
+
+为什么需要starrocks，在文档[什么是 StarRocks](https://docs.starrocks.io/zh/docs/introduction/what_is_starrocks/) 讲的很清楚，这里解释一个概念：Ad-hoc 数据分析
+
+> **Ad-hoc 数据分析** 是指一种**即席**的、 **按需**进行的分析方法，主要用于快速回答特定业务问题或查询。与预定义的定期分析（如每日报告、月度分析等）不同，其没有固定的模板或频率，而是根据当前业务需求、用户请求或突发问题进行的临时数据查询和分析。
+>
+> **Ad-hoc 数据分析特点：**
+>
+> - **灵活性**：Ad-hoc 分析的查询是灵活的，分析师可以根据需要临时定义查询条件，而不是依赖于预先设计的分析流程。
+> - **快速响应**：由于其针对的是即时需求，Ad-hoc 分析的目的是快速获取有价值的信息，帮助业务团队做出数据驱动的决策。
+> - **非重复性**：这种分析通常不需要重复执行，完成后可能不会再被使用。
+
+
+
+### 部署
+
+快速上手：
+
+[docker 存算一体](https://docs.starrocks.io/zh/docs/quick_start/shared-nothing/)
+
+[docker 存算一体](https://docs.starrocks.io/zh/docs/quick_start/shared-data/)
+
+
+
+### StarRocks架构
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/starrocks/starrocks-2.png" alt="image" style="zoom:32%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/starrocks/starrocks-2.png" alt="image" style={{ maxWidth: '64%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- **SR Migration Tool** ：一种用于将数据从一个系统或数据库迁移到 StarRocks（SR）数据库的工具。支持不同数据源的迁移，比如传统的关系型数据库（如 MySQL、PostgreSQL）、数据仓库（如 Hive）、或者其他大数据存储解决方案。
+
+
+
+#### Catalogs、databases 和 tables
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/starrocks/starrock-3.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/starrocks/starrock-3.png" alt="image" style={{ maxWidth: '68%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- **Internal Catalog**：主要负责存储和管理**元数据**，元数据包括：
+
+- 数据库和表的定义。
+- 表中的列、索引、分区等信息。
+- 数据存放位置、数据分区策略等。
+
+数据实际存储在 StarRocks 自带的分布式文件系统中，如果是存算分离的情况下就是在外部外部存储中。
+
+- **External Catalog** ：用于连接 StarRocks 以外的外部数据源，尤其是数据湖（如 Hadoop、Hive、Iceberg、Delta Lake、S3 等）中的数据。
+
+这样可以在不移动数据的情况下访问和分析不同数据源中的数据，通过 External Catalog，StarRocks 可以将外部数据源中的数据虚拟为自己的表。
+
+这样直接就可通过 SQL 查询这些外部数据，类似操作内部表，无需关心外部数据的存储位置或存储格式，StarRocks 会透明化处理底层数据的解析和查询优化。
+
+[其他概念,表,物化视图...](https://docs.starrocks.io/zh/docs/table_design/)
+
+
+
+### 表设计
+
+#### [表类型](https://docs.starrocks.io/zh/docs/table_design/table_types/)
+
+StarRocks 提供四种类型的表，包括明细表、主键表、聚合表和更新表，适用于存储多种业务数据，例如原始数据、实时频繁更新的数据和聚合数据。
+
+- 明细表(**Duplicate Key table**)：简单易用，表中数据不具有任何约束，相同的数据行可以重复存在。该表适用于存储不需要约束和预聚合的原始数据，例如日志等。
+
+- 主键表(**Primary Key table**)：能力强大，具有唯一性非空约束。该表能够在支撑实时更新、部分列更新等场景的同时，保证查询性能，适用于实时查询。
+
+*需要注意的是：由于存储引擎会为主键建立索引，导入数据时会把索引加载到内存中，所以主键模型对内存的要求更高，所以不适合主键模型的场景还是比较多的。*
+
+- 聚合表(**Aggregate table**)：适用于存储预聚合后的数据，可以降低聚合查询时所需扫描和计算的数据量，极大提高聚合查询的效率。
+
+- 更新表(**Unique Key table**)：适用于实时更新的业务场景，目前已逐渐被主键表取代。
+
+明细表 (Duplicate key table)、聚合表 (Aggregate table)、更新表 (Unique Key table) 和主键表 ( Primary Key table)，在StarRocks中表的类型是通过建表语句中的关键字来确定的，具体来说是通过 DUPLICATE KEY、UNIQUE KEY、PRIMARY KEY 或者聚合字段（如 SUM、MAX 等）来定义不同的表类型。如下：
+
+```sql
+-- DUPLICATE KEY、UNIQUE KEY、AGGREGATE KEY、PRIMARY KEY都必须放在建表语句字段的前面而且要多字段顺序也要和建表语句的字段顺序一致。
+
+-- 明细表，关键字: DUPLICATE KEY,允许有重复键，不会对相同键的行进行合并，适合存储明细数据。
+CREATE TABLE sales_detail (
+    order_id INT,
+    product_id INT,
+    quantity INT
+) ENGINE=OLAP
+DUPLICATE KEY(order_id, product_id);
+
+-- 聚合表，关键字: 聚合函数（如 SUM, MAX, MIN 等）。数据会按定义的聚合键进行聚合，适合存储汇总数据。
+CREATE TABLE sales_summary_test (
+    product_id INT,
+    total_quantity INT SUM,
+    total_sales DECIMAL(10, 2) SUM
+) ENGINE=OLAP
+AGGREGATE KEY(product_id)
+distributed by HASH(product_id) buckets 8;
+
+-- 更新表，关键字: UNIQUE KEY。表中每一行的键都是唯一的，支持按主键进行更新操作，适合对记录有更新需求的场景。
+CREATE TABLE user_profiles_test (
+    user_id INT,
+    username VARCHAR(50),
+    age TINYINT
+) ENGINE=OLAP
+UNIQUE KEY(user_id,username)
+distributed by HASH(username) buckets 8;
+
+-- 主键表，关键字: PRIMARY KEY。主键唯一，支持高效的更新、删除操作，适合需要频繁更新和删除操作的场景。
+CREATE TABLE employees (
+    emp_id INT,
+    name VARCHAR(50),
+    age TINYINT,
+    PRIMARY KEY(emp_id)
+) ENGINE=OLAP;
+```
+
+一个表只能是某一种类型。因此，不能同时设置 DUPLICATE KEY、UNIQUE KEY 和 PRIMARY KEY。表的类型需要根据业务需求明确指定，例如你不能同时使用 DUPLICATE KEY 和 PRIMARY KEY，系统会根据你设置的关键字将表确定为某种类型。
+
+> **DUPLICATE KEY、UNIQUE KEY、AGGREGATE KEY、PRIMARY KEY都是可以设置多个字段的**
+
+而如果没有明确指定表的类型，系统默认将表设置为 DUPLICATE KEY 表。
+
+> 为什么明细表不会合并数据，却要指定Duplicate key？
+>
+> 即Duplicate key不是mysql中联合唯一性约束，StarRocks不会根据Duplicate key来合并重复数据，设置Duplicate key是为了**明确表的设计意图**，StarRocks 依赖 DUPLICATE KEY 来决定数据如何在底层的存储文件（Tablet）中排序和组织。根据 DUPLICATE KEY 来合理地划分和分布数据，以确保负载均衡，避免某些节点过载。
+>
+> 并且在查询时也更有效地使用索引，减少数据扫描的范围，从而加速查询。
+
+
+
+#### 外部表
+
+StarRocks是可以直接连接外部表的，也就是其External Catalog负责处理的。使用外部表时，仍然需要先创建外部表时先定义表的格式。这包括指定表的结构（列名和数据类型）以及数据存储的位置和格式类型（如 CSV、Parquet、ORC 等）。这样做才能确保 StarRocks 能够正确解析和查询外部数据。
+
+**注意：不管是外部表还是内部表，StarRocks 都是不支持UPDATE 操作的。并且在外部表中只能查询，DML操作(DELETE、UPDATE 和 INSERT)都是不支持的**
+
+外部表定义语法示例：
+
+```sql
+create external table mysql_t1(
+ id int,
+ name varchar (20),
+ age int)
+ ENGINE=mysq1
+ PROPERTIES
+（
+  "host" = "hadoop101"
+  "port" = "3306"
+  "user" = "root"
+  "password" = "123456"
+  "database" = "test"
+）；
+
+CREATE EXTERNAL TABLE external_users (
+    user_id INT,
+    username VARCHAR(50),
+    age INT
+)
+LOCATION 's3://your-bucket/users/'
+PROPERTIES (
+    "format" = "CSV"  -- 指定数据格式
+);
+```
+
+
+
+
+
+#### 分区分桶
+
+StarRocks 采用 **分区 + 分桶** 的两级数据分布策略，将数据均匀分布各个 BE 节点。查询时能够有效裁剪数据扫描量，最大限度地利用集群的并发性能，从而提升查询性能。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/starrocks/starrocks-4.png" alt="image" style="zoom:50%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/starrocks/starrocks-4.png" alt="image" style={{ maxWidth: '68%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- **分区**
+
+第一层级为分区。表中数据可以根据分区列（通常是时间和日期）分成一个个更小的数据管理单元。查询时，通过分区裁剪，可以减少扫描的数据量，显著优化查询性能。
+
+StarRocks 提供简单易用的分区方式，即表达式分区。此外还提供较灵活的分区方式，即 Range 分区和 List 分区。
+
+- **分桶**
+
+第二层级为分桶。同一个分区中的数据通过分桶，划分成更小的数据管理单元。并且分桶以多副本形式（默认为3）均匀分布在 BE 节点上，保证数据的高可用。
+
+StarRocks 提供两种分桶方式：
+
+- 哈希分桶：根据数据的分桶键值，将数据划分至分桶。选择查询时经常使用的条件列组成分桶键，能有效提高查询效率。
+- 随机分桶：随机划分数据至分桶。这种分桶方式更加简单易用。
+
+```sql
+CREATE TABLE orders (
+    order_id INT,
+    user_id INT,
+    order_date DATE,
+    total_amount DOUBLE
+)
+PARTITION BY RANGE(order_date) (
+    PARTITION p1 VALUES LESS THAN ('2023-01-01'),
+    PARTITION p2 VALUES LESS THAN ('2024-01-01')
+)
+DISTRIBUTED BY HASH(user_id) BUCKETS 32;
+
+-- 动态时间分区
+CREATE TABLE order_history (
+    order_id INT,
+    user_id INT,
+    order_date DATE,
+    order_amount DOUBLE
+)
+PARTITION BY RANGE(order_date)
+(START ("2022-01-01") END ("2030-01-01") EVERY (INTERVAL 1 YEAR))
+DISTRIBUTED BY HASH(user_id) BUCKETS 64;
+
+ALTER TABLE order_history
+SET ("dynamic_partition.enable" = "true",
+     "dynamic_partition.time_unit" = "MONTH",
+     "dynamic_partition.start" = "-12",
+     "dynamic_partition.end" = "3",
+     "dynamic_partition.history_partition_num" = "12");
+
+-- dynamic_partition.enable：启用动态分区功能。
+-- dynamic_partition.time_unit：按月创建分区。
+-- dynamic_partition.start = "-12"：自动创建过去 12 个月的分区。
+-- dynamic_partition.end = "3"：为未来 3 个月的数据预创建分区。
+-- dynamic_partition.history_partition_num = "12"：只保留过去12个月的分区，超过的分区会被自动清理。
+```
+
+> 注意：StarRocks的分区分桶都需要在表设计阶段就要指定好，其如果表设计的不对，仍然无法利用其分区分桶带来的数据裁剪和并行能力提升
+
+
+
+#### 字段类型
+
+除了基本的数据类型，如数值、日期和字符串类型，StarRocks 还支持复杂的半结构化数据类型，包括 ARRAY、JSON、MAP、STRUCT。
+
+1. **数值类型**
+- TINYINT: 8 位带符号整数，范围为 -128 到 127。适合存储小范围的整数。
+- SMALLINT: 16 位带符号整数，范围为 -32,768 到 32,767。适合存储较小的整数。
+- INT: 32 位带符号整数，范围为 -2,147,483,648 到 2,147,483,647。常用于存储用户 ID、订单 ID 等。
+- BIGINT: 64 位带符号整数，范围为 -9,223,372,036,854,775,808 到 9,223,372,036,854,775,807。适合存储大数值，比如交易金额或计数器。
+- FLOAT: 单精度浮点数。适合存储不需要高精度的小数。
+- DOUBLE: 双精度浮点数。适合存储需要高精度的小数。
+- DECIMAL: 定点数，可以精确控制小数位数。用于金融计算等对精度要求高的场景。示例：amount DECIMAL(10, 2)（10 位数字，其中 2 位为小数）
+
+2. **字符串类型**
+- CHAR(n): 固定长度的字符串，n 为长度。适合存储固定长度的字符，例如国家代码。示例：country_code CHAR(3)
+- VARCHAR(n): 可变长度的字符串，最大长度 n。适合存储不定长度的字符串。
+- STRING: 可变长度的字符串，没有最大长度限制。适合存储大文本数据。
+
+3. **日期和时间类型**
+- DATE: 日期类型，格式为 ‘YYYY-MM-DD’。适合存储日期信息。
+- DATETIME: 日期和时间类型，格式为 ‘YYYY-MM-DD HH:MM:SS’。适合存储具体的时间戳。
+- **TIMESTAMP**: 时间戳类型，精确到秒。适合存储事件发生的精确时间。
+
+4. **布尔类型**：示例：is_active BOOLEAN
+5. **复杂类型**
+- ARRAY: 数组类型，可以存储多个同类型的值。适合存储集合数据。示例：tags ARRAY\<VARCHAR\>
+- MAP: 键值对映射类型。适合存储关联数据。示例：properties MAP\<VARCHAR, INT\>
+- **STRUCT**: 结构体类型，可以存储不同类型的字段。适合存储复杂对象。示例：address STRUCT\<street: STRING, city: STRING, zip: INT\>
+
+```sql
+-- 字段类型创建示例
+CREATE TABLE user_profiles (
+    user_id INT,
+    username VARCHAR(50),
+    age TINYINT,
+    registration_date DATE,
+    last_login DATETIME,
+    is_active BOOLEAN,
+    balance DECIMAL(10, 2),
+    tags ARRAY<VARCHAR(50)>,          -- 明确指定字符串最大长度
+    properties MAP<VARCHAR(50), INT>  -- 明确指定键和值的最大长度
+);
+
+-- 字段类型创建和添加其他设置示例
+CREATE TABLE user_profiles (
+    user_id INT,
+    username VARCHAR(50),
+    age TINYINT,
+    registration_date DATE,
+    last_login DATETIME,
+    is_active BOOLEAN,
+    balance DECIMAL(10, 2),
+    tags ARRAY<VARCHAR(50)>,
+    properties MAP<VARCHAR(50), INT>
+) ENGINE=OLAP
+DUPLICATE KEY(user_id, username)  -- 显式指定重复键
+COMMENT "User Profiles"
+DISTRIBUTED BY RANDOM
+PROPERTIES (
+    "bucket_size" = "4294967296",
+    "compression" = "LZ4",
+    "datacache.enable" = "true",
+    "enable_async_write_back" = "false",
+    "replication_num" = "1",
+    "storage_volume" = "shared"
+);
+```
+
+
+
+
+
+### 索引
+
+#### 排序键
+
+排序键使用时和 mysql索引规则一样，缺少最佳左前缀原则，索引会失效。使用排序键本质就是在进行二分查找，所以排序列指定的越多，那么消耗的内存也会越大，StarRocks为了避免这种情况发生也对排序键做了限制：
+
+- shortkey 的列只能是排序键的前缀；
+- shortkey 列数不超过3；
+- 字节数不超过36字节；
+- 不包含 FLOAT/DOUBLE 类型的列；
+- VARCHAR 类型列只能出现一次，并且是末尾位置；
+- 当 shortkey index 的末尾列为CHAR或者VARCHAR 类型时，shoutkey.的长度会超过36字节；
+
+当用户在建表语句中指定 PROPERTIES ｛short_key = "integer"｝ 时，可突破上述限制；
+
+
+
+#### 位图
+
+```sql
+CREATE INDEX name_index ON tableName(col_name) USING bitmap;
+```
+
+**位图索引（Bitmap Index）** 是一种非常高效的索引类型，适用于低基数（Cardinality）列，即值的可能取值较少的列。因为位图索引将每个值映射到一个位图，即一个位数组。对于表中的每一行，位图中对应位置的位被设置为 1 或 0，以表示该行是否具有特定的值。例如，对于一个 INT 列，每个可能的 INT 值都会有一个独立的位图。
+
+> **在高基数情况下**（即列中的唯一值较多），位图索引可能会占用大量的存储空间，这样会降低其效率，也会影响查询性能
+
+**基数判断标准**:
+
+- **低基数**: 列中取值的种类较少，常见的数量级在 10 到 100 左右。
+- **中高基数**: 列中取值的种类上千甚至数万以上，这种情况下不适合建立位图索引。
+
+```sql
+SELECT COUNT(DISTINCT(column_name)) FROM table_name;
+```
+
+
+
+#### 布隆过滤器索引
+
+一种空间高效的概率型数据结构，用于快速判断某个值是否存在于集合中，适合加速某些特定类型的查询。布隆过滤器通过允许一定概率的误判来换取较高的查询性能，特别适用于高基数的列以及对大表的精确匹配查询。
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/starrocks/starrocks-bloomfilter.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/starrocks/starrocks-bloomfilter.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+```sql
+-- 布隆过滤器索引不是通过 index来创建的，而是通过字段属性来创建的
+CREATE TABLE user_profiles (
+    user_id INT,
+    username VARCHAR(50),
+    age TINYINT,
+    registration_date DATE,
+    last_login DATETIME,
+    is_active BOOLEAN,
+    balance DECIMAL(10, 2)
+) ENGINE=OLAP
+DUPLICATE KEY(`user_id`)
+DISTRIBUTED BY HASH(`user_id`) BUCKETS 10
+PROPERTIES (
+    "bloom_filter_columns"="username,age",
+    "replication_num"="3"
+);
+
+-- 如果表已经存在，也可以通过 ALTER TABLE 来添加布隆过滤器索引：
+ALTER TABLE user_profiles
+MODIFY COLUMN username SET bloom_filter = true;
+```
+
+>注意：
+>
+>- 不适用于范围查询，
+>
+>- 对低基数列效果不佳，且存在一定的误判率。因为数据基数低，而是的在大数据量下误判会很高
+>
+>- 布隆过滤器适合用于 INT、BIGINT、VARCHAR 等类型。
+>- 不支持较复杂的类型，如 ARRAY、MAP、STRUCT 等
+>- 对 FLOAT 和 DOUBLE 类型，布隆过滤器的效果可能不如整数和字符串类型。
+
+
+
+
+
+#### Colocate Join
+
+**Colocate Join** 是 StarRocks 中的一种特殊的 Join 策略，通过将数据预先按照相同的分布规则进行分布，使得在 Join 操作中无需进行额外的数据分布和重排，从而避免了网络数据传输带来的开销，大幅提升 Join 查询的执行效率。
+
+**Colocate Join 前提**：
+
+1. **分布键一致**：确保参与 Join 的所有表使用相同的分布键。这样可以确保连接的记录在相同的计算节点上。
+2. **分桶数量相同**：参与 Join 的表应具有相同的分桶数。这样在执行 Join 操作时，可以直接在相同的分桶内进行处理，避免 Shuffle 操作。
+3. **分区策略相同**（可选）：如果表进行了分区，建议在分区策略上也保持一致，但在许多情况下，分区策略不是 Colocate Join 的严格要求。
+
+**Colocate Join 使用场景**：
+
+- **大表与大表的 Join**: 两个大表之间的数据已经按相同的规则进行分区和分桶，当两张表进行 Join 时可以避免 Shuffle 操作。
+
+> **Shuffle 操作**是分布式计算中一个常见的概念，指在数据处理过程中对数据进行重新分布和组织的过程。通常发生在需要进行 **Join**、**Group By**、**Aggregation** 等操作时，用于将相同的键（Key）或值聚集到同一个计算节点上，以便于进行后续的计算。
+
+- **需要高效的查询性能**: 当 Join 操作频繁时，Colocate Join 可以减少数据在集群节点之间的传输，提升查询速度。
+
+
+
+**Colocate Join 实现机制**：
+
+Colocate Join的实现不是通过提前复制数据到同一个节点来完成，其不需要移动数据，而是依赖于在数据表创建时就确保数据按照相同的分布策略存储。在创建参与 Join 的表时，使用相同的分布键和分桶数。这样具有相同连接键的记录在逻辑上会分配到相同的计算节点上。例如，如果两张表都按照 user_id 进行哈希分布，并且都设置为相同的桶数（例如 10），那么连接键相同的记录就会落在同一节点的同一桶中。
+

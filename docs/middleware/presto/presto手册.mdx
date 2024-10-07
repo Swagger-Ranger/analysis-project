@@ -1,0 +1,327 @@
+---
+title: presto手册
+sidebar_position: 7
+toc_min_heading_level: 2
+toc_max_heading_level: 5
+---
+
+### 为什么要用Presto
+
+如何[官网](https://prestodb.io/)所说，Presto是一个`Fast and Reliable SQL Engine for Data Analytics and the Open Lakehouse`。
+
+1. 即它是一个查询引擎，用于处理多数据源（如 HDFS、S3、MySQL 、ElasticSearch、StarRocks等）的大数据查询。并且Presto 专注于高效查询，尤其是在数据量非常大的场景下，允许用户执行复杂的分析查询。以往在面对多数据源时，往常需要程序员在应用代码中写很多代码逻辑来整合查询结果，**而使用 Presto 进行多数据源查询能够大大简化开发者的工作**，具体的原因如下：
+- **统一查询接口**：Presto 提供了一个统一的 SQL 查询接口，可以通过单个查询直接访问不同的数据源（如 MySQL、Elasticsearch、HDFS 等）。这意味着开发者不需要为每个数据源编写不同的查询逻辑。
+- **减少代码复杂性**：在没有 Presto 的情况下，开发者通常需要在应用代码中编写大量逻辑来处理不同的数据源、数据格式和聚合操作。而使用 Presto 后，这些逻辑可以集中在 SQL 查询中，大幅减少了代码的复杂性。
+- **实时查询能力**：Presto 允许对大规模数据集进行快速查询，且能够支持复杂的 SQL 语法，使得从多个数据源中获取实时数据变得更加简单和高效。
+- **灵活性**：由于 Presto 支持 ANSI SQL，开发者可以灵活地进行查询、筛选、连接等操作，而不需要担心不同数据源的查询语法差异。
+2. Presto本身的特点之一是它不依赖其他任何的组件，可以独立部署在单台机器上，当然一般是集群部署来以充分利用其并行处理能力。
+3. presto本身是无状态的不存储任何数据，这样即使机器挂了也就是查询结果没有返回而已，重启之后重试查询即可，没有任何副作用。在架构上很简洁，在执行查询时Presto会将查询分解成多个任务，并将这些任务分配给集群中的工作节点。如果某个工作节点宕机，Presto 能够检测到这种情况，并会自动将未完成的任务重新分配到其他可用的节点上。这种重试机制确保了查询的整体完整性和一致性。**Presto** 非常适合用来整合对 **MySQL** 和 **Elasticsearch (ES)** 的查询。
+
+
+
+**Presto**: 是一个**分布式 SQL 查询引擎**，它主要用于处理大数据查询，能够跨多个数据源（如 HDFS、S3、MySQL 等）执行 SQL 查询。Presto 专注于高效查询，尤其是在数据量非常大的场景下，允许用户执行复杂的分析查询。
+
+**StarRocks**: 是一个**OLAP（在线分析处理）数据库系统**，其目标是提供快速的实时数据分析功能。StarRocks 的架构在底层做了许多优化，如列式存储、物化视图、二级索引等，以提高分析速度。相比 Presto，StarRocks 不仅是一个查询引擎，它还管理存储、数据和索引优化，特别适合实时和近实时的分析场景。
+
+因此，**Presto 更像是一个查询执行引擎**，而**StarRocks 是一个分析引擎以及 OLAP 数据库系统**。它们的定位略有不同，Presto 负责高效的跨源查询，而 StarRocks 更专注于优化后的数据分析。
+
+
+
+> **DWS** 和 **ODS**
+>
+> ODS (Operational Data Store) - 操作数据存储是数据仓库中的 **操作数据层**，用于存储业务系统中的原始数据。ODS 通常从各个业务系统直接提取数据，但它并不一定保证数据的长期存储，而是以较短的延迟提供较实时的、未加工的数据。这些数据还未经过深度处理或转换，常用于支持业务中的日常操作需求，并为后续的加工和分析提供基础。
+>
+> DWS (Data Warehouse System)- 数据仓库系统是数据仓库的 **分析层**，通常存储了经过清洗、转换和聚合的历史数据，供更复杂的业务分析和决策支持。与 ODS 相比，DWS 中的数据已经过优化处理，以适应长期存储和复杂查询的需要。
+>
+> **ODS** 是 **DWS** 的前置层，数据先从源系统进入 ODS，经过处理后再进入 DWS 中供分析使用。ODS 更侧重于实时性，支持业务的短期操作需求，而 DWS 则用于长期的分析和决策支持。
+>
+> *一个例子是，用sqoop将数据导入hive，然后hive执行批处理，将数据查询导入es、mysql；然后从es、mysql查询数据做聚合等操作支持业务查询。这里*使用 **Sqoop** 从 MySQL 导入数据到 **Hive**，此过程属于 ODS。然后在 Hive 中进行批处理，处理后将数据导入到 **Elasticsearch** 或 **MySQL**，以供后续查询和分析，这个过程则属于 DWS。
+
+
+
+### presto架构
+
+#### 基础组件
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/presto/presto-0.png" alt="image" style="zoom:42%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/presto/presto-0.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+presto集群是master worker架构，有如下几个组件：
+
+1. **Coordinator**：
+
+- Coordinator 服务器是用来解析语句，执行计划分析和管理 Presto 的Worker 节点。Presto 安装必须有一个 Coordinator 和多个 Worker。如果用于开发环境和测试，则一个 Presto 实例 可以同时担任这两个角色。
+- Coordinator 跟踪每个 Work的活动情况并协调查询语句的执行。Coordinator 为每个查询建立模型，模型包含多个stage，每个Stage再转为Task 分发到不同的Worker 上执行。
+
+2. **Discovery server**：只能有一个，负责维护coordinator和worker节点关系，worker节点启动后向discovery service服务注册，coordinator通过discovery service获取注册的worker节点以及catalog，通常内嵌于coordinator节点中。
+
+3. **Worker**：Worker 是负责执行任务和处理数据。Worker 从 Connector 获取数据。Worker 之间会交换中间数据。Coordinator 是负责从Worker 获取结果并返回最终结果给 Client。当 Worker 启动时，会广播自己去发现 Coordinator，并告知 Coordinator 它是可用，随时 可以接受 Task。
+
+> **Worker** 是指处理查询的工作节点，是独立的主机（或服务器），而不是简单的线程。每个 Worker 节点负责执行查询的一部分，并将结果返回给协调节点（Coordinator），后者负责将这些结果合并并返回给客户端。
+
+4. **Catalog**：Catalog 是一个逻辑名称，包含Schema和connector，表示一个特定的数据源配置。在 Presto 中，每个 Catalog 指向一个具体的数据源，如 MySQL、PostgreSQL、Hive、Kafka 等。它为不同的数据源提供了一个统一的访问接口。用户通过指定 Catalog 来查询数据。
+
+5. **Connector**：Connector 是适配器，用于 Presto 和数据源（如 Hive、RDBMS）的连接，每个Catalog 都有一个特定的 Connector。
+
+6. **Schema**：Schema 是用于组织 table。把 catelog 和 schema 结合在一起来包含一组的表，Schema对应了某一类数据源的数据库。
+
+7. **Table**：Table 跟关系型的表定义一样，但数据和表的映射是交给 Connector。
+
+
+
+#### Presto 语句执行过程
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/presto/presto-1.png" alt="image" style="zoom:56%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/presto/presto-1.png" alt="image" style={{ maxWidth: '56%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+1. 解析器：coordinator接收到SQL之后，通过解析器将SQL转换成抽象语法树AST
+2. 逻辑计划器：SQL语法正确，会通过connector将meta表中的schema、列名、列的数据类型进行对比是否与SQL中一致，对性能进行优化，生成逻辑执行计划，
+3. 分发计划器：将逻辑执行计划进行分布式解析分发到执行毁中
+4. 执行器：将逻辑执行计划转换成物理执行计划分发到对应的worker中去执行
+
+
+
+#### 和MapReduce的对比
+
+[//]: # (<img src="/Users/liufei/docs/typora笔记/images/presto/presto-2.png" alt="image" style="zoom:36%;" />)
+<div style={{ textAlign: 'center', width: '100%' }}>
+    <img src="/analysis-project/img/presto/presto-2.png" alt="image" style={{ maxWidth: '50%', height: 'auto', display: 'block', margin: '0 auto' }} />
+</div>
+
+- ﻿﻿MapReduce：每次执行任务中间结果需要写磁盘，计算的时候需要从磁盘中拿，导致速度很慢
+- ﻿﻿Presto:Task是在每个worker上执行的，每个Task执行完之后数据还是存放在内存里的，多个Task之间需要进行数据交换的时候直接从内存中拿。
+
+
+
+
+
+### 环境搭建
+
+[部署文档](https://prestodb.io/docs/current/installation/deployment.html#an-example-deployment-with-docker)
+
+
+
+
+
+
+
+### 数据格式
+
+在执行presto语句时，都是需要先指定catalog来确认使用的连接，这样就确定了其使用的主库，如果存在多库连表也是以此链接为主要表，其他的连接为外部表来执行数据查询和整合的。
+
+并且Presto是可以创建表的并且也支持通过 SQL 语句进行数据插入操作(实际数据的存储支持取决于底层的存储系统是否允许写操作)，本质都是通过 **Catalog** 传递给实际的数据源（如 Hive、MySQL、Elasticsearch 等），并在这些数据源中存储表结构和数据。Presto 的作用是充当一个中间层，它会将用户使用的 **Presto SQL 语法** 转换为底层数据源可以理解的操作。
+
+在 Presto 中创建表时，表的存储格式可以使用多种格式来优化存储和查询效率。常见的格式包括 ORC、Parquet、RCFile、Avro 等，每种格式都有不同的用途和优势。下面是一些常见的格式及其含义：
+
+1. **ORC (Optimized Row Columnar)**：ORC 是一种专为 Hive 优化的列式存储格式，主要用于高效地存储和处理大数据集。
+
+- 优点：支持高效的压缩和解压缩，降低存储成本。提供快速的列级别操作，可以跳过不相关的列，减少 I/O。支持多种类型的索引，提升查询性能。
+
+- 适用场景：非常适合需要高效压缩和大规模批量处理的数据场景。
+
+- 示例:
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    name STRING
+)
+WITH (format = 'ORC');
+     ```
+
+2. **Parquet**：Parquet 是另一种广泛使用的列式存储格式，适用于不同的大数据处理框架（如 Hadoop、Spark）。
+
+- 优点：支持高效压缩和列级别的操作。与 ORC 类似，能有效减少 I/O，提升查询速度。
+
+- 适用场景：特别适用于需要高效读取某些列的大数据分析场景。
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    name STRING
+)
+WITH (format = 'PARQUET');
+     ```
+
+3. **RCFile (Record Columnar File)**：RCFile 是早期的 Hive 数据存储格式，介于行存储和列存储之间，主要为大规模批量数据提供良好的存储和读取性能。
+
+- 优点：相对于行式存储，可以更好地支持列操作，但性能和压缩效率不如 ORC 和 Parquet。
+
+- 适用场景：现在较少使用，通常在老的 Hive 兼容性要求下使用。
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    name STRING
+)
+WITH (format = 'RCFILE');
+     ```
+
+4. **Avro**：Avro 是一种行式存储格式，适合存储半结构化数据或需要序列化和反序列化数据的场景。
+
+- 优点：支持多种数据类型，灵活性高。特别适合写多读少的场景。
+
+- 适用场景：通常用于数据交换、数据流处理和写入数据较多的场景。
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    name STRING
+)
+WITH (format = 'AVRO');
+     ```
+
+5. **TextFile**：TextFile 是最简单的文本格式存储方式，通常每行是一个记录，列与列之间使用分隔符。
+
+- 优点：易于理解和使用，但没有压缩和列级别优化。
+
+- 适用场景：适合小规模数据集或简单需求场景，性能和压缩相对较差。
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    name STRING
+)
+WITH (format = 'TEXTFILE');
+     ```
+
+6. **JSON**：存储 JSON 格式的数据，适用于半结构化数据。这样是，presto本身对json结构的支持就是其能够集成es的原因
+
+- 优点：易于处理和交换 JSON 数据，适合复杂和多层次数据结构。
+
+- 适用场景：需要处理多层次结构或半结构化数据时使用。
+
+```sql
+CREATE TABLE hive.default.my_table (
+    id BIGINT,
+    data JSON
+)
+WITH (format = 'JSON');
+     ```
+
+这些格式可以根据数据的特性、存储需求和查询场景来选择最合适的存储格式，以提高查询性能和存储效率。
+
+
+
+#### 分区
+
+在 Presto 中，**创建表时的分区**（partitioning）是一种优化手段，主要用于提高查询性能，尤其是在处理大规模数据时。分区表将数据划分为更小的逻辑单元（分区），这些分区通常基于特定的列（如日期、地区等）来创建。查询时 Presto 只会扫描相关分区的数据，从而避免全表扫描，提高查询效率。
+
+```sql
+CREATE TABLE my_table (
+    id BIGINT,
+    name VARCHAR,
+    created_at DATE
+) WITH (
+    partitioned_by = ARRAY['created_at'],   -- 按照 created_at 列分区
+    format = 'ORC');
+```
+
+**分区表在底层的支持**
+
+底层存储系统对分区的支持不同，比如：
+
+- **Hive 连接器**：Presto 与 Hive 集成时，Hive 表的分区通常存储为 HDFS 文件系统中的子目录。例如，按照日期分区，底层存储可能是 year=2023/month=10/ 这样的目录结构。Presto 查询 Hive 表时，会根据分区裁剪策略只访问相关分区的文件，不同的分区就是不同的文件。
+
+>在 Hive 中，每个分区通常在 HDFS 上作为一个独立的目录存在，里面包含与该分区相关的数据文件。通过分区，Hive 可以在查询时快速定位需要的数据，从而减少扫描的数据量。并且Hive 允许通过动态分区插入的方式来自动创建和管理这些分区。当新的数据插入时，Hive 会自动将数据存储到相应的分区中。
+  >
+  >```sql
+  >CREATE TABLE sales (
+  >id INT,
+  >amount DECIMAL(10, 2),
+  >sale_date DATE
+  >)PARTITIONED BY (year INT, month INT)
+  >STORED AS ORC;
+  >```
+  >
+  >实际的存储目录如下：
+  >
+  >```sh
+  >/user/hive/warehouse/sales/
+  >└── year=2024/
+  >   └── month=01/
+  >       └── part-00001.orc
+  >   └── month=02/
+  >       └── part-00002.orc
+  >```
+
+- **对象存储（S3, GCS）**：对于基于对象存储的系统，分区同样通过文件路径来实现。例如，在 AWS S3 中，数据可能被存储为类似 /path/to/table/year=2023/month=10/ 的对象路径。
+
+- **SQL 数据库分区**：对于一些关系型数据库，分区表的实现由数据库本身处理（如 MySQL 或 PostgreSQL 中的分区表）。Presto 通过与这些数据库的连接器交互，利用其原生的分区特性进行高效查询。
+
+> Presto 在 MySQL 中创建表时的 partitioned_by 选项并不会自动创建 MySQL 的分区表。相反，Presto 会创建一个普通的 MySQL 表，而 partitioned_by 的定义将被忽略。因此，如果你希望在 MySQL 中使用分区，必须手动创建 MySQL 的分区表结构。
+>
+> Elasticsearch 也不直接支持 Presto 的分区概念。通常，Elasticsearch 处理的是索引，而不是像 SQL 数据库那样的分区表。Presto 对 Elasticsearch 的支持主要通过查询来实现，但在使用 partitioned_by 时，Elasticsearch 将忽略该选项。
+
+
+
+
+
+### Presto的优化
+
+- **数据存储**
+
+1. 合理改置分区
+
+2. 使用列式存储，对ORC支持更好。
+
+Presto对ORC文件读取做了特定优化，因此在Hive中创建Presto使用的表时，建议采用ORC格式存储。相对于Parquet，Presto
+
+3. 使用压缩，与Hive类似，Presto会根据元数据信息读取分区数据，合理的分区能减少Presto数据读取量，提升查询性能。
+
+数据压缩可以减少节点间数据传输对10带宽压力，对于即席查询需要快速解压，建议采用Snappy压缩。
+
+- **SQL优化**
+
+1. 子查询，只选择需要的字段
+由于采用列式存储，选择需要的字段可加快字段的读取、减少数据量。避免采用“读取所有字段。
+
+2. 查询加上分区字段
+对于有分区的表，where语句中优先使用分区字段进行过滤。acct_day是分区字段，visit_time是具体访问时间。
+
+3. Group By语句优化
+合理安排Group by语句中字段顺序对性能有一定提升。将Group By语句中字段按照每个字段distinct数据多少进行降序排列。
+
+4. Order by时使用limit
+Order by需要扫描数据到单个worker节点进行排序，导致单个worker需要大量内存。如果是查询Top N或者Bottom N，使用limit可减少排序计算和内存压力。
+
+5. Join时将大表放在左边
+Presto中join的默认算法是`broadcast join`，即将join左边的表分割到多个worker，然后将join右边的表数据整个复制一份友送到每个worker进行计算。如果右边的表数据量太大，则可能会报内存溢出错误。
+
+> Presto 中，join 的默认算法是 **broadcast join**，这是一种将小表的数据广播到所有工作节点的连接方式。具体来说，当你在 Presto 中执行一个连接操作时，如果其中一个表较小，Presto 会选择将该小表的所有数据复制（广播）到参与该连接的所有工作节点上。这样，每个工作节点可以直接使用本地数据进行连接，而不需要从其他节点获取数据，从而提高性能。
+     >
+     > 广播连接特别适用于小表与大表的连接，能够显著提高性能，因为它减少了网络传输的需求和连接时间。
+     >
+     > **但这种方法不适用于所有情况。如果广播的表太大，将会导致内存压力和性能下降。因此，Presto 在选择连接算法时会进行评估，以确保在合理的内存使用下运行。**
+     >
+     > ------
+     >
+     > 这个和mysql是正好相反的，mysql中往往是小表驱动大表，原因如下：
+     >
+     > 1. **优化性能**：小表的大小较小，可以快速加载到内存中，可以使用内存中的小表来过滤大表的数据，减少大表中需要处理的行数。
+     >
+     >    2.	**减少I/O操作**：当小表作为驱动表时，MySQL 可以通过对小表进行完全扫描，然后使用索引或其他优化手段在大表中查找匹配的行。这种方法减少了对大表的多次扫描，从而降低了I/O操作的成本。
+     >    2.	**利用索引**：如果大表中有适当的索引，小表驱动大表的连接可以利用这些索引来快速定位所需的记录。这样可以显著提高查询速度。
+     >    2.	**避免过多的临时表**：在处理连接时，如果大表作为驱动表，可能会生成较多的临时表，这会增加存储和处理的复杂性。使用小表作为驱动，可以减少临时表的创建，从而降低系统的资源消耗。
+
+- **注意点**
+
+1. 字段使用
+避免和关键字冲实：MySQL对字段加反引号，Presto对字段加双引号分割当然，如果字段名称不是关键字，可以不加这个双引号。
+
+2. 时间函效
+
+对于Timestamp，需要进行比较的时候，需要添加Timestamp关键字，而MySQL中对Timestamp可以直接进行比较
+
+3. 不支持Insert overwrite语法
+Presto中不支持insert
+overwrite语法，只能先delete，然后insert into。
+
+4. Parquet格式
+
+Presto目前支持Paraguet格式，支持查询，但不支将insert.
+
